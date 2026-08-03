@@ -17,6 +17,10 @@ export interface NavItem {
 
 export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavItem[] }> = [
   {
+    heading: 'Group',
+    items: [{ id: 'group', label: 'All centres', icon: '⬢', ready: true }],
+  },
+  {
     heading: 'Centre',
     items: [
       { id: 'board', label: 'Room board', icon: '▦', ready: true },

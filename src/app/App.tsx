@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { buildBoard, summarise, NOW, type BoardBed } from './demo-data.js';
+import { buildCentres } from './centres-data.js';
 import { formatDateWithDay } from './format.js';
 import { AvailableCard, OccupiedCard } from './components/BedCard.tsx';
 import { DetailPanel } from './components/DetailPanel.tsx';
+import { GroupDashboard } from './components/GroupDashboard.tsx';
 import { NAV_GROUPS, Sidebar } from './components/Sidebar.tsx';
 import { Chip, FilterPill, StatTile } from './components/ui.tsx';
 
@@ -42,11 +44,17 @@ export default function App() {
   const board = useMemo(() => buildBoard(NOW), []);
   const summary = useMemo(() => summarise(board), [board]);
 
-  const [section, setSection] = useState('board');
+  const [section, setSection] = useState('group');
   const [collapsed, setCollapsed] = useState(false);
   const [filter, setFilter] = useState<FilterId>('all');
   const [query, setQuery] = useState('');
   const [openBed, setOpenBed] = useState<string | null>(null);
+
+  // Which centre the Centre-level views are scoped to. Only Primrose Lodge is configured; selecting
+  // any other shows an honest empty state rather than invented rooms.
+  const centres = useMemo(() => buildCentres(), []);
+  const [centreSlug, setCentreSlug] = useState('primrose-lodge');
+  const centre = centres.find((c) => c.slug === centreSlug) ?? centres[0]!;
 
   const q = query.trim().toLowerCase();
   const visible = board.filter((bed) => {
@@ -93,17 +101,41 @@ export default function App() {
         <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[10.5px] tracking-wide text-[var(--color-ink-muted)] uppercase">
-              Example Care Group
-              <span aria-hidden="true">›</span>
-              South East
+              UK Addiction Treatment Group
+              {section !== 'group' ? (
+                <>
+                  <span aria-hidden="true">›</span>
+                  {centre.region}
+                </>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-[15px] leading-tight font-semibold">Primrose Lodge</h1>
+              <h1 className="truncate text-[15px] leading-tight font-semibold">
+                {section === 'group' ? 'All centres' : centre.name}
+              </h1>
               <Chip label="Development" tone="warn" />
             </div>
           </div>
 
           <div className="ml-auto flex items-center gap-2.5">
+            {/* Centre selector. Hidden on the group view, which spans every centre by definition. */}
+            {section !== 'group' ? (
+              <label className="hidden items-center gap-1.5 text-[11.5px] text-[var(--color-ink-muted)] sm:flex">
+                <span className="sr-only">Centre</span>
+                <select
+                  value={centreSlug}
+                  onChange={(e) => setCentreSlug(e.target.value)}
+                  className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                >
+                  {centres.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.name}
+                      {c.isConfigured ? '' : ' — no data'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="relative hidden sm:block">
               <span className="sr-only">Search beds, clients, staff</span>
               <span
@@ -130,7 +162,38 @@ export default function App() {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          {isBoard ? (
+          {section === 'group' ? (
+            <GroupDashboard
+              onOpenCentre={(slug) => {
+                setCentreSlug(slug);
+                setSection('board');
+              }}
+            />
+          ) : isBoard && !centre.isConfigured ? (
+            <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
+              <div
+                aria-hidden="true"
+                className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[18px] text-[var(--color-accent)]"
+              >
+                ▦
+              </div>
+              <h2 className="mt-3.5 text-[16px] font-semibold">
+                {centre.name} is not configured yet
+              </h2>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+                Its rooms and bed spaces have not been set up, and its capacity is still a placeholder.
+                Rather than show invented rooms, this page stays empty until the real configuration is
+                entered — which is administration, not development.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCentreSlug('primrose-lodge')}
+                className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
+              >
+                Switch to Primrose Lodge
+              </button>
+            </div>
+          ) : isBoard ? (
             <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
               <section
                 aria-label="Centre summary"
