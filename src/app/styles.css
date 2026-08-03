@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+
+/**
+ * Brand palette — derived from the three supplied base colours.
+ *
+ *   #dc61b0  pink     #77499f  purple     #97cae6  blue
+ *
+ * Each is assigned by what it can actually carry, measured rather than guessed:
+ *
+ * | base    | contrast on white | hue | nearest status hue | role                          |
+ * |---------|-------------------|-----|--------------------|-------------------------------|
+ * | #77499f | 6.49:1  PASS body | 272 | red 92 deg away    | PRIMARY accent — interactive  |
+ * | #dc61b0 | 3.29:1  fails body| 321 | red 43 deg away    | brand moments only, large only|
+ * | #97cae6 | 1.76:1  fails all | 201 | green 40 deg away  | decorative fills only         |
+ *
+ * Two consequences worth stating, because they are the whole reason the palette is arranged this
+ * way rather than "pink is the brand colour so pink is the accent":
+ *
+ * 1. Pink sits only 43 degrees from alert red and cannot hold small text. So it never appears as a
+ *    status, never on a chip, and never at body size. It lives in the chrome — the sidebar, the
+ *    active-nav marker — where no status colour is ever rendered beside it. A pink chip next to a
+ *    red "overdue" chip is a misread waiting to happen on a card seen for half a second.
+ * 2. Blue is 40 degrees from green and fails every text threshold, so it is surfaces and fills, with
+ *    a darkened variant (--brand-blue-ink) for the rare case it must carry words.
+ *
+ * Purple therefore does the interactive work: it is the only base colour that passes body-text
+ * contrast AND stays clear of every semantic hue.
+ *
+ * Alerts use red (hue ~0) rather than rose (hue ~350) specifically to buy maximum distance from the
+ * brand pink.
+ */
+@theme {
+  /* --- raw brand --- */
+  --brand-pink: #dc61b0;
+  --brand-purple: #77499f;
+  --brand-blue: #97cae6;
+
+  /* text-safe darkened variants (5.3:1 and 5.4:1 on white) */
+  --brand-pink-ink: #b23d8a;
+  --brand-blue-ink: #337093;
+
+  /* --- app chrome: always dark, because the supplied logo is a white mark --- */
+  --color-chrome: #2b1c3d; /* white text 15.7:1 */
+  --color-chrome-raised: #34234a;
+  --color-chrome-hover: #3a2851;
+  --color-chrome-line: #453564;
+  --color-chrome-ink: #f4f0f8;
+  --color-chrome-ink-dim: #b6a9c7;
+
+  /* --- content surfaces (light) --- */
+  --color-surface: #faf8fc;
+  --color-panel: #ffffff;
+  --color-ink: #1f1a26;
+  --color-ink-muted: #635b70;
+  --color-line: #e9e3f0;
+
+  --color-accent: #77499f;
+  --color-accent-hover: #653d88;
+  --color-accent-soft: #f4eefa;
+  --color-accent-ring: #c9a5e3;
+
+  --color-info: #337093;
+  --color-info-soft: #eef6fb;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-surface: #17131d;
+      --color-panel: #1f1a26;
+      --color-ink: #f5f2f8;
+      --color-ink-muted: #a79fb3;
+      --color-line: #322b3c;
+
+      /* Lightened so purple still reads on a dark panel (6.5:1). */
+      --color-accent: #b98fd8;
+      --color-accent-hover: #c9a5e3;
+      --color-accent-soft: #2e2340;
+      --color-accent-ring: #77499f;
+
+      --color-info: #97cae6;
+      --color-info-soft: #1e2c36;
+
+      --brand-pink-ink: #e992c8;
+      --brand-blue-ink: #97cae6;
+    }
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Dates and counts line up in columns. */
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--brand-purple);
+    color: #fff;
+  }
+
+  /* Brand-tinted scrollbars in the chrome only. */
+  nav::-webkit-scrollbar {
+    width: 8px;
+  }
+  nav::-webkit-scrollbar-thumb {
+    background: var(--color-chrome-line);
+    border-radius: 4px;
+  }
+  nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

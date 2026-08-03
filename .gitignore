@@ -1,0 +1,23 @@
+node_modules
+dist
+.output
+coverage
+*.local
+
+# Env - never commit
+.env
+.env.*
+
+# Supabase CLI local state
+supabase/.branches
+supabase/.temp
+
+# --- Never commit real client data ---
+# The source whiteboard contains real client names and embedded photographs.
+*.xlsx
+*.xlsm
+*.xls
+Whiteboard*
+/private-data/
+/import-samples/
+**/client-photos/
