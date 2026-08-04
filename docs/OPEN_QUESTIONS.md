@@ -8,6 +8,32 @@ Legend: 🔴 open · 🟢 answered (with date and answer) · ⚪ superseded
 
 ---
 
+## Round 3 — asked 2026-08-04
+
+### Q41 🔴 Is a "Buddy" a member of staff, or another client?
+Evidence from the workbook points at **peer client**, but not conclusively:
+
+- **One of the six buddy values is also the name of a client on the same board.** A staff member
+  would not appear in the client-name column.
+- Every buddy value is a **first name only** — but so is every therapist value, so that cuts both
+  ways.
+
+This matters more than it looks. If a buddy is a peer and we model them as staff, they land in
+therapist workload figures, appear in staff pickers, and imply an account they should never have. If
+a buddy is staff and we model them as a peer, the assignment cannot survive their client's discharge.
+
+`staff_assignments.assignee_kind` supports `staff`, `peer` and `unresolved`, so imported rows stay
+visible as a plain name until this is answered. No guess has been baked in.
+*Blocks: resolving imported buddy assignments. Blocks nothing structural.*
+
+### Q42 🔴 What is a Key Worker, and is it distinct from Focal Therapist?
+`staff_assignments.role_code` allows `key_worker` because the role is common in UK treatment
+services, but the workbook has no such column. Confirm whether it exists at Primrose Lodge and how it
+differs from the focal therapist, or the value should be removed.
+*Blocks: nothing yet.*
+
+---
+
 ## Round 2 — asked 2026-08-03
 
 ### Q39 🟢 How many bed spaces does Primrose Lodge actually have?

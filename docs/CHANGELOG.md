@@ -4,6 +4,55 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-04 — Audit history and staff assignments
+
+Starting on the gap list. These two first because audit cannot be backfilled, and assignments unblock
+workload, filtering and accountability.
+
+### `0009_audit_events` — append-only audit
+
+The largest single gap in the build: §23 requires it, §33 lists it as acceptance, and it did not
+exist. Everything changed before today is unreconstructable.
+
+- Records actor, action, record type and id, centre, timestamp, previous and new values, and reason.
+- **Only the fields that actually changed** are stored on UPDATE. Whole-row snapshots bury the change
+  and duplicate sensitive content on every touch.
+- No-op updates write nothing, so the log stays signal.
+- `reason` comes from `set_config('app.change_reason', …)`, which is how the workflows that require a
+  reason will supply one.
+- Attached to clients, admissions, room_allocations, access assignments, user profiles, beds, centres.
+
+**Append-only is enforced twice.** No UPDATE/DELETE policy exists *and* those privileges are revoked,
+so a policy added by mistake later cannot re-open them. INSERT is revoked too — the trigger is
+SECURITY DEFINER and writes on the user's behalf, otherwise a user could forge an entry attributing
+an action to someone else.
+
+Verified (9 assertions): insert recorded · update records changed field only · no-op writes nothing ·
+reason captured · centre captured · admin can read · **UPDATE, DELETE and direct INSERT all refused**
+to a platform administrator.
+
+### `0010_staff_assignments` — therapist, buddy and doctor as records
+
+Previously strings on a card, which made filtering by therapist, real workload, and assignment
+history all impossible.
+
+- One live assignment per role per admission, enforced by a partial unique index. Replacing a
+  therapist means ending one row and opening another, which is what preserves the history.
+- Zero-length assignments rejected.
+- Indexed for "how many clients does this therapist hold right now".
+
+**A finding while building this.** One of the six buddy values in the workbook is *also the name of a
+client on the same board*, and all buddy values are first names only. That points to buddies being
+peer clients rather than staff — so the table does not guess. `assignee_kind` is `staff`, `peer` or
+`unresolved`, and imported rows stay visible as a plain name until confirmed. Modelling a client as
+staff would put them in workload figures and imply an account they should not have. New question Q41.
+
+Verified (10 assertions): unresolved import by name · staff assignee · peer buddy · staff-and-peer
+rejected · self-buddy rejected · two live therapists rejected · zero-length rejected · handover keeps
+both rows · exactly one live therapist after handover · assignments audited.
+
+**Next:** task_templates + client_tasks, which converts 16 workbook columns from display into records.
+
 ## 2026-08-03 — Clients, admissions and bed allocation (schema applied and proven)
 
 **Applied** — `0004_clients_and_admissions`, `0005_room_allocations`.
