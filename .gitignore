@@ -4,9 +4,12 @@ dist
 coverage
 *.local
 
-# Env - never commit
+# Env - never commit real values
 .env
 .env.*
+# ...but the template must be committed, or nobody can configure the project.
+# It holds only the development URL and publishable key, both public by design.
+!.env.example
 
 # Supabase CLI local state
 supabase/.branches
