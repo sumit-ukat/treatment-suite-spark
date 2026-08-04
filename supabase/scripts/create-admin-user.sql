@@ -48,21 +48,39 @@ begin
     update auth.users
        set encrypted_password = extensions.crypt(v_password, extensions.gen_salt('bf')),
            email_confirmed_at = coalesce(email_confirmed_at, now()),
-           updated_at = now()
+           updated_at = now(),
+           -- Repair any NULL token column, for rows created before this was understood.
+           confirmation_token         = coalesce(confirmation_token, ''),
+           recovery_token             = coalesce(recovery_token, ''),
+           email_change               = coalesce(email_change, ''),
+           email_change_token_new     = coalesce(email_change_token_new, ''),
+           email_change_token_current = coalesce(email_change_token_current, ''),
+           phone_change               = coalesce(phone_change, ''),
+           phone_change_token         = coalesce(phone_change_token, ''),
+           reauthentication_token     = coalesce(reauthentication_token, '')
      where id = v_uid;
     raise notice 'Existing user %: password reset.', v_email;
   else
+    -- The eight token columns MUST be '' and not NULL.
+    --
+    -- Supabase Auth (GoTrue) scans them into Go `string` fields, which cannot hold NULL. Leaving any
+    -- of them NULL makes every sign-in fail with HTTP 500 "Database error querying schema" — a
+    -- message that points nowhere near the actual cause. The column defaults do not save you here,
+    -- because an explicit column list omitting them inserts NULL.
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data, is_sso_user, is_anonymous
+      raw_app_meta_data, raw_user_meta_data, is_sso_user, is_anonymous,
+      confirmation_token, recovery_token, email_change, email_change_token_new,
+      email_change_token_current, phone_change, phone_change_token, reauthentication_token
     ) values (
       '00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated',
       v_email, extensions.crypt(v_password, extensions.gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       json_build_object('display_name', v_name)::jsonb,
-      false, false
+      false, false,
+      '', '', '', '', '', '', '', ''
     );
 
     -- Supabase Auth needs a matching identity row for email/password sign-in to resolve.

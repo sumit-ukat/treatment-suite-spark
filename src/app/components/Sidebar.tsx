@@ -1,4 +1,5 @@
 import logoUrl from '../brand/prl-logo.svg';
+import { useAuth } from '../auth/AuthProvider.tsx';
 
 /**
  * Navigation.
@@ -58,6 +59,8 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
 }) {
+  const { displayName, email, roleNames, permissions, centres, signOut } = useAuth();
+
   return (
     <nav
       aria-label="Main navigation"
@@ -153,10 +156,26 @@ export function Sidebar({
             <div className="text-[10px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
               Signed in as
             </div>
-            <div className="truncate text-[12.5px] font-medium">Demo — Centre manager</div>
-            <div className="truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
-              Primrose Lodge
+            <div className="truncate text-[12.5px] font-medium">
+              {displayName ?? email ?? 'Unknown user'}
             </div>
+            <div className="truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
+              {roleNames.length ? roleNames.join(', ') : 'No role'}
+            </div>
+            <div className="nums mt-1 flex items-center gap-1.5 text-[10px] text-[var(--color-chrome-ink-dim)]">
+              <span title="Centres this account can reach">{centres.length} centres</span>
+              <span aria-hidden="true">·</span>
+              <span title="Permissions granted to this account">
+                {permissions.size} permissions
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="mt-2 w-full rounded-md border border-[var(--color-chrome-line)] px-2 py-1 text-[11.5px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
+            >
+              Sign out
+            </button>
           </div>
         ) : null}
         <button

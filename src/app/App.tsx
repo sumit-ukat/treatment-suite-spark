@@ -2,11 +2,42 @@ import { useMemo, useState } from 'react';
 import { buildBoard, summarise, NOW, type BoardBed } from './demo-data.js';
 import { buildCentres } from './centres-data.js';
 import { formatDateWithDay } from './format.js';
+import { useAuth } from './auth/AuthProvider.tsx';
+import {
+  AccessErrorScreen,
+  LoadingScreen,
+  LoginScreen,
+  NoAccessScreen,
+} from './auth/LoginScreen.tsx';
 import { AvailableCard, OccupiedCard } from './components/BedCard.tsx';
 import { DetailPanel } from './components/DetailPanel.tsx';
 import { GroupDashboard } from './components/GroupDashboard.tsx';
 import { NAV_GROUPS, Sidebar } from './components/Sidebar.tsx';
 import { Chip, FilterPill, StatTile } from './components/ui.tsx';
+
+/**
+ * Gate the whole application on the session.
+ *
+ * Nothing renders before the session resolves — no flash of the dashboard while auth is still
+ * loading, which would briefly show structure to someone who may have no right to it.
+ */
+export default function App() {
+  const { status } = useAuth();
+
+  switch (status) {
+    case 'loading':
+      return <LoadingScreen />;
+    case 'signed_out':
+    case 'unconfigured':
+      return <LoginScreen />;
+    case 'no_access':
+      return <NoAccessScreen />;
+    case 'error':
+      return <AccessErrorScreen />;
+    case 'signed_in':
+      return <Dashboard />;
+  }
+}
 
 type FilterId =
   | 'all'
@@ -40,7 +71,7 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
   }
 };
 
-export default function App() {
+function Dashboard() {
   const board = useMemo(() => buildBoard(NOW), []);
   const summary = useMemo(() => summarise(board), [board]);
 
