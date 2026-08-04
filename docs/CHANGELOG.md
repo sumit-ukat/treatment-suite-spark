@@ -4,6 +4,59 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-04 — Task system
+
+Converts 16 workbook columns from things the app draws into things it can act on. Ownership, queues,
+completion evidence and lateness all become possible for the first time.
+
+### `0011_task_system`
+
+- `task_templates` — per organisation, optionally per centre, so centres can run different schedules.
+- `client_tasks` — **`due_at` and `completed_at` are separate columns and neither may substitute for
+  the other.** That is the whole point: the whiteboard holds one value per action, which is why
+  lateness is unmeasurable in it.
+- `task_assignments` — reassignment closes one row and opens another, so "who was responsible on the
+  day" survives the reassignment.
+- Title and description are **copied** from the template at generation. A template edited next year
+  must not silently rewrite what a task said when someone completed it.
+- `source_value` keeps the workbook cell verbatim beside `source_interpretation`, so a reading of `X`
+  can be revisited without going back to the spreadsheet.
+
+**Deviation from the brief, recorded deliberately:** the brief lists `overdue` as a status. It is not
+stored. Overdue is derived from `due_at` against `now()`, because a stored flag needs a job to keep it
+true and is silently wrong between runs. Also in DECISIONS.
+
+Constraints the spreadsheet cannot enforce, now enforced: completing requires a timestamp; a
+non-completed task cannot carry one; cancelling requires a reason; not-applicable requires a reason.
+
+### `0012_task_generation`
+
+Due-date computation and generation in the trusted layer, mirroring `src/domain/tasks.ts`. The
+duplication is deliberate — the browser previews and sorts, the database enforces — but the two must
+agree, and DST is where they would most easily diverge. Both follow one rule: days/weeks are calendar
+arithmetic on the centre's wall clock, hours are elapsed on the instant.
+
+Moving the planned discharge date now recalculates open discharge-based deadlines **automatically via
+trigger**, and never touches a completed one. That is precisely the failure the workbook shows: its
+pre-discharge dates were hand-computed and stayed put when one client's discharge moved 29 days.
+
+### `0013_seed_task_templates` — 20 templates
+
+**Three were absent from the product entirely until now**: `side_assignment` (col R, never built),
+`detox_review` (col U, extracted then dropped), `doctor_assessment` (col AG). Side assignment carries
+a *topic* rather than a status, so it requires a completion note.
+
+### Verified — 15 assertions
+
+Generation (20 tasks, idempotent on re-run) · 24-hour contact as elapsed time · week offsets as
+calendar days · pre-discharge at discharge − 24h · manual basis leaves `due_at` null rather than
+guessing · **DST parity: +4 weeks from 20 Oct 14:00 BST yields 17 Nov 14:00 GMT in SQL, matching the
+TypeScript test exactly** · elapsed rules stay elapsed across the same boundary · discharge change
+moves open deadlines · completed deadlines untouched · all four status constraints refuse · tasks
+audited.
+
+---
+
 ## 2026-08-04 — Audit history and staff assignments
 
 Starting on the gap list. These two first because audit cannot be backfilled, and assignments unblock
