@@ -9,7 +9,13 @@ import { Chip } from './ui.tsx';
  * screenshot. Verification state is shown as a badge AND a screen-reader label, so it never depends
  * on colour alone.
  */
-export function PhotoBadge({ occupant, size = 'md' }: { occupant: Occupant; size?: 'md' | 'lg' }) {
+export function PhotoBadge({
+  occupant,
+  size = 'md',
+}: {
+  occupant: Occupant;
+  size?: 'sm' | 'md' | 'lg';
+}) {
   const { photoState: state } = occupant;
   const ring =
     state === 'verified'
@@ -26,7 +32,9 @@ export function PhotoBadge({ occupant, size = 'md' }: { occupant: Occupant; size
       : state === 'unverified'
         ? 'Photograph awaiting verification'
         : 'No photograph on file';
-  const box = size === 'lg' ? 'size-12 text-[15px]' : 'size-10 text-[13px]';
+  const box =
+    size === 'lg' ? 'size-12 text-[15px]' : size === 'sm' ? 'size-7 text-[10px]' : 'size-10 text-[13px]';
+  const dot = size === 'sm' ? 'size-[11px] text-[7px]' : 'size-[15px] text-[9px]';
 
   return (
     <div className="relative shrink-0" title={title}>
@@ -37,7 +45,7 @@ export function PhotoBadge({ occupant, size = 'md' }: { occupant: Occupant; size
         {occupant.initials}
       </div>
       <span
-        className={`absolute -right-0.5 -bottom-0.5 grid size-[15px] place-items-center rounded-full text-[9px] font-bold text-white ring-2 ring-[var(--color-panel)] ${markTone}`}
+        className={`absolute -right-0.5 -bottom-0.5 grid ${dot} place-items-center rounded-full font-bold text-white ring-2 ring-[var(--color-panel)] ${markTone}`}
         aria-hidden="true"
       >
         {mark}

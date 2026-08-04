@@ -10,6 +10,7 @@ import {
   NoAccessScreen,
 } from './auth/LoginScreen.tsx';
 import { AvailableCard, OccupiedCard } from './components/BedCard.tsx';
+import { BedList } from './components/BedList.tsx';
 import { DetailPanel } from './components/DetailPanel.tsx';
 import { GroupDashboard } from './components/GroupDashboard.tsx';
 import { NAV_GROUPS, Sidebar } from './components/Sidebar.tsx';
@@ -78,6 +79,7 @@ function Dashboard() {
   const [section, setSection] = useState('group');
   const [collapsed, setCollapsed] = useState(false);
   const [filter, setFilter] = useState<FilterId>('all');
+  const [view, setView] = useState<'board' | 'list'>('list');
   const [query, setQuery] = useState('');
   const [openBed, setOpenBed] = useState<string | null>(null);
 
@@ -333,8 +335,30 @@ function Dashboard() {
 
                 <span className="nums ml-auto text-[11.5px] text-[var(--color-ink-muted)]">
                   {visible.length} of {board.length} bed spaces
-                  <span className="ml-1.5 opacity-70">· 16 rooms, 6A/6B & 9A/9B shared</span>
                 </span>
+
+                {/* Cards to glance, list to scan. Different jobs, so both stay. */}
+                <div
+                  role="group"
+                  aria-label="View"
+                  className="flex overflow-hidden rounded-lg border border-[var(--color-line)]"
+                >
+                  {(['board', 'list'] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setView(v)}
+                      aria-pressed={view === v}
+                      className={`px-2.5 py-1.5 text-[11.5px] font-medium transition ${
+                        view === v
+                          ? 'bg-[var(--brand-purple)] text-white'
+                          : 'bg-[var(--color-panel)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+                      }`}
+                    >
+                      {v === 'board' ? 'Cards' : 'List'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {visible.length === 0 ? (
@@ -351,6 +375,10 @@ function Dashboard() {
                     Clear filters
                   </button>
                 </div>
+              ) : view === 'list' ? (
+                <section aria-label="Bed spaces" className="mt-3">
+                  <BedList beds={visible} onOpen={setOpenBed} />
+                </section>
               ) : (
                 <section
                   aria-label="Bed spaces"
