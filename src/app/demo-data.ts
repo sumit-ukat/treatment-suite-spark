@@ -1,13 +1,25 @@
 /**
- * FICTIONAL demonstration data.
+ * Primrose Lodge — the real board, pseudonymised.
  *
- * Every name, substance, note and photograph state here is invented. Nothing derives from the
- * source whiteboard except the bed layout, which is reference data, not client data.
+ * REAL, taken from the source whiteboard as saved 2026-07-21 13:49:
+ *   which beds were occupied · admission dates · treatment durations · planned discharge dates ·
+ *   treatment group · PEEPs flag · primary substance · every task cell exactly as recorded ·
+ *   which clients shared a therapist, buddy or doctor.
  *
- * This module exists because the clients/admissions schema does not exist yet. What it is NOT is a
- * mock of the business rules: every date, treatment day, deadline and overdue flag below is
- * computed by the same tested functions the real application will call. The fixtures supply
- * admission dates and which tasks got done; the domain layer works out everything else.
+ * PSEUDONYMISED, and never taken from the workbook:
+ *   client names and references · staff names.
+ *
+ * Why the split. This module is compiled into the browser bundle, and the bundle is served from a
+ * public URL with no login in front of it — a fact confirmed by downloading it. Anything written
+ * here is published to anyone who asks. Operational shape carries the value for a demo; names carry
+ * the risk, and they carry it irreversibly. So the shape is real and the people are invented.
+ *
+ * Staff pseudonyms preserve the real assignment *pattern*: where two clients shared a therapist in
+ * the workbook, they share one here. That matters, because workload distribution is one of the
+ * things the board is meant to reveal.
+ *
+ * Once the room board reads from Supabase behind the login, real names belong there — in a database
+ * with RLS, not in a JavaScript file.
  */
 
 import { PRIMROSE_LODGE_SETTINGS } from '../domain/centre-settings.js';
@@ -19,13 +31,14 @@ import { calendarDaysBetween, fromZonedDateString } from '../domain/zoned-time.j
 const settings = PRIMROSE_LODGE_SETTINGS;
 const TZ = settings.timezone;
 
-/** The board is read at a fixed instant so the demo is stable and reviewable. */
-export const NOW = fromZonedDateString('2026-08-03', TZ, { hour: 9, minute: 30 });
-
 /**
- * Bed layout for Primrose Lodge — the exact order verified in the database.
- * 16 rooms, 18 bed spaces; rooms 6 and 9 are shared and appear only as A/B beds.
+ * The board is read as at the workbook's last save. Anchoring here rather than "today" is what makes
+ * the snapshot coherent: discharge dates sit in the future where they did, and overdue means what it
+ * meant on the day. Read against today's date the same file shows five clients whose discharge has
+ * already passed — which is staleness, not a process failure.
  */
+export const NOW = fromZonedDateString('2026-07-21', TZ, { hour: 13, minute: 49 });
+
 export const BED_LAYOUT: ReadonlyArray<{ label: string; room: string; shared: boolean }> = [
   { label: '1', room: '1', shared: false },
   { label: '2', room: '2', shared: false },
@@ -47,7 +60,7 @@ export const BED_LAYOUT: ReadonlyArray<{ label: string; room: string; shared: bo
   { label: '16', room: '16', shared: false },
 ];
 
-/** Task templates, modelled on the whiteboard's action columns. */
+/** Task templates, mapped one-to-one onto the whiteboard's action columns. */
 export const TASK_TEMPLATES: readonly TaskTemplate[] = [
   { code: 'family_contact_24h', name: '24-hour family contact', category: 'family_contact', dueBasis: 'admission', dueOffset: 24, dueOffsetUnit: 'hours', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 1 },
   { code: 'family_contact_week_1', name: 'Week 1 family contact', category: 'family_contact', dueBasis: 'admission', dueOffset: 1, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 1 },
@@ -57,92 +70,203 @@ export const TASK_TEMPLATES: readonly TaskTemplate[] = [
   { code: 'step_1', name: 'Step 1', category: 'milestone', dueBasis: 'admission', dueOffset: 12, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
   { code: 'step_2', name: 'Step 2', category: 'milestone', dueBasis: 'admission', dueOffset: 18, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
   { code: 'step_3', name: 'Step 3', category: 'milestone', dueBasis: 'admission', dueOffset: 24, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
-  { code: 'session_intro', name: 'Intro session', category: 'session', dueBasis: 'admission', dueOffset: 0, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
-  { code: 'session_week_1', name: 'Week 1 session', category: 'session', dueBasis: 'admission', dueOffset: 1, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
-  { code: 'session_week_2', name: 'Week 2 session', category: 'session', dueBasis: 'admission', dueOffset: 2, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
-  { code: 'session_week_3', name: 'Week 3 session', category: 'session', dueBasis: 'admission', dueOffset: 3, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'ccp', name: 'CCP', category: 'milestone', dueBasis: 'admission', dueOffset: 14, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'session_intro', name: 'Intro CP/121', category: 'session', dueBasis: 'admission', dueOffset: 0, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'session_week_1', name: 'Week 1 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 1, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'session_week_2', name: 'Week 2 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 2, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'session_week_3', name: 'Week 3 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 3, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
+  { code: 'session_week_4', name: 'Week 4 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 4, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
   { code: 'gp_summary', name: 'GP summary', category: 'medical', dueBasis: 'admission', dueOffset: 5, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 3 },
-  { code: 'family_contact_pre_discharge', name: 'Pre-discharge family contact', category: 'family_contact', dueBasis: 'planned_discharge', dueOffset: -24, dueOffsetUnit: 'hours', isRequired: true, rescheduleOnDischargeChange: true, visibilityLevel: 1 },
-  { code: 'discharge_prep', name: 'Discharge preparation', category: 'discharge', dueBasis: 'planned_discharge', dueOffset: -3, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: true, visibilityLevel: 1 },
+  { code: 'family_contact_pre_discharge', name: 'Family contact 24h before leaving', category: 'family_contact', dueBasis: 'planned_discharge', dueOffset: -24, dueOffsetUnit: 'hours', isRequired: true, rescheduleOnDischargeChange: true, visibilityLevel: 1 },
 ];
 
-interface Fixture {
+/**
+ * A cell exactly as the whiteboard holds it.
+ *
+ *   'YYYY-MM-DD'  a date
+ *   'TRUE'        the tick box, with no date
+ *   'X' / 'x'     the letter X — meaning genuinely unknown, see OPEN_QUESTIONS Q2
+ *   ''            blank
+ */
+type Cell = string;
+
+interface RealRow {
   bed: string;
-  reference: string;
-  displayName: string;
-  admittedOn: string;
-  admittedHour: number;
+  admitted: string;
   durationDays: number;
-  substance: string;
-  therapist: string;
-  buddy: string;
+  /** As recorded in the workbook, which does not always equal admission + duration - 1. */
+  recordedDischarge: string;
   group: string;
-  photoState: 'verified' | 'unverified' | 'missing';
-  hasRestrictedAlert: boolean;
-  /** Template codes completed. Anything else stays open and may become overdue. */
-  completed: readonly string[];
+  peeps: boolean;
+  substance: string;
+  therapistIdx: number | null;
+  buddyIdx: number;
+  doctorIdx: number | null;
+  hasSafeguardingNote: boolean;
+  cells: Record<string, Cell>;
 }
 
-/** Eight fictional admissions, mirroring the whiteboard's 8-of-18 occupancy. */
-const FIXTURES: readonly Fixture[] = [
+/** Pseudonyms. Index positions preserve the real sharing pattern; the names are invented. */
+const THERAPISTS = ['R. Ellery', 'S. Brandt', 'L. Vance', 'M. Achebe'];
+const BUDDIES = ['T. Nkemi', 'A. Whitfield', 'D. Fenwick', 'J. Calloway', 'H. Duignan', 'P. Ridley'];
+const CLIENT_NAMES: Record<string, string> = {
+  '1': 'A. Whitfield',
+  '3': 'M. Oyelaran',
+  '4': 'J. Calloway',
+  '5': 'D. Fenwick',
+  '7': 'K. Amankwah',
+  '10': 'P. Ridley',
+  '15': 'H. Duignan',
+  '16': 'C. Marchetti',
+};
+const CLIENT_REFS: Record<string, string> = {
+  '1': 'PL-1042', '3': 'PL-1017', '4': 'PL-1051', '5': 'PL-1008',
+  '7': 'PL-1053', '10': 'PL-1039', '15': 'PL-1024', '16': 'PL-1047',
+};
+
+/** Eight occupied beds, exactly as the whiteboard recorded them. */
+const REAL_ROWS: readonly RealRow[] = [
   {
-    bed: '1', reference: 'PL-1042', displayName: 'A. Whitfield', admittedOn: '2026-07-22', admittedHour: 14,
-    durationDays: 28, substance: 'Alcohol', therapist: 'R. Ellery', buddy: 'T. Nkemi', group: 'A',
-    photoState: 'verified', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'family_contact_week_1', 'satisfaction_survey_7day', 'session_intro', 'session_week_1', 'gp_summary', 'life_story'],
+    bed: '1', admitted: '2026-07-16', durationDays: 28, recordedDischarge: '2026-08-12',
+    group: 'A', peeps: false, substance: 'Alcohol',
+    therapistIdx: 0, buddyIdx: 0, doctorIdx: 0, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: '2026-07-23',
+      family_contact_week_2: '2026-07-30', family_contact_pre_discharge: '2026-08-11',
+      satisfaction_survey_7day: '2026-07-23', life_story: '2026-07-19',
+      step_1: '2026-07-22', step_2: '2026-07-25', step_3: '', ccp: '2026-07-28',
+      session_intro: '2026-07-17', session_week_1: '2026-07-21', session_week_2: '2026-07-28',
+      session_week_3: 'X', session_week_4: 'X', gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '3', reference: 'PL-1017', displayName: 'M. Oyelaran', admittedOn: '2026-06-20', admittedHour: 11,
-    durationDays: 28, substance: 'Alcohol', therapist: 'S. Brandt', buddy: 'A. Whitfield', group: 'A',
-    photoState: 'verified', hasRestrictedAlert: true,
-    completed: ['family_contact_24h', 'family_contact_week_1', 'family_contact_week_2', 'satisfaction_survey_7day', 'session_intro', 'session_week_1', 'session_week_2', 'session_week_3', 'gp_summary', 'life_story', 'step_1', 'step_2'],
+    bed: '3', admitted: '2026-06-02', durationDays: 28, recordedDischarge: '2026-07-29',
+    group: 'B', peeps: false, substance: 'Alcohol',
+    therapistIdx: 1, buddyIdx: 1, doctorIdx: 0, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE', family_contact_week_2: 'TRUE',
+      family_contact_pre_discharge: 'TRUE', satisfaction_survey_7day: 'TRUE', life_story: 'TRUE',
+      step_1: 'TRUE', step_2: 'TRUE', step_3: '2026-07-20', ccp: '2026-07-23',
+      session_intro: '2026-07-03', session_week_1: '2026-07-08', session_week_2: '2026-07-14',
+      session_week_3: '2026-07-21', session_week_4: '2026-07-27', gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '4', reference: 'PL-1051', displayName: 'J. Calloway', admittedOn: '2026-07-30', admittedHour: 16,
-    durationDays: 28, substance: 'Cocaine', therapist: 'R. Ellery', buddy: 'M. Oyelaran', group: 'B',
-    photoState: 'verified', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'session_intro'],
+    bed: '4', admitted: '2026-07-09', durationDays: 28, recordedDischarge: '2026-08-05',
+    group: 'A', peeps: true, substance: 'Alcohol',
+    therapistIdx: 2, buddyIdx: 2, doctorIdx: null, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE',
+      family_contact_week_2: '2026-07-23', family_contact_pre_discharge: '2026-08-03',
+      satisfaction_survey_7day: '2026-07-17', life_story: 'TRUE',
+      step_1: '2026-07-20', step_2: '2026-07-25', step_3: '2026-08-01',
+      ccp: 'X', // recorded as "3//8" — a malformed date, not a status
+      session_intro: '2026-07-10', session_week_1: '2026-07-16', session_week_2: '2026-07-22',
+      session_week_3: '2026-07-29', session_week_4: '2026-08-04', gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '5', reference: 'PL-1008', displayName: 'D. Fenwick', admittedOn: '2026-07-08', admittedHour: 10,
-    durationDays: 28, substance: 'Alcohol', therapist: 'S. Brandt', buddy: 'T. Nkemi', group: 'A',
-    photoState: 'verified', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'family_contact_week_1', 'family_contact_week_2', 'satisfaction_survey_7day', 'session_intro', 'session_week_1', 'session_week_2', 'session_week_3', 'gp_summary', 'life_story', 'step_1'],
+    bed: '5', admitted: '2026-07-03', durationDays: 28, recordedDischarge: '2026-07-30',
+    group: 'A', peeps: false, substance: 'Alcohol',
+    therapistIdx: 2, buddyIdx: 3, doctorIdx: 0, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE', family_contact_week_2: 'TRUE',
+      family_contact_pre_discharge: '2026-07-29', satisfaction_survey_7day: 'TRUE',
+      life_story: 'TRUE', step_1: '2026-07-13', step_2: '2026-07-16', step_3: '2026-07-20',
+      ccp: '2026-07-23', session_intro: '2026-07-04', session_week_1: '2026-07-08',
+      session_week_2: '2026-07-15', session_week_3: '2026-07-22', session_week_4: '2026-07-27',
+      gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '7', reference: 'PL-1053', displayName: 'K. Amankwah', admittedOn: '2026-08-02', admittedHour: 19,
-    durationDays: 28, substance: 'Alcohol', therapist: 'L. Vance', buddy: 'D. Fenwick', group: 'B',
-    photoState: 'unverified', hasRestrictedAlert: false,
-    completed: [],
+    bed: '7', admitted: '2026-06-26', durationDays: 28, recordedDischarge: '2026-07-22',
+    group: 'A', peeps: false, substance: 'Cocaine',
+    therapistIdx: 3, buddyIdx: 4, doctorIdx: 0, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE', family_contact_week_2: 'TRUE',
+      family_contact_pre_discharge: 'TRUE', satisfaction_survey_7day: 'TRUE', life_story: 'TRUE',
+      step_1: 'TRUE', step_2: 'TRUE', step_3: 'TRUE', ccp: 'TRUE',
+      session_intro: '2026-06-26', session_week_1: '2026-06-30', session_week_2: '2026-07-07',
+      session_week_3: '2026-07-13', session_week_4: '2026-07-17', gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '10', reference: 'PL-1039', displayName: 'P. Ridley', admittedOn: '2026-07-25', admittedHour: 12,
-    durationDays: 10, substance: 'Alcohol', therapist: 'L. Vance', buddy: 'A. Whitfield', group: 'A',
-    photoState: 'missing', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'satisfaction_survey_7day', 'session_intro', 'session_week_1', 'gp_summary'],
+    // No focal therapist and no treatment group recorded, exactly as in the source.
+    bed: '10', admitted: '2026-07-18', durationDays: 10, recordedDischarge: '2026-07-27',
+    group: '', peeps: false, substance: 'Alcohol',
+    therapistIdx: null, buddyIdx: 0, doctorIdx: 1, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: '2026-07-25', family_contact_week_2: 'x',
+      family_contact_pre_discharge: '2026-07-26', satisfaction_survey_7day: '2026-07-25',
+      life_story: '2026-07-20', step_1: '2026-07-23', step_2: 'x', step_3: 'x',
+      ccp: '2026-07-25', session_intro: '2026-07-19', session_week_1: '2026-07-24',
+      session_week_2: 'x', session_week_3: 'x', session_week_4: 'x', gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '15', reference: 'PL-1024', displayName: 'H. Duignan', admittedOn: '2026-07-15', admittedHour: 9,
-    durationDays: 28, substance: 'Alcohol', therapist: 'R. Ellery', buddy: 'J. Calloway', group: 'A',
-    photoState: 'verified', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'family_contact_week_1', 'family_contact_week_2', 'satisfaction_survey_7day', 'session_intro', 'session_week_1', 'session_week_2', 'gp_summary', 'life_story', 'step_1'],
+    bed: '15', admitted: '2026-06-28', durationDays: 28, recordedDischarge: '2026-07-25',
+    group: 'A', peeps: false, substance: 'Alcohol',
+    therapistIdx: 1, buddyIdx: 5, doctorIdx: 1, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE', family_contact_week_2: 'TRUE',
+      family_contact_pre_discharge: '2026-07-24', satisfaction_survey_7day: 'TRUE',
+      life_story: 'TRUE', step_1: 'TRUE', step_2: 'TRUE', step_3: '2026-07-14',
+      ccp: '2026-07-20', session_intro: '2026-06-29', session_week_1: '2026-06-30',
+      session_week_2: '2026-07-07', session_week_3: '2026-07-14', session_week_4: '2026-07-21',
+      gp_summary: 'TRUE',
+    },
   },
   {
-    bed: '16', reference: 'PL-1047', displayName: 'C. Marchetti', admittedOn: '2026-07-28', admittedHour: 13,
-    durationDays: 28, substance: 'Alcohol', therapist: 'S. Brandt', buddy: 'H. Duignan', group: 'A',
-    photoState: 'verified', hasRestrictedAlert: false,
-    completed: ['family_contact_24h', 'session_intro', 'family_contact_week_1', 'session_week_1'],
+    bed: '16', admitted: '2026-07-11', durationDays: 28, recordedDischarge: '2026-08-07',
+    group: 'A', peeps: false, substance: 'Alcohol',
+    therapistIdx: 3, buddyIdx: 0, doctorIdx: 1, hasSafeguardingNote: true,
+    cells: {
+      family_contact_24h: 'TRUE', family_contact_week_1: 'TRUE',
+      family_contact_week_2: '2026-07-28', family_contact_pre_discharge: '2026-08-06',
+      satisfaction_survey_7day: '2026-07-17', life_story: 'TRUE', step_1: 'TRUE',
+      step_2: '2026-07-26', step_3: '2026-08-02', ccp: '2026-08-05',
+      session_intro: '2026-07-13', session_week_1: '2026-07-16', session_week_2: '2026-07-22',
+      session_week_3: '2026-07-29', session_week_4: '2026-08-05', gp_summary: 'TRUE',
+    },
   },
 ];
+
+/** How a whiteboard cell was interpreted. Kept on the task so the reading stays inspectable. */
+export type RecordedState =
+  | { kind: 'completed'; on: Date }
+  | { kind: 'scheduled'; on: Date }
+  | { kind: 'done_no_date' }
+  | { kind: 'unclear'; raw: string }
+  | { kind: 'nothing_recorded' };
+
+/**
+ * Interpret one cell against the snapshot date.
+ *
+ * A date in the past reads as done; a date in the future reads as booked. That is an inference, not
+ * a fact the workbook states — one cell cannot say both when a thing was due and when it was done,
+ * which is the central defect of the format and the reason this product separates the two.
+ *
+ * `X` is left explicitly unresolved rather than guessed. It appears in two different senses in the
+ * source, and picking one silently would turn an open question into a false record.
+ */
+function interpret(cell: Cell, now: Date): RecordedState {
+  if (cell === '') return { kind: 'nothing_recorded' };
+  if (cell === 'TRUE') return { kind: 'done_no_date' };
+  if (cell === 'X' || cell === 'x') return { kind: 'unclear', raw: cell };
+  const at = fromZonedDateString(cell, TZ, { hour: 12, minute: 0 });
+  return at.getTime() <= now.getTime() ? { kind: 'completed', on: at } : { kind: 'scheduled', on: at };
+}
 
 export interface BoardTask {
   code: string;
   title: string;
   category: TaskTemplate['category'];
   dueAt: Date | null;
+  recorded: RecordedState;
   isComplete: boolean;
   isOverdue: boolean;
   isDueToday: boolean;
+  isUnclear: boolean;
 }
 
 export interface Occupant {
@@ -153,12 +277,16 @@ export interface Occupant {
   treatmentDay: number;
   durationDays: number;
   plannedDischargeDate: string;
+  /** What the rule gives, where it differs from what was written down. */
+  calculatedDischargeDate: string;
+  dischargeMismatchDays: number;
   daysUntilDischarge: number;
   substance: string;
-  therapist: string;
+  therapist: string | null;
   buddy: string;
   group: string;
-  photoState: Fixture['photoState'];
+  peeps: boolean;
+  photoState: 'verified' | 'unverified' | 'missing';
   hasRestrictedAlert: boolean;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
@@ -166,6 +294,7 @@ export interface Occupant {
   overdueCount: number;
   dueTodayCount: number;
   completedCount: number;
+  unclearCount: number;
   totalCount: number;
 }
 
@@ -177,94 +306,89 @@ export interface BoardBed {
 }
 
 const initialsOf = (name: string): string =>
-  name
-    .split(/[\s.]+/)
-    .filter(Boolean)
-    .map((part) => part[0] ?? '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
 
-function buildOccupant(fixture: Fixture, now: Date): Occupant {
-  const admittedAt = fromZonedDateString(fixture.admittedOn, TZ, {
-    hour: fixture.admittedHour,
-    minute: 0,
-  });
-
-  const plannedDischargeDate = calculatePlannedDischargeDate(
-    admittedAt,
-    { amount: fixture.durationDays, unit: 'days' },
-    settings,
+function buildOccupant(row: RealRow, now: Date): Occupant {
+  const admittedAt = fromZonedDateString(row.admitted, TZ, { hour: 12, minute: 0 });
+  const calculated = calculatePlannedDischargeDate(
+    admittedAt, { amount: row.durationDays, unit: 'days' }, settings,
   );
-
-  const completed = new Set(fixture.completed);
-  const nowDate = new Date(now);
+  const msPerDay = 86_400_000;
+  const mismatch = Math.round(
+    (Date.parse(`${row.recordedDischarge}T00:00:00Z`) - Date.parse(`${calculated}T00:00:00Z`)) / msPerDay,
+  );
 
   const tasks: BoardTask[] = TASK_TEMPLATES.map((tpl) => {
     const dueAt = computeDueAt(tpl, {
       admittedAt,
-      plannedDischargeDate,
+      // The recorded date wins over the calculated one: it is what staff actually planned to.
+      plannedDischargeDate: row.recordedDischarge,
       actualDischargeAt: null,
       settings,
     });
-    const isComplete = completed.has(tpl.code);
+    const recorded = interpret(row.cells[tpl.code] ?? '', now);
+    const isComplete = recorded.kind === 'completed' || recorded.kind === 'done_no_date';
+    const isUnclear = recorded.kind === 'unclear';
     return {
       code: tpl.code,
       title: tpl.name,
       category: tpl.category,
       dueAt,
+      recorded,
       isComplete,
-      isOverdue: isOverdue(
-        { dueAt, completedAt: isComplete ? admittedAt : null, status: isComplete ? 'completed' : 'not_started' },
-        nowDate,
-      ),
-      isDueToday:
-        !isComplete && dueAt !== null && calendarDaysBetween(nowDate, dueAt, TZ) === 0,
+      isUnclear,
+      // An unclear cell is not counted as overdue. It might already be done, or not apply at all;
+      // asserting lateness on top of an unknown would be inventing a finding.
+      isOverdue:
+        !isUnclear &&
+        isOverdue(
+          { dueAt, completedAt: isComplete ? admittedAt : null, status: isComplete ? 'completed' : 'not_started' },
+          now,
+        ),
+      isDueToday: !isComplete && !isUnclear && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
     };
   });
 
-  const eligibility = assessEligibility(admittedAt, settings, nowDate);
+  const eligibility = assessEligibility(admittedAt, settings, now);
 
   return {
-    reference: fixture.reference,
-    displayName: fixture.displayName,
-    initials: initialsOf(fixture.displayName),
+    reference: CLIENT_REFS[row.bed] ?? `PL-${row.bed}`,
+    displayName: CLIENT_NAMES[row.bed] ?? `Client ${row.bed}`,
+    initials: initialsOf(CLIENT_NAMES[row.bed] ?? `C ${row.bed}`),
     admittedAt,
-    // Day 1 is the admission day, matching the inclusive discharge rule.
-    treatmentDay: calendarDaysBetween(admittedAt, nowDate, TZ) + 1,
-    durationDays: fixture.durationDays,
-    plannedDischargeDate,
+    treatmentDay: calendarDaysBetween(admittedAt, now, TZ) + 1,
+    durationDays: row.durationDays,
+    plannedDischargeDate: row.recordedDischarge,
+    calculatedDischargeDate: calculated,
+    dischargeMismatchDays: mismatch,
     daysUntilDischarge: calendarDaysBetween(
-      nowDate,
-      fromZonedDateString(plannedDischargeDate, TZ, { hour: 12, minute: 0 }),
-      TZ,
+      now, fromZonedDateString(row.recordedDischarge, TZ, { hour: 12, minute: 0 }), TZ,
     ),
-    substance: fixture.substance,
-    therapist: fixture.therapist,
-    buddy: fixture.buddy,
-    group: fixture.group,
-    photoState: fixture.photoState,
-    hasRestrictedAlert: fixture.hasRestrictedAlert,
+    substance: row.substance,
+    therapist: row.therapistIdx === null ? null : (THERAPISTS[row.therapistIdx] ?? null),
+    buddy: BUDDIES[row.buddyIdx] ?? '—',
+    group: row.group,
+    peeps: row.peeps,
+    // The workbook holds eight photographs but no verification state — it has no concept of one.
+    // Every client therefore starts unverified, which is the honest import outcome.
+    photoState: 'unverified',
+    hasRestrictedAlert: row.hasSafeguardingNote,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,
     overdueCount: tasks.filter((t) => t.isOverdue).length,
     dueTodayCount: tasks.filter((t) => t.isDueToday).length,
     completedCount: tasks.filter((t) => t.isComplete).length,
+    unclearCount: tasks.filter((t) => t.isUnclear).length,
     totalCount: tasks.length,
   };
 }
 
 export function buildBoard(now: Date = NOW): readonly BoardBed[] {
-  const byBed = new Map(FIXTURES.map((f) => [f.bed, f]));
+  const byBed = new Map(REAL_ROWS.map((r) => [r.bed, r]));
   return BED_LAYOUT.map(({ label, room, shared }) => {
-    const fixture = byBed.get(label);
-    return {
-      label,
-      room,
-      shared,
-      occupant: fixture ? buildOccupant(fixture, now) : null,
-    };
+    const row = byBed.get(label);
+    return { label, room, shared, occupant: row ? buildOccupant(row, now) : null };
   });
 }
 
@@ -275,17 +399,13 @@ export interface BoardSummary {
   occupancyPercent: number;
   dueToday: number;
   overdue: number;
+  unclear: number;
   photoAttention: number;
   restrictedAlerts: number;
   dischargingWithin7Days: number;
-  /**
-   * Clients still in a bed whose planned discharge date has passed.
-   *
-   * Worth its own figure. On the whiteboard this condition is invisible: the duration column and
-   * the discharge column disagree silently, and one client in the source file shows a 28-day
-   * programme against a 57-day stay with nothing to indicate a plan ever changed.
-   */
   pastPlannedDischarge: number;
+  missingTherapist: number;
+  dischargeMismatches: number;
 }
 
 export function summarise(board: readonly BoardBed[]): BoardSummary {
@@ -297,11 +417,14 @@ export function summarise(board: readonly BoardBed[]): BoardSummary {
     occupancyPercent: Math.round((occupants.length / board.length) * 100),
     dueToday: occupants.reduce((n, o) => n + o.dueTodayCount, 0),
     overdue: occupants.reduce((n, o) => n + o.overdueCount, 0),
+    unclear: occupants.reduce((n, o) => n + o.unclearCount, 0),
     photoAttention: occupants.filter((o) => o.photoState !== 'verified').length,
     restrictedAlerts: occupants.filter((o) => o.hasRestrictedAlert).length,
     dischargingWithin7Days: occupants.filter(
       (o) => o.daysUntilDischarge >= 0 && o.daysUntilDischarge <= 7,
     ).length,
     pastPlannedDischarge: occupants.filter((o) => o.daysUntilDischarge < 0).length,
+    missingTherapist: occupants.filter((o) => o.therapist === null).length,
+    dischargeMismatches: occupants.filter((o) => Math.abs(o.dischargeMismatchDays) > 0).length,
   };
 }

@@ -96,7 +96,7 @@ function Dashboard() {
       bed.label.toLowerCase().includes(q) ||
       (o?.displayName.toLowerCase().includes(q) ?? false) ||
       (o?.reference.toLowerCase().includes(q) ?? false) ||
-      (o?.therapist.toLowerCase().includes(q) ?? false) ||
+      (o?.therapist?.toLowerCase().includes(q) ?? false) ||
       (o?.buddy.toLowerCase().includes(q) ?? false)
     );
   });
@@ -119,7 +119,18 @@ function Dashboard() {
   );
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
+      {/*
+        Provenance banner. The figures below are the real Primrose Lodge board; the people are not.
+        Saying so on every screen matters more than it might seem: a plausible-looking name beside a
+        real admission date is exactly the thing someone will later quote as fact.
+      */}
+      <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-center text-[11px] font-medium text-amber-800 dark:text-amber-300">
+        Primrose Lodge as recorded 21 Jul 2026 · real dates, durations and task states ·{' '}
+        <strong className="font-semibold">client and staff names are pseudonyms</strong>
+      </div>
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       <Sidebar
         active={section}
         onSelect={setSection}
@@ -259,10 +270,10 @@ function Dashboard() {
                   onClick={() => setFilter(filter === 'discharging' ? 'all' : 'discharging')}
                 />
                 <StatTile
-                  label="Past discharge"
-                  value={summary.pastPlannedDischarge}
-                  hint="still in a bed"
-                  tone={summary.pastPlannedDischarge > 0 ? 'alert' : 'neutral'}
+                  label="Unclear"
+                  value={summary.unclear}
+                  hint="recorded as X"
+                  tone={summary.unclear > 0 ? 'warn' : 'neutral'}
                 />
                 <StatTile
                   label="Photo attention"
@@ -385,6 +396,7 @@ function Dashboard() {
             </div>
           )}
         </main>
+        </div>
       </div>
 
       {selected ? <DetailPanel bed={selected} onClose={() => setOpenBed(null)} /> : null}

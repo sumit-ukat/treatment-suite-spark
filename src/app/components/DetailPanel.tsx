@@ -88,7 +88,7 @@ export function DetailPanel({ bed, onClose }: { bed: BoardBed; onClose: () => vo
                 : `From ${formatDate(o.familyMeetingEligibleFrom)}`
             }
           />
-          <Fact label="Focal therapist" value={o.therapist} />
+          <Fact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
           <Fact label="Buddy" value={o.buddy} />
         </div>
 

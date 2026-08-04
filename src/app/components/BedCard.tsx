@@ -145,7 +145,11 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         </div>
         <div className="min-w-0">
           <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Therapist</dt>
-          <dd className="truncate font-medium">{o.therapist}</dd>
+          <dd className="truncate font-medium">
+            {o.therapist ?? (
+              <span className="text-amber-600 dark:text-amber-400">Not assigned</span>
+            )}
+          </dd>
         </div>
         <div className="min-w-0">
           <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Buddy</dt>
@@ -187,6 +191,14 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         ) : null}
         {o.dueTodayCount > 0 ? (
           <Chip icon="&#9679;" label={`${o.dueTodayCount} due today`} tone="warn" />
+        ) : null}
+        {/* Cells recorded as X. Neither done nor outstanding until someone says which. */}
+        {o.unclearCount > 0 ? (
+          <Chip
+            icon="?"
+            label={`${o.unclearCount} unclear`}
+            title="Recorded as X on the whiteboard. Meaning not yet confirmed - could be done, or not applicable."
+          />
         ) : null}
         {!dischargePassed && !dischargeToday && o.overdueCount === 0 && o.dueTodayCount === 0 ? (
           <Chip icon="&#10003;" label="Nothing due" tone="good" />
