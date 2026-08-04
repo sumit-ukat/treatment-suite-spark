@@ -1,4 +1,4 @@
-import logoUrl from '../brand/prl-logo.svg';
+import markUrl from '../brand/ukat-mark.png';
 import { useAuth } from '../auth/AuthProvider.tsx';
 
 /**
@@ -68,24 +68,41 @@ export function Sidebar({
         collapsed ? 'w-[68px]' : 'w-[228px]'
       }`}
     >
+      {/*
+        The textless mark, not the wordmark.
+        The supplied wordmark has navy "UK" and grey "Centres" set for a white background; on this
+        dark chrome it would be close to illegible, and recolouring someone's logo is not an option.
+        The mark is full-colour on transparent, so it reads on any background — which is exactly what
+        a compact, collapsible rail needs. The wordmark gets used unmodified on the sign-in screen,
+        where the background is white.
+      */}
       <div
-        className="flex h-[60px] items-center gap-2 border-b border-[var(--color-chrome-line)] px-4"
+        className="flex h-[60px] items-center gap-2.5 border-b border-[var(--color-chrome-line)] px-4"
         style={{
-          // The only place all three brand colours appear together: purple to pink to blue, behind
-          // the logo. Purely decorative, carries no meaning and no text, so the contrast limits on
-          // pink and blue do not apply here.
           backgroundImage:
             'linear-gradient(100deg,' +
-            ' color-mix(in oklab, var(--brand-purple) 55%, transparent) 0%,' +
-            ' color-mix(in oklab, var(--brand-pink) 30%, transparent) 45%,' +
-            ' color-mix(in oklab, var(--brand-blue) 18%, transparent) 100%)',
+            ' color-mix(in oklab, var(--brand-purple) 45%, transparent) 0%,' +
+            ' color-mix(in oklab, var(--brand-pink) 24%, transparent) 50%,' +
+            ' color-mix(in oklab, var(--brand-blue) 14%, transparent) 100%)',
         }}
       >
         <img
-          src={logoUrl}
-          alt="Primrose Lodge"
-          className={`h-7 w-auto shrink-0 ${collapsed ? 'mx-auto' : ''}`}
+          src={markUrl}
+          alt="UK Addiction Treatment Centres"
+          width={256}
+          height={256}
+          className={`h-8 w-8 shrink-0 object-contain ${collapsed ? 'mx-auto' : ''}`}
         />
+        {!collapsed ? (
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[12.5px] font-semibold text-[var(--color-chrome-ink)]">
+              Treatment Operations
+            </span>
+            <span className="block truncate text-[9.5px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
+              UK Addiction Treatment
+            </span>
+          </span>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import logoUrl from '../brand/prl-logo.svg';
+import markUrl from '../brand/ukat-mark.png';
+import wordmarkUrl from '../brand/ukat-wordmark.png';
 import { useAuth } from './AuthProvider.tsx';
 
 /**
@@ -32,29 +33,32 @@ export function LoginScreen() {
 
   return (
     <div className="grid min-h-dvh place-items-center bg-[var(--color-chrome)] px-4 py-10">
-      <div className="w-full max-w-[380px]">
-        <div className="mb-6 flex justify-center">
-          <img src={logoUrl} alt="Primrose Lodge" className="h-10 w-auto" />
-        </div>
+      <div className="w-full max-w-[400px]">
+        {/*
+          White card, so the supplied wordmark is used exactly as provided — navy "UK", magenta
+          "Addiction Treatment", grey "Centres", all at full legibility. This is the one screen where
+          the full lockup belongs: the front door, with room to breathe.
+        */}
+        <div className="rounded-2xl bg-white p-7 shadow-2xl">
+          <img
+            src={wordmarkUrl}
+            alt="UK Addiction Treatment Centres"
+            width={527}
+            height={96}
+            className="h-9 w-auto"
+          />
 
-        <div className="rounded-2xl border border-[var(--color-chrome-line)] bg-[var(--color-chrome-raised)] p-6 shadow-2xl">
-          <h1 className="text-[16px] font-semibold text-[var(--color-chrome-ink)]">
-            Treatment Operations
-          </h1>
-          <p className="mt-1 text-[12px] text-[var(--color-chrome-ink-dim)]">
-            Sign in with your work account.
-          </p>
+          <h1 className="mt-6 text-[17px] font-semibold text-[#1f1a26]">Treatment Operations</h1>
+          <p className="mt-1 text-[12.5px] text-[#635b70]">Sign in with your work account.</p>
 
           {configError ? (
-            <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-200">
+            <div className="mt-5 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-900">
               {configError}
             </div>
           ) : (
             <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-3.5">
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11.5px] font-medium text-[var(--color-chrome-ink-dim)]">
-                  Email
-                </span>
+                <span className="text-[11.5px] font-medium text-[#635b70]">Email</span>
                 <input
                   type="email"
                   name="email"
@@ -63,14 +67,12 @@ export function LoginScreen() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@ukat.co.uk"
-                  className="rounded-lg border border-[var(--color-chrome-line)] bg-black/25 px-3 py-2 text-[13px] text-[var(--color-chrome-ink)] placeholder:text-[var(--color-chrome-ink-dim)]/60 focus:border-[var(--brand-pink)] focus:outline-none"
+                  className="rounded-lg border border-[#ddd5e8] bg-[#faf8fc] px-3 py-2.5 text-[13px] text-[#1f1a26] placeholder:text-[#9d94ab] focus:border-[var(--brand-purple)] focus:bg-white focus:outline-none"
                 />
               </label>
 
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11.5px] font-medium text-[var(--color-chrome-ink-dim)]">
-                  Password
-                </span>
+                <span className="text-[11.5px] font-medium text-[#635b70]">Password</span>
                 <input
                   type="password"
                   name="password"
@@ -78,14 +80,14 @@ export function LoginScreen() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="rounded-lg border border-[var(--color-chrome-line)] bg-black/25 px-3 py-2 text-[13px] text-[var(--color-chrome-ink)] focus:border-[var(--brand-pink)] focus:outline-none"
+                  className="rounded-lg border border-[#ddd5e8] bg-[#faf8fc] px-3 py-2.5 text-[13px] text-[#1f1a26] focus:border-[var(--brand-purple)] focus:bg-white focus:outline-none"
                 />
               </label>
 
               {error ? (
                 <div
                   role="alert"
-                  className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11.5px] text-red-200"
+                  className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11.5px] text-red-800"
                 >
                   {error}
                 </div>
@@ -94,7 +96,7 @@ export function LoginScreen() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-1 rounded-lg bg-[var(--brand-purple)] px-3 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--brand-pink)] disabled:opacity-60"
+                className="mt-1 rounded-lg bg-[var(--brand-purple)] px-3 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#653d88] disabled:opacity-60"
               >
                 {busy ? 'Signing in…' : 'Sign in'}
               </button>
@@ -102,11 +104,14 @@ export function LoginScreen() {
           )}
         </div>
 
-        <p className="mt-4 text-center text-[10.5px] leading-relaxed text-[var(--color-chrome-ink-dim)]">
-          Development environment · fictional data only.
-          <br />
-          Access is granted per centre. Contact your centre manager if you cannot see a centre you
-          expect.
+        <p className="mt-5 flex flex-col items-center gap-2 text-center text-[10.5px] leading-relaxed text-[var(--color-chrome-ink-dim)]">
+          <img src={markUrl} alt="" width={256} height={256} className="h-5 w-5 opacity-70" />
+          <span>
+            Development environment · fictional data only.
+            <br />
+            Access is granted per centre. Contact your centre manager if you cannot see a centre you
+            expect.
+          </span>
         </p>
       </div>
     </div>
@@ -188,7 +193,13 @@ export function LoadingScreen() {
   return (
     <div className="grid min-h-dvh place-items-center bg-[var(--color-chrome)]">
       <div className="flex flex-col items-center gap-3">
-        <img src={logoUrl} alt="" className="h-8 w-auto opacity-70" />
+        <img
+          src={markUrl}
+          alt=""
+          width={256}
+          height={256}
+          className="h-9 w-9 animate-pulse opacity-80"
+        />
         <span className="text-[12px] text-[var(--color-chrome-ink-dim)]">Loading…</span>
       </div>
     </div>
