@@ -16,11 +16,14 @@ export interface NavItem {
   badge?: number;
 }
 
+/**
+ * Navigation belongs to a centre, not to the group.
+ *
+ * The group view is a hub: a list of centres and nothing else. Its own navigation would be a rail of
+ * items that cannot act on ten centres at once — "Room board" across the group is meaningless. So the
+ * rail appears only once you are inside a centre, and everything in it is scoped to that centre.
+ */
 export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavItem[] }> = [
-  {
-    heading: 'Group',
-    items: [{ id: 'group', label: 'All centres', icon: '⬢', ready: true }],
-  },
   {
     heading: 'Centre',
     items: [
@@ -53,13 +56,17 @@ export function Sidebar({
   onSelect,
   collapsed,
   onToggle,
+  centreName,
+  onLeaveCentre,
 }: {
   active: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
   onToggle: () => void;
+  centreName: string;
+  onLeaveCentre: () => void;
 }) {
-  const { displayName, email, roleNames, permissions, centres, signOut } = useAuth();
+  const { displayName, email, roleNames, permissions, signOut } = useAuth();
 
   return (
     <nav
@@ -96,14 +103,26 @@ export function Sidebar({
         {!collapsed ? (
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-[12.5px] font-semibold text-[var(--color-chrome-ink)]">
-              Treatment Operations
+              {centreName}
             </span>
             <span className="block truncate text-[9.5px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
-              UK Addiction Treatment
+              Treatment Operations
             </span>
           </span>
         ) : null}
       </div>
+
+      {/* The way back out. Always the first thing in the rail, so the current centre is never a
+          place you can get stuck inside. */}
+      <button
+        type="button"
+        onClick={onLeaveCentre}
+        title={collapsed ? 'All centres' : undefined}
+        className="flex items-center gap-2 border-b border-[var(--color-chrome-line)] px-4 py-2.5 text-[11.5px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
+      >
+        <span aria-hidden="true">&#8592;</span>
+        {!collapsed ? <span>All centres</span> : null}
+      </button>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         {NAV_GROUPS.map((group) => (
@@ -179,12 +198,8 @@ export function Sidebar({
             <div className="truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
               {roleNames.length ? roleNames.join(', ') : 'No role'}
             </div>
-            <div className="nums mt-1 flex items-center gap-1.5 text-[10px] text-[var(--color-chrome-ink-dim)]">
-              <span title="Centres this account can reach">{centres.length} centres</span>
-              <span aria-hidden="true">·</span>
-              <span title="Permissions granted to this account">
-                {permissions.size} permissions
-              </span>
+            <div className="nums mt-1 text-[10px] text-[var(--color-chrome-ink-dim)]">
+              <span title="Permissions granted to this account">{permissions.size} permissions</span>
             </div>
             <button
               type="button"

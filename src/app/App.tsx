@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { buildBoard, summarise, NOW, type BoardBed } from './demo-data.js';
 import { buildCentres } from './centres-data.js';
 import { formatDateWithDay } from './format.js';
+import markUrl from './brand/ukat-mark.png';
 import { useAuth } from './auth/AuthProvider.tsx';
 import {
   AccessErrorScreen,
@@ -72,6 +73,66 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
   }
 };
 
+/**
+ * Provenance banner.
+ *
+ * The figures are the real Primrose Lodge board; the people are not. Saying so on every screen
+ * matters more than it looks: a plausible name beside a real admission date is exactly the thing
+ * someone later quotes as fact.
+ */
+function ProvenanceBanner() {
+  return (
+    <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-center text-[11px] font-medium text-amber-800 dark:text-amber-300">
+      Primrose Lodge as recorded 21 Jul 2026 · real dates, durations and task states ·{' '}
+      <strong className="font-semibold">client and staff names are pseudonyms</strong>
+    </div>
+  );
+}
+
+/** Header for the hub. Carries identity and sign-out, since there is no rail to hold them. */
+function HubHeader() {
+  const { displayName, email, roleNames, centres, signOut } = useAuth();
+  return (
+    <header
+      className="flex h-[64px] shrink-0 items-center gap-3 px-4 text-[var(--color-chrome-ink)] sm:px-6"
+      style={{
+        backgroundColor: 'var(--color-chrome)',
+        backgroundImage:
+          'linear-gradient(100deg,' +
+          ' color-mix(in oklab, var(--brand-purple) 45%, transparent) 0%,' +
+          ' color-mix(in oklab, var(--brand-pink) 22%, transparent) 55%,' +
+          ' color-mix(in oklab, var(--brand-blue) 12%, transparent) 100%)',
+      }}
+    >
+      <img src={markUrl} alt="" width={256} height={256} className="h-9 w-9 shrink-0" />
+      <div className="min-w-0">
+        <div className="truncate text-[15px] leading-tight font-semibold">
+          UK Addiction Treatment Centres
+        </div>
+        <div className="nums truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
+          Treatment Operations · {centres.length} centres
+        </div>
+      </div>
+
+      <div className="ml-auto flex items-center gap-3">
+        <div className="hidden text-right leading-tight sm:block">
+          <div className="text-[12.5px] font-medium">{displayName ?? email}</div>
+          <div className="text-[10.5px] text-[var(--color-chrome-ink-dim)]">
+            {roleNames.length ? roleNames.join(', ') : 'No role'}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="rounded-lg border border-white/20 px-2.5 py-1.5 text-[11.5px] transition hover:bg-white/10"
+        >
+          Sign out
+        </button>
+      </div>
+    </header>
+  );
+}
+
 function Dashboard() {
   const board = useMemo(() => buildBoard(NOW), []);
   const summary = useMemo(() => summarise(board), [board]);
@@ -120,17 +181,34 @@ function Dashboard() {
     [board],
   );
 
+  /*
+   * Two shapes, not one.
+   *
+   * The hub lists centres and nothing else — no rail, because no rail item can act on ten centres at
+   * once. Entering a centre swaps to a workspace whose every control is scoped to that centre.
+   *
+   * This mirrors how the centres actually run: independently, with no data crossing between them.
+   */
+  if (section === 'group') {
+    return (
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <ProvenanceBanner />
+        <HubHeader />
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <GroupDashboard
+            onOpenCentre={(slug) => {
+              setCentreSlug(slug);
+              setSection('board');
+            }}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
-      {/*
-        Provenance banner. The figures below are the real Primrose Lodge board; the people are not.
-        Saying so on every screen matters more than it might seem: a plausible-looking name beside a
-        real admission date is exactly the thing someone will later quote as fact.
-      */}
-      <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-center text-[11px] font-medium text-amber-800 dark:text-amber-300">
-        Primrose Lodge as recorded 21 Jul 2026 · real dates, durations and task states ·{' '}
-        <strong className="font-semibold">client and staff names are pseudonyms</strong>
-      </div>
+      <ProvenanceBanner />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <Sidebar
@@ -138,6 +216,8 @@ function Dashboard() {
         onSelect={setSection}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
+        centreName={centre.name}
+        onLeaveCentre={() => setSection('group')}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -206,14 +286,7 @@ function Dashboard() {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          {section === 'group' ? (
-            <GroupDashboard
-              onOpenCentre={(slug) => {
-                setCentreSlug(slug);
-                setSection('board');
-              }}
-            />
-          ) : isBoard && !centre.isConfigured ? (
+          {isBoard && !centre.isConfigured ? (
             <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
               <div
                 aria-hidden="true"
