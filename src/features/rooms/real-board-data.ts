@@ -56,6 +56,7 @@ function buildRealOccupant(
   tasksByAdmission: Map<string, ClientTaskRow[]>,
   substancesById: Map<string, SubstanceRow>,
   photographedClientIds: Set<string>,
+  noteRequiredByTemplateId: Map<string, boolean>,
   now: Date,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
@@ -79,10 +80,15 @@ function buildRealOccupant(
     const isComplete = t.status === 'completed';
     const isNotApplicable = t.status === 'not_applicable' || t.status === 'cancelled';
     return {
+      // A real row, so this task can actually be completed — see BoardTask.id.
+      id: t.id,
       code: t.code ?? '',
       title: t.title,
       category: t.category as BoardTask['category'],
       dueAt,
+      requiresCompletionNote: t.template_id
+        ? (noteRequiredByTemplateId.get(t.template_id) ?? false)
+        : false,
       // Inert placeholder — see the file header. No UI component reads this field for real data.
       recorded: isComplete
         ? { kind: 'completed', on: completedAt ?? now }
@@ -151,6 +157,9 @@ export async function buildRealBoard(
   const roomsById = new Map(rooms.map((r) => [r.id, r]));
   const clientsById = new Map(data.clients.map((c) => [c.client_id, c]));
   const substancesById = new Map(data.substances.map((s) => [s.id, s]));
+  const noteRequiredByTemplateId = new Map(
+    data.taskTemplates.map((t) => [t.id, t.requires_completion_note]),
+  );
   const photographedClientIds = new Set<string>(
     (data.photos as ClientPhotoRow[]).map((p) => p.client_id),
   );
@@ -188,6 +197,7 @@ export async function buildRealBoard(
             tasksByAdmission,
             substancesById,
             photographedClientIds,
+            noteRequiredByTemplateId,
             now,
           )
         : null;

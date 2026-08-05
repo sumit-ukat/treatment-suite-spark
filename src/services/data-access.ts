@@ -348,7 +348,9 @@ export interface StaffAssignmentRow {
 }
 
 export interface ClientTaskRow {
+  id: string;
   admission_id: string;
+  template_id: string | null;
   code: string | null;
   category: string;
   title: string;
@@ -356,6 +358,37 @@ export interface ClientTaskRow {
   completed_at: string | null;
   status: string;
 }
+
+export interface TaskTemplateRow {
+  id: string;
+  requires_completion_note: boolean;
+}
+
+export const tasks = {
+  /**
+   * Completing and reopening go through RPCs because they are the *only* way to do it: migration 0026
+   * revoked UPDATE on `client_tasks` from `authenticated` after finding that the table's update policy
+   * let any `tasks.complete` holder rewrite any column — including `due_at`, which would let someone
+   * move their own deadline and erase being overdue. Every rule (permission, current state, the
+   * template's note requirement, who gets recorded as having done it) lives in the database.
+   */
+  async complete(taskId: string, note?: string | undefined): Promise<void> {
+    const { error } = await client().rpc('complete_client_task', {
+      p_task_id: taskId,
+      p_note: note?.trim() ? note.trim() : null,
+    });
+    if (error) throw new DataAccessError('tasks.complete', error);
+  },
+
+  /** Requires `tasks.reopen` and a reason, which the database records in the audit trail. */
+  async reopen(taskId: string, reason: string): Promise<void> {
+    const { error } = await client().rpc('reopen_client_task', {
+      p_task_id: taskId,
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('tasks.reopen', error);
+  },
+};
 
 export interface ClientPhotoRow {
   client_id: string;
@@ -370,7 +403,10 @@ export interface ClientPhotoRow {
  */
 export const roomBoard = {
   async forCentre(centreId: string) {
-    const [admissions, allocations, staffAssignments, tasks, substances] = await Promise.all([
+    // `clientTasks` rather than `tasks` — the module already exports a `tasks` service, and shadowing
+    // it inside this function would be a trap for the next person adding a call here.
+    const [admissions, allocations, staffAssignments, clientTasks, substances, taskTemplates] =
+      await Promise.all([
       run<AdmissionRow[]>(
         'roomBoard.admissions',
         client()
@@ -401,10 +437,16 @@ export const roomBoard = {
         'roomBoard.tasks',
         client()
           .from('client_tasks')
-          .select('admission_id,code,category,title,due_at,completed_at,status')
+          .select('id,admission_id,template_id,code,category,title,due_at,completed_at,status')
           .eq('centre_id', centreId),
       ),
       clinicalLookups.substances(),
+      // Only to know which tasks demand a completion note, so the UI can ask for it before submitting
+      // rather than bouncing the user off a server error. The server still enforces it.
+      run<TaskTemplateRow[]>(
+        'roomBoard.taskTemplates',
+        client().from('task_templates').select('id,requires_completion_note'),
+      ),
     ]);
 
     // Clients are read via the `client_summary` RPC, not a direct `select` on `clients` — migration
@@ -426,7 +468,16 @@ export const roomBoard = {
         )
       : [];
 
-    return { admissions, clients, allocations, staffAssignments, tasks, substances, photos };
+    return {
+      admissions,
+      clients,
+      allocations,
+      staffAssignments,
+      tasks: clientTasks,
+      substances,
+      taskTemplates,
+      photos,
+    };
   },
 };
 

@@ -4,6 +4,60 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — Tasks can finally be completed — and a second bypass closed
+
+Until now the task system was read-only decoration. 20 templates were seeded, tasks were generated on
+admission, and the room board counted them as overdue and due-today — but **no function to complete one
+existed in either schema**. The counts could never change. Tracking whether actions actually got done
+is the entire purpose of the workbook this tool replaces, so this was the largest functional gap left.
+
+`app.complete_client_task` and `app.reopen_client_task` (migration 0026, with `public` wrappers per
+0024) now own that, plus the UI in the detail panel: a **Mark done** button per open action, and
+**Reopen** on completed ones for roles holding `tasks.reopen`.
+
+### A second bypass, of the same shape as the last one
+
+`client_tasks_update` allowed any holder of `tasks.complete` to UPDATE **any column** of any task at an
+accessible centre, straight through PostgREST — because RLS filters *rows*, not *columns*. Correct as a
+row filter, it constrained nothing about what could be changed. Four things it permitted, all plain
+PATCH calls rather than hypotheticals:
+
+- completing a task that requires a completion note, without one;
+- setting `completed_by` to someone else, misattributing the work;
+- reopening a completed task while holding only `tasks.complete`, never `tasks.reopen`;
+- editing `due_at` to move one's own deadline and erase being overdue.
+
+The last matters most: **an operations-compliance tool whose deadlines the accountable person can
+silently rewrite does not measure compliance.** UPDATE is now revoked from `authenticated` and `anon`
+entirely, making the RPCs the only path. A full revoke rather than column-level grants, because no
+screen updates a task directly today, so nothing needs the exception — and an exception granted "just
+in case" is how this bypass existed in the first place. The now-unreachable policy is deliberately
+kept, so a future re-grant does not silently carry no row filter at all.
+
+**Deliberately not built:** recalculation of dependent due dates on completion. `app.compute_due_at`
+supports a `prior_task_code` chain, but no seeded template uses one — checked, not assumed — so that
+machinery would have nothing to drive it.
+
+### Verified with SQL role impersonation, 11 assertions
+
+Therapist (holds `tasks.complete`, not `tasks.reopen`) completes a task and is recorded as
+`completed_by`; a note-requiring task is refused with a blank note and accepted with one; double
+completion refused; therapist cannot reopen; helpdesk cannot complete; reopen refused without a
+reason; platform_admin reopens and the completion is cleared; the reason reaches
+`audit_events.reason`. And the bypass itself: a direct `update client_tasks set due_at = …` now fails
+with `permission denied for table client_tasks`. All fictional test data removed; zero rows left.
+
+### Verified in the browser, including a cold load
+
+Completed an overdue action (persisted, attributed to the signed-in user, counter moved 0→1 of 20 with
+no manual refresh); a note-requiring action prompted for the note and stored it; reopening it with a
+reason **returned it to Overdue**, which is the point — undoing a completion restores the lateness it
+was hiding. Two React dep-array warnings in the console were confirmed stale HMR artifacts, not live
+bugs: they did not reappear after a cold reload and full re-navigation, and a repo-wide check found no
+missing imports.
+
+---
+
 ## 2026-08-05 — A real, live security gap: `clients` leaked identity past `clients.view_identity`
 
 Found by self-review, not reported by the user: the `clients_read` RLS policy (migration 0006) granted

@@ -177,6 +177,9 @@ function Dashboard() {
   const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);
   const [boardError, setBoardError] = useState<string | null>(null);
+  // Bumped after a task is completed or reopened, to re-read the board rather than patch local state
+  // to what we assume the server did. The server owns task state; this asks it what happened.
+  const [boardVersion, setBoardVersion] = useState(0);
 
   useEffect(() => {
     // Re-fetches on returning to this section, not only when the centre changes. Without `section`
@@ -201,7 +204,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [authCentre, section]);
+  }, [authCentre, section, boardVersion]);
 
   const board = realBoard;
   const summary = useMemo(() => (board.length ? summarise(board) : EMPTY_SUMMARY), [board]);
@@ -578,7 +581,13 @@ function Dashboard() {
         </div>
       </div>
 
-      {selected ? <DetailPanel bed={selected} onClose={() => setOpenBed(null)} /> : null}
+      {selected ? (
+        <DetailPanel
+          bed={selected}
+          onClose={() => setOpenBed(null)}
+          onTaskChanged={() => setBoardVersion((v) => v + 1)}
+        />
+      ) : null}
     </div>
   );
 }

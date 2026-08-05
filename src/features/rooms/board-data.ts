@@ -263,6 +263,12 @@ function interpret(cell: Cell, now: Date): RecordedState {
 }
 
 export interface BoardTask {
+  /**
+   * The `client_tasks` row id, when this task is a real database row. Null for the fictional and
+   * frozen-snapshot boards in this file, which have no row behind them — and that null is what makes
+   * them un-completable in the UI rather than needing a separate read-only flag.
+   */
+  id: string | null;
   code: string;
   title: string;
   category: TaskTemplate['category'];
@@ -272,6 +278,8 @@ export interface BoardTask {
   isOverdue: boolean;
   isDueToday: boolean;
   isNotApplicable: boolean;
+  /** From the task template. The server enforces this too; the UI uses it to ask for the note up front. */
+  requiresCompletionNote: boolean;
 }
 
 export interface Occupant {
@@ -335,6 +343,8 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     const isComplete = recorded.kind === 'completed' || recorded.kind === 'done_no_date';
     const isNotApplicable = recorded.kind === 'not_applicable';
     return {
+      // No database row behind this board — see BoardTask.id.
+      id: null,
       code: tpl.code,
       title: tpl.name,
       category: tpl.category,
@@ -342,6 +352,8 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
       recorded,
       isComplete,
       isNotApplicable,
+      // Irrelevant here: with id null nothing on this board can be completed anyway.
+      requiresCompletionNote: false,
       // A not-applicable task is never overdue. The programme does not reach it, so there is no
       // work to be late for — counting it would manufacture a failure out of a shorter stay.
       isOverdue:

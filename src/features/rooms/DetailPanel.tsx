@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
-import type { BoardBed } from './board-data.js';
+import { useEffect, useState } from 'react';
+import type { BoardBed, BoardTask } from './board-data.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip } from '../../components/ui.tsx';
+import { tasks as taskService } from '../../services/data-access.js';
+import { useAuth } from '../auth/AuthProvider.tsx';
 
 const CATEGORY_LABEL: Record<string, string> = {
   family_contact: 'Family contact',
@@ -14,7 +16,16 @@ const CATEGORY_LABEL: Record<string, string> = {
   admin: 'Admin',
 };
 
-export function DetailPanel({ bed, onClose }: { bed: BoardBed; onClose: () => void }) {
+export function DetailPanel({
+  bed,
+  onClose,
+  onTaskChanged,
+}: {
+  bed: BoardBed;
+  onClose: () => void;
+  /** Called after a completion or reopen lands, so the board re-reads rather than guessing the new state. */
+  onTaskChanged?: (() => void) | undefined;
+}) {
   const o = bed.occupant;
 
   useEffect(() => {
@@ -106,43 +117,7 @@ export function DetailPanel({ bed, onClose }: { bed: BoardBed; onClose: () => vo
 
           <ul className="flex flex-col gap-1">
             {sorted.map((t) => (
-              <li
-                key={t.code}
-                className="flex items-center gap-2.5 rounded-lg border border-[var(--color-line)] px-2.5 py-2"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`grid size-[17px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold ${
-                    t.isComplete
-                      ? 'bg-emerald-600 text-white'
-                      : t.isOverdue
-                        ? 'bg-red-600 text-white'
-                        : t.isDueToday
-                          ? 'bg-amber-500 text-white'
-                          : 'border border-[var(--color-line)]'
-                  }`}
-                >
-                  {t.isComplete ? '✓' : t.isOverdue ? '!' : t.isDueToday ? '●' : ''}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12.5px] leading-tight">{t.title}</span>
-                  <span className="text-[10px] text-[var(--color-ink-muted)]">
-                    {CATEGORY_LABEL[t.category] ?? t.category}
-                  </span>
-                </span>
-                <span className="nums shrink-0 text-right text-[11px] text-[var(--color-ink-muted)]">
-                  {t.dueAt ? formatDate(t.dueAt) : '—'}
-                </span>
-                {t.isComplete ? (
-                  <Chip icon="&#10003;" label="Done" tone="good" />
-                ) : t.isOverdue ? (
-                  <Chip icon="&#9650;" label="Overdue" tone="alert" />
-                ) : t.isDueToday ? (
-                  <Chip icon="&#9679;" label="Today" tone="warn" />
-                ) : (
-                  <Chip icon="&#9719;" label="Open" />
-                )}
-              </li>
+              <TaskRow key={t.id ?? t.code} task={t} onChanged={onTaskChanged} />
             ))}
           </ul>
         </div>
@@ -153,6 +128,169 @@ export function DetailPanel({ bed, onClose }: { bed: BoardBed; onClose: () => vo
         </footer>
       </aside>
     </>
+  );
+}
+
+/**
+ * One action, with the controls to complete or reopen it.
+ *
+ * Three things decide whether a control appears, and all three are real constraints rather than
+ * styling choices:
+ *
+ * 1. `task.id === null` — the fictional and frozen-snapshot boards have no database row behind them,
+ *    so there is nothing to complete. They render exactly as before.
+ * 2. `can('tasks.complete')` / `can('tasks.reopen')` — hiding a button the server would refuse is
+ *    honest UI, not security. The database enforces both regardless of what is rendered here.
+ * 3. `requiresCompletionNote` — asked for up front instead of letting the user submit and bounce off
+ *    a server error. The server still enforces it; this only saves a round trip.
+ */
+function TaskRow({ task: t, onChanged }: { task: BoardTask; onChanged?: (() => void) | undefined }) {
+  const { can } = useAuth();
+  const [mode, setMode] = useState<'idle' | 'note' | 'reopen'>('idle');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isReal = t.id !== null;
+  const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  const canReopen = isReal && t.isComplete && can('tasks.reopen');
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      setMode('idle');
+      setText('');
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const complete = () => {
+    if (!t.id) return;
+    // Guard the note requirement here too, so the button cannot fire an empty note.
+    if (t.requiresCompletionNote && !text.trim()) {
+      setMode('note');
+      return;
+    }
+    void run(() => taskService.complete(t.id!, text));
+  };
+
+  return (
+    <li className="rounded-lg border border-[var(--color-line)] px-2.5 py-2">
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className={`grid size-[17px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold ${
+            t.isComplete
+              ? 'bg-emerald-600 text-white'
+              : t.isOverdue
+                ? 'bg-red-600 text-white'
+                : t.isDueToday
+                  ? 'bg-amber-500 text-white'
+                  : 'border border-[var(--color-line)]'
+          }`}
+        >
+          {t.isComplete ? '✓' : t.isOverdue ? '!' : t.isDueToday ? '●' : ''}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12.5px] leading-tight">{t.title}</span>
+          <span className="text-[10px] text-[var(--color-ink-muted)]">
+            {CATEGORY_LABEL[t.category] ?? t.category}
+          </span>
+        </span>
+        <span className="nums shrink-0 text-right text-[11px] text-[var(--color-ink-muted)]">
+          {t.dueAt ? formatDate(t.dueAt) : '—'}
+        </span>
+        {t.isComplete ? (
+          <Chip icon="&#10003;" label="Done" tone="good" />
+        ) : t.isOverdue ? (
+          <Chip icon="&#9650;" label="Overdue" tone="alert" />
+        ) : t.isDueToday ? (
+          <Chip icon="&#9679;" label="Today" tone="warn" />
+        ) : (
+          <Chip icon="&#9719;" label="Open" />
+        )}
+
+        {canComplete && mode === 'idle' ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => (t.requiresCompletionNote ? setMode('note') : complete())}
+            className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+          >
+            {busy ? '…' : 'Mark done'}
+          </button>
+        ) : null}
+
+        {canReopen && mode === 'idle' ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setMode('reopen')}
+            className="shrink-0 rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+          >
+            Reopen
+          </button>
+        ) : null}
+      </div>
+
+      {mode !== 'idle' ? (
+        <div className="mt-2 border-t border-[var(--color-line)] pt-2">
+          <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+            {mode === 'note' ? 'Completion note (required for this action)' : 'Why is this being reopened?'}
+          </label>
+          <textarea
+            autoFocus
+            rows={2}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="mt-1 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+          />
+          {mode === 'reopen' ? (
+            <p className="mt-1 text-[10px] text-[var(--color-ink-muted)]">
+              This removes the completion record. The reason is kept in the audit trail.
+            </p>
+          ) : null}
+          <div className="mt-1.5 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={busy || !text.trim()}
+              onClick={() =>
+                mode === 'note'
+                  ? complete()
+                  : void run(() => taskService.reopen(t.id!, text))
+              }
+              className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+            >
+              {busy ? 'Saving…' : mode === 'note' ? 'Mark done' : 'Reopen'}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setMode('idle');
+                setText('');
+                setError(null);
+              }}
+              className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p role="alert" className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      ) : null}
+    </li>
   );
 }
 
