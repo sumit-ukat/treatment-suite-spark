@@ -4,6 +4,40 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — Rooms & Beds administration screen (first screen on real Supabase data)
+
+Since the bed-count questions were closed on "staff will enter this themselves", that decision is
+now actionable: `src/features/administration/RoomsAndBeds.tsx` lets an authorised user add rooms and
+beds for a centre, backed by the real `rooms` and `beds` tables — not the demo file everything else
+still runs on.
+
+- Adding a single room creates its one bed automatically (mirrors how Primrose Lodge was seeded).
+  A shared room is created empty; its beds (6A, 6B, ...) are added individually, because their count
+  and labels are a judgement call, not something to guess.
+- `can('rooms.manage')` decides whether the add/edit controls render. That is a courtesy, not the
+  control — the database refuses the write regardless of what the button shows, proven below.
+- The screen bridges two centre concepts that exist in parallel right now: the group dashboard's
+  fictional summary centres (`centres-data.ts`) and the real Supabase centres from
+  `useAuth().centres`. Matched by slug for this screen only. The two lists converge once the group
+  dashboard itself reads real data — not yet.
+
+**A real gap found while verifying this, not while looking for one:** `rooms` had no audit trigger.
+`beds` and `centres` both got one in migration 0009; `rooms` was left off that list by mistake, so
+every room change since has gone unrecorded. Fixed in `0021`. Matters more today than a week ago,
+since staff will now be making exactly this kind of change themselves.
+
+**Verified end to end**, not just at the database:
+- Loaded the live screen: Primrose Lodge showed 16 rooms / 18 beds, matching Supabase exactly.
+- Added room "17" through the actual form in the browser → the count became 17 rooms / 19 beds,
+  and the row was confirmed present in Supabase with a real timestamp, not merely reflected in
+  local UI state.
+- The write and the following status update **both now appear in `audit_events`**.
+- A fictional helpdesk user (no `rooms.manage`) was refused the same insert — `42501`.
+- Test room, test bed and the fictional user were all removed; Primrose Lodge confirmed back at
+  16 rooms / 18 beds with zero leftover fictional accounts.
+
+---
+
 ## 2026-08-05 — Clinical records, and the privacy rule made real
 
 Six tables: `family_contacts`, `family_meetings`, `detox_records`, `medical_review_requests`,

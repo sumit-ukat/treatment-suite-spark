@@ -14,6 +14,7 @@ import { AvailableCard, OccupiedCard } from '../rooms/BedCard.tsx';
 import { BedList } from '../rooms/BedList.tsx';
 import { DetailPanel } from '../rooms/DetailPanel.tsx';
 import { GroupDashboard } from '../centres/GroupDashboard.tsx';
+import { RoomsAndBedsAdmin } from '../administration/RoomsAndBeds.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
 
@@ -149,6 +150,12 @@ function Dashboard() {
   const centres = useMemo(() => buildCentres(), []);
   const [centreSlug, setCentreSlug] = useState('primrose-lodge');
   const centre = centres.find((c) => c.slug === centreSlug) ?? centres[0]!;
+
+  // The REAL centre from Supabase, matched by slug. This is a bridge, not the destination: the
+  // group dashboard still runs on fictional summary figures (centres-data.ts), but Administration
+  // must write real rows, so it needs the real uuid rather than the fictional slug.
+  const { centres: authCentres } = useAuth();
+  const authCentre = authCentres.find((c) => c.slug === centreSlug) ?? null;
 
   const q = query.trim().toLowerCase();
   const visible = board.filter((bed) => {
@@ -471,6 +478,22 @@ function Dashboard() {
                 content appear nowhere on this board at any permission level — a restricted alert
                 shows as a flag only, with detail reachable through the client file by authorised
                 roles.
+              </p>
+            </div>
+          ) : section === 'admin' && authCentre ? (
+            <RoomsAndBedsAdmin centre={authCentre} />
+          ) : section === 'admin' ? (
+            <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
+              <div
+                aria-hidden="true"
+                className="grid size-12 place-items-center rounded-xl bg-amber-500/12 text-[18px] text-amber-600 dark:text-amber-400"
+              >
+                &#9888;
+              </div>
+              <h2 className="mt-3.5 text-[16px] font-semibold">No matching centre in the database</h2>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+                &ldquo;{centre.name}&rdquo; exists in the group overview but not in your accessible
+                centres in Supabase, so there is nothing real to configure yet.
               </p>
             </div>
           ) : (

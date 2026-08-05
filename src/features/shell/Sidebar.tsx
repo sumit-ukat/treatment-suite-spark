@@ -46,7 +46,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
     items: [
       { id: 'reports', label: 'Reports', icon: '▤', ready: false },
       { id: 'audit', label: 'Audit history', icon: '◷', ready: false },
-      { id: 'admin', label: 'Administration', icon: '⚙', ready: false },
+      { id: 'admin', label: 'Administration', icon: '⚙', ready: true },
     ],
   },
 ];
