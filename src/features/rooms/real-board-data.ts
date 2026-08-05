@@ -59,7 +59,10 @@ function buildRealOccupant(
   now: Date,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
-  if (!c) return null; // RLS or a data race hid the client row; skip rather than render a ghost.
+  // A missing row here means the caller can't even see this client exists — genuinely nothing to
+  // render. Identity withheld (display_name null, migration 0025) is a *different* case, handled
+  // below: the bed is still occupied and must still show as such.
+  if (!c) return null;
 
   const admittedAt = new Date(admission.admitted_at);
   const durationDays =
@@ -96,12 +99,14 @@ function buildRealOccupant(
   });
 
   const eligibility = assessEligibility(admittedAt, settings, now);
-  const displayName = `${c.first_name.charAt(0)}. ${c.last_name}`;
+  // c.display_name is null when the caller holds clients.view_operational but not
+  // clients.view_identity — the bed is still occupied and known, just not by name.
+  const displayName = c.display_name ?? c.reference;
 
   return {
     reference: c.reference,
     displayName,
-    initials: initialsOf(`${c.first_name} ${c.last_name}`),
+    initials: initialsOf(c.display_name ?? c.reference),
     admittedAt,
     treatmentDay: calendarDaysBetween(admittedAt, now, TZ) + 1,
     durationDays,
@@ -144,7 +149,7 @@ export async function buildRealBoard(
   ]);
 
   const roomsById = new Map(rooms.map((r) => [r.id, r]));
-  const clientsById = new Map(data.clients.map((c) => [c.id, c]));
+  const clientsById = new Map(data.clients.map((c) => [c.client_id, c]));
   const substancesById = new Map(data.substances.map((s) => [s.id, s]));
   const photographedClientIds = new Set<string>(
     (data.photos as ClientPhotoRow[]).map((p) => p.client_id),

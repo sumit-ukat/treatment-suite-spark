@@ -4,6 +4,47 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — A real, live security gap: `clients` leaked identity past `clients.view_identity`
+
+Found by self-review, not reported by the user: the `clients_read` RLS policy (migration 0006) granted
+SELECT on `clients` to any role with an admission at an accessible centre, and never checked
+`clients.view_identity` — even though that permission code has existed since migration 0014
+specifically to withhold real names from roles like helpdesk. Verified live with a fictional
+helpdesk-role session: it could `select first_name from clients` and read a real name it should never
+see. This is the same indicator/detail gap already closed for safeguarding, risk and medical detail —
+just not yet applied to identity itself, and identity is the one every other screen touches first.
+
+**What makes this worse than an isolated bug:** the previous entry's "verified" room board relied on
+exactly this hole. `data-access.ts`'s `roomBoard.forCentre` read the `clients` table directly, which
+only worked because the policy let it. Tightening the policy alone, without touching that call site,
+would have traded a leak for a different bug — every occupied bed silently rendering as if it had no
+one in it for any role lacking `clients.view_identity`, since the tightened RLS would return zero rows
+instead of throwing.
+
+**The fix, in one migration (`0025_fix_client_identity_leak.sql`):**
+- `clients_read` now requires `app.has_permission('clients.view_identity')` in addition to centre
+  access — closing the leak.
+- `app.client_summary(p_client_ids uuid[])` + its `public` wrapper (same reachability pattern as
+  migration 0024) return `reference` to any caller holding `clients.view_operational`, and
+  `display_name` only to callers additionally holding `clients.view_identity` — `null` otherwise,
+  never an error, so existence can't be inferred from a failure.
+- `roomBoard.forCentre` now calls `client_summary` instead of `select`-ing `clients` directly;
+  `real-board-data.ts`'s `buildRealOccupant` falls back to showing the `reference` when
+  `display_name` is `null`, rather than treating a permission-denied client as an empty bed.
+
+**Verified with SQL role impersonation** (RLS only enforces under `set local role authenticated` —
+the connection used for migrations is a superuser and bypasses RLS regardless of JWT claims, which the
+first pass of this test got wrong and had to redo): platform_admin and therapist (both hold
+`clients.view_identity`) get the real name from both the raw table and `client_summary`; a fictional
+helpdesk role gets zero rows from the raw table and `{ reference: "…", display_name: null }` from
+`client_summary`. All temporary rows and users removed afterward; confirmed zero leftovers.
+
+**Verified in the browser**, cold reload, signed in as platform_admin: created one fictional occupied
+bed via SQL, reloaded, saw "Fictional TestOccupant" with reference "BROWSER-VERIFY-1" render correctly
+through the new RPC path — no regression for the one role with a real login. Removed afterward.
+
+---
+
 ## 2026-08-05 — The room board now reads real data
 
 The gap this closes: the admission form (previous entry) proved it could write a real client into

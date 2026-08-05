@@ -330,11 +330,10 @@ export interface AdmissionRow {
 }
 
 export interface ClientRow {
-  id: string;
+  client_id: string;
   reference: string;
-  first_name: string;
-  last_name: string;
-  preferred_name: string | null;
+  /** Null when the caller holds `clients.view_operational` but not `clients.view_identity` — see migration 0025. */
+  display_name: string | null;
 }
 
 export interface RoomAllocationRow {
@@ -408,13 +407,16 @@ export const roomBoard = {
       clinicalLookups.substances(),
     ]);
 
-    // Clients are fetched separately because RLS on `clients` is keyed off having an admission at an
-    // accessible centre, not off centre_id directly — see migration 0014.
+    // Clients are read via the `client_summary` RPC, not a direct `select` on `clients` — migration
+    // 0025 tightened `clients` RLS to require `clients.view_identity`, so a role holding only
+    // `clients.view_operational` (e.g. helpdesk) would get zero rows from a direct read even though
+    // it is entitled to know a bed is occupied. The RPC returns every row the caller may see the
+    // *existence* of, with `display_name` nulled out server-side when identity is withheld.
     const clientIds = [...new Set(admissions.map((a) => a.client_id))];
     const clients = clientIds.length
       ? await run<ClientRow[]>(
           'roomBoard.clients',
-          client().from('clients').select('id,reference,first_name,last_name,preferred_name').in('id', clientIds),
+          client().rpc('client_summary', { p_client_ids: clientIds }),
         )
       : [];
     const photos = clientIds.length
