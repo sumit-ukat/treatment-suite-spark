@@ -29,7 +29,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
     items: [
       { id: 'board', label: 'Room board', icon: '▦', ready: true },
       { id: 'clients', label: 'Clients', icon: '☰', ready: false },
-      { id: 'admissions', label: 'Admissions', icon: '↳', ready: false },
+      { id: 'admissions', label: 'Admissions', icon: '↳', ready: true },
     ],
   },
   {

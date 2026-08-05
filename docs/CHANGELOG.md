@@ -4,6 +4,47 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — Admission form, and a real gap found by using it for real
+
+`src/features/admissions/AdmitClientForm.tsx` — the first screen that calls `admit_client` rather
+than SQL calling it directly. Collects input, shows a review step, sends one RPC call. It performs no
+business logic of its own: whether a bed is really free, whether the discharge date is right,
+whether a duplicate exists is decided by the database, and a wrong submission is refused rather than
+silently accepted.
+
+**Scoped to new clients only.** The brief also asks for reusing an existing client via search; that
+needs a client directory to search against, which does not exist yet. Building a search box with
+nothing to search would be worse than leaving it out, so it is left out and stated plainly here
+rather than half-built quietly.
+
+### A real gap, found by the first real use rather than by inspection
+
+The first call through the actual Supabase client — not through direct SQL — failed:
+
+> Could not find the function public.admit_client(...) in the schema cache
+
+PostgREST only resolves RPC calls against schemas it exposes, which is `public` by default. Every
+trusted function built so far lives in `app`, and **every single one had, until this moment, only
+ever been exercised via direct SQL through a connection with full database access** — which bypasses
+PostgREST entirely. This was the first call made through the real client-facing path, and the gap
+was invisible until that path was actually used. It affects every `app.*` function, not just this one.
+
+Fixed with a thin `public.admit_client()` wrapper that delegates straight to `app.admit_client()` —
+no logic duplicated, every check stays where it was. `app` remains unreachable from the API even in
+principle; the public surface is exactly what is deliberately exposed. The same wrapper will be
+needed for any other `app.*` function a future screen calls directly, added when that screen is
+built rather than pre-emptively.
+
+### Verified in the browser, against the real database, not by assertion
+
+Filled in the actual form and submitted: client created, admitted to bed 4, 20 tasks generated.
+Confirmed directly in Supabase — real client row, real admission, correct bed, correct discharge
+date, 1 staff assignment, 1 audit event. Reloaded the form and watched available beds drop from
+**18 to 17**, with bed 4 no longer offered. Test data removed afterward; confirmed zero stray
+clients and zero open allocations at Primrose Lodge.
+
+---
+
 ## 2026-08-05 — Trusted admission workflow: `app.admit_client()`
 
 The gap this closes: until now there was no way to create a real client or admission at all. The

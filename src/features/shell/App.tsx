@@ -15,6 +15,7 @@ import { BedList } from '../rooms/BedList.tsx';
 import { DetailPanel } from '../rooms/DetailPanel.tsx';
 import { GroupDashboard } from '../centres/GroupDashboard.tsx';
 import { RoomsAndBedsAdmin } from '../administration/RoomsAndBeds.tsx';
+import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
 
@@ -482,7 +483,9 @@ function Dashboard() {
             </div>
           ) : section === 'admin' && authCentre ? (
             <RoomsAndBedsAdmin centre={authCentre} />
-          ) : section === 'admin' ? (
+          ) : section === 'admissions' && authCentre ? (
+            <AdmitClientForm centre={authCentre} />
+          ) : section === 'admin' || section === 'admissions' ? (
             <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
               <div
                 aria-hidden="true"

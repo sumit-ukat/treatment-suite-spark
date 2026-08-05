@@ -225,6 +225,96 @@ export const roomsAndBeds = {
     const { error } = await client().from('beds').update({ status }).eq('id', bedId);
     if (error) throw new DataAccessError('roomsAndBeds.setBedStatus', error);
   },
+
+  /**
+   * Beds with no CURRENT open allocation. `beds.status` is a manual flag (maintenance/closed) and
+   * does not track occupancy — a bed can say "available" and still have someone in it. This is a
+   * read to populate a picker; it is not what stops a double-booking. `admit_client`'s insert into
+   * `room_allocations` is what actually enforces that, via the exclusion constraint in migration
+   * 0005, regardless of what this list shows.
+   */
+  async availableBeds(centreId: string): Promise<Array<RoomRow & { bed: BedRow }>> {
+    const [rooms, beds, openAllocations] = await Promise.all([
+      this.rooms(centreId),
+      this.beds(centreId),
+      run<Array<{ bed_id: string }>>(
+        'roomsAndBeds.availableBeds.openAllocations',
+        client().from('room_allocations').select('bed_id').eq('centre_id', centreId).is('ended_at', null),
+      ),
+    ]);
+    const occupied = new Set(openAllocations.map((a) => a.bed_id));
+    const roomsById = new Map(rooms.map((r) => [r.id, r]));
+
+    const out: Array<RoomRow & { bed: BedRow }> = [];
+    for (const bed of beds) {
+      const room = roomsById.get(bed.room_id);
+      if (!room || bed.status !== 'available' || room.status !== 'available' || occupied.has(bed.id)) continue;
+      out.push({ ...room, bed });
+    }
+    return out;
+  },
+};
+
+export interface SubstanceRow {
+  id: string;
+  name: string;
+}
+
+export const clinicalLookups = {
+  substances(): Promise<SubstanceRow[]> {
+    return run(
+      'clinicalLookups.substances',
+      client().from('substances').select('id,name').eq('is_active', true).order('name'),
+    );
+  },
+};
+
+export interface AdmitClientInput {
+  centreId: string;
+  bedId: string;
+  admittedAt: string; // ISO timestamp
+  plannedDuration: number;
+  plannedDurationUnit: 'days' | 'weeks';
+  firstName: string;
+  lastName: string;
+  preferredName?: string | undefined;
+  treatmentGroup?: string | undefined;
+  substanceName?: string | undefined;
+  peepRequired: boolean;
+  focalTherapistLabel?: string | undefined;
+  buddyLabel?: string | undefined;
+  doctorLabel?: string | undefined;
+  reason?: string | undefined;
+}
+
+export const admissions = {
+  /**
+   * Calls the trusted `app.admit_client` RPC — the whole admission happens as one transaction on
+   * the server, or none of it does. This client sends parameters; it does not perform the
+   * business logic. See supabase/migrations/0022_substances_seed_and_admit_client.sql.
+   */
+  async admitClient(input: AdmitClientInput): Promise<string> {
+    const { data, error } = await client().rpc('admit_client', {
+      p_centre_id: input.centreId,
+      p_bed_id: input.bedId,
+      p_admitted_at: input.admittedAt,
+      p_planned_duration: input.plannedDuration,
+      p_planned_duration_unit: input.plannedDurationUnit,
+      p_client_id: null,
+      p_first_name: input.firstName,
+      p_last_name: input.lastName,
+      p_preferred_name: input.preferredName ?? null,
+      p_treatment_group: input.treatmentGroup ?? null,
+      p_substance_name: input.substanceName ?? null,
+      p_peep_required: input.peepRequired,
+      p_focal_therapist_label: input.focalTherapistLabel ?? null,
+      p_buddy_label: input.buddyLabel ?? null,
+      p_doctor_label: input.doctorLabel ?? null,
+      p_reason: input.reason ?? null,
+    });
+    if (error) throw new DataAccessError('admissions.admitClient', error);
+    return data as string;
+  },
 };
 
 type AuthChangeCallback = Parameters<
