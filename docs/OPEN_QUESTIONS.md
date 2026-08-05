@@ -8,6 +8,24 @@ Legend: 🔴 open · 🟢 answered (with date and answer) · ⚪ superseded
 
 ---
 
+## Closed 2026-08-05 — staff will enter this themselves
+
+### Q40 ⚪ CLOSED · Which bed is Primrose Lodge's 19th?
+### ⚪ CLOSED · Real bed counts for the other nine centres
+
+Both closed by decision: staff will enter their own room and bed configuration once the tool is
+ready. Chasing the numbers now would be work done twice.
+
+**The consequence is a priority change, not a saving.** These stop being data-gathering questions and
+become a *feature* requirement: the Administration screens — rooms and beds, centre configuration —
+are now on the critical path to "ready", because they are the mechanism by which staff do this. A
+tool that cannot be configured by the people using it is not ready, however complete the rest is.
+
+Until then, seeded and placeholder figures stay clearly labelled as such in the UI so nobody mistakes
+them for confirmed capacity.
+
+---
+
 ## Answered 2026-08-05
 
 ### Q2 🟢 What does `X` mean?

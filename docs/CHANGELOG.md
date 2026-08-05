@@ -4,6 +4,55 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — Clinical records, and the privacy rule made real
+
+Six tables: `family_contacts`, `family_meetings`, `detox_records`, `medical_review_requests`,
+`safeguarding_records`, `risk_records`. **27 of 34 entities now exist.**
+
+### The indicator/detail split now holds at row level
+
+Until today the restricted flag pointed at nothing. The permission codes existed but there was no
+content to protect. Now there is, and RLS gates rows while it cannot gate columns — so:
+
+- the tables require the `*_detail` permission: **no row, therefore no narrative**
+- `app.safeguarding_indicator()` / `app.risk_indicator()` are SECURITY DEFINER and return
+  **counts and severity only**, gated on `*_indicator`
+
+A counter cannot leak a narrative because it never selects one. The guarantee comes from the shape
+of the query, not from remembering to omit a column.
+
+`app.medical_review_summary()` does the same for medical: status, priority and dates for summary
+holders; the outcome text is simply never selected.
+
+Both return **zero rather than raising** when the user holds neither permission — an error would leak
+the existence of a concern through the failure itself.
+
+### The seven-day rule is now a database constraint
+
+`family_meetings.scheduled_for >= eligible_from`, enforced by CHECK. The brief requires that the API
+cannot bypass it, and a constraint is the only thing that holds regardless of the caller.
+
+`eligible_from` is **stamped by `app.create_family_meeting()` from centre settings, never supplied by
+the caller** — otherwise the constraint would be decorative, since you could send an earlier
+eligibility date alongside an earlier meeting date and satisfy it trivially.
+
+It is stored rather than recomputed on read: if a centre changes its window later, meetings already
+booked keep the rule that applied at the time. Recomputing would rewrite history and could
+retrospectively make a lawful booking look unlawful.
+
+Closing a meeting without it happening always needs a reason. An early discharge before eligibility
+lands there and can never be recorded as complete.
+
+### Verified — 19 assertions
+
+Helpdesk reads **zero** rows from safeguarding, risk, medical and detox · helpdesk **does** get the
+safeguarding flag (1, high) and risk flag (1, critical) · therapist reads zero safeguarding rows but
+gets the flag and the medical summary · admin reads full detail · meeting on day 3 **refused**, day 8
+allowed · completing without an actual time refused · cancelling without a reason refused ·
+safeguarding cannot be deleted.
+
+---
+
 ## 2026-08-04 — Permission codes restructured, history made undeletable
 
 Stack decision confirmed: **React + TypeScript + Supabase. No Laravel.** The existing build already
