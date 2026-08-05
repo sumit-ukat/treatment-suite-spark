@@ -47,7 +47,16 @@ These are not aspirations; each was verified by test:
 
 ## 2. Gaps against the specification
 
-### 2.1 🔴 Permission codes must be restructured — and the new set is better
+### 2.1 ✅ RESOLVED 2026-08-04 — permission codes restructured
+
+Done in `0014` and `0015`. 40 codes, every role remapped from empty, old codes retired. Verified:
+helpdesk sees the safeguarding flag and is refused the narrative; sees the client reference and is
+refused the name. Helpdesk, support staff and regional operations hold zero clinical-detail grants.
+Original analysis retained below.
+
+---
+
+### ~~2.1 🔴 Permission codes must be restructured~~ — and the new set is better
 
 Current codes are coarser than the spec's, and one difference matters a great deal.
 
@@ -67,7 +76,22 @@ is the correct model and the current one should migrate to it.
 **This must happen before roles are assigned to real staff.** Changing permission codes afterwards
 means re-deciding every grant while people are relying on them.
 
-### 2.2 🔴 Deletion of history is not prevented
+### 2.2 ✅ RESOLVED 2026-08-04 — deletion of history prevented
+
+Done in `0014`. `FOR ALL` policies replaced with explicit INSERT/UPDATE, and DELETE revoked outright
+on `clients`, `admissions`, `room_allocations`, `client_tasks`, `task_assignments` and
+`staff_assignments`. Verified that even an organisation-wide platform administrator is refused.
+
+A related property surfaced during testing: `audit_events.actor_id` references `auth.users`, so **a
+user whose actions appear in the audit log cannot be deleted either**. That is correct — accounts
+should be deactivated via `user_profiles.is_active`, not removed — and it is now load-bearing rather
+than incidental.
+
+Original analysis retained below.
+
+---
+
+### ~~2.2 🔴 Deletion of history is not prevented~~
 
 Both `client_tasks` and `room_allocations` carry `FOR ALL` write policies, which include `DELETE`.
 A user holding `task.complete` can therefore delete a completed task, and one holding

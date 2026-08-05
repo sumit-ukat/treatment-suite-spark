@@ -4,6 +4,56 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-04 — Permission codes restructured, history made undeletable
+
+Stack decision confirmed: **React + TypeScript + Supabase. No Laravel.** The existing build already
+follows that architecture, so this and everything after it is extension, not rebuild. Inspection
+findings in [ARCHITECTURE_GAP_ANALYSIS.md](ARCHITECTURE_GAP_ANALYSIS.md).
+
+### `0014` — history cannot be deleted
+
+`FOR ALL` write policies include DELETE. Anyone holding `task.complete` could delete a completed
+task; anyone holding `room.allocate` could delete an allocation. The audit trigger made that
+detectable, not impossible, and the brief prohibits both.
+
+Replaced with explicit INSERT/UPDATE policies, and DELETE revoked outright on `clients`,
+`admissions`, `room_allocations`, `client_tasks`, `task_assignments`, `staff_assignments` — so a
+policy added by mistake later cannot re-open it. **Verified that even an organisation-wide platform
+administrator is refused.**
+
+A related property surfaced while testing: `audit_events.actor_id` references `auth.users`, so a user
+whose actions are logged cannot be deleted either. Correct — deactivate via `is_active`, never remove.
+
+### `0014` / `0015` — 40 permission codes, every role remapped
+
+The previous 23 codes could not express *"see the flag, not the narrative"*. A single
+`safeguarding.view` is all-or-nothing, so the helpdesk rule the brief demands was literally
+unrepresentable. Now split:
+
+| Indicator (level 1) | Detail (level 3) |
+|---|---|
+| `safeguarding.view_indicator` | `safeguarding.view_detail` |
+| `risk.view_indicator` | `risk.view_detail` |
+| `medical.view_summary` (2) | `medical.view_detail` |
+| `clients.view_operational` | `clients.view_identity` |
+
+Grants rebuilt from empty rather than patched, so nothing survives by accident:
+platform_admin 40 · centre_manager 34 · therapist 14 · supervisor 14 · support_staff 11 ·
+regional_operations 10 · **helpdesk 7**.
+
+Regional operations deliberately holds no clinical detail — the brief states that regional visibility
+must not imply unrestricted access to clinical content.
+
+### Verified — 18 assertions
+
+Admin still sees 10 centres and 20 tasks · admin cannot delete tasks, allocations or clients ·
+**helpdesk sees the safeguarding flag and is refused the narrative** · sees the risk flag, refused the
+narrative · **sees the client reference, refused the name** · refused medical detail · can still see
+tasks · therapist sees names but not safeguarding detail, cannot allocate rooms or manage users ·
+helpdesk, support staff and regional operations hold zero clinical-detail grants.
+
+---
+
 ## 2026-08-04 — Task system
 
 Converts 16 workbook columns from things the app draws into things it can act on. Ownership, queues,
