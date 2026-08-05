@@ -8,6 +8,23 @@ Legend: 🔴 open · 🟢 answered (with date and answer) · ⚪ superseded
 
 ---
 
+## Round 4 — asked 2026-08-04
+
+### Q43 🔴 May the person who uploads a photograph also verify it?
+Upload and verification are separate permissions, so they *can* be held by different people. Nothing
+currently stops one person doing both.
+
+Arguments both ways. Verification exists to catch the wrong photograph being attached to the wrong
+client — a second pair of eyes is the whole value, and self-verification reduces it to a formality.
+Against that, a small centre on a night shift may have exactly one person available, and a control
+that cannot be satisfied gets worked around.
+
+Options: allow it · block it outright · allow it but record that upload and verification were the
+same person, so it shows in the audit and in reporting.
+*Blocks: nothing. Currently permitted.*
+
+---
+
 ## Round 3 — asked 2026-08-04
 
 ### Q41 🔴 Is a "Buddy" a member of staff, or another client?
