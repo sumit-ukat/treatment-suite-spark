@@ -4,6 +4,51 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — Trusted admission workflow: `app.admit_client()`
+
+The gap this closes: until now there was no way to create a real client or admission at all. The
+only real data in the database was the room/bed layout — every safety feature underneath it (double-
+booking prevention, task generation, audit) had nothing to actually run against.
+
+`app.admit_client()` is one SECURITY DEFINER function that does everything brief section 9 asks for
+as a single atomic unit, rather than a sequence of separate client calls a half-finished network
+request could leave inconsistent:
+
+- resolves an existing client by id, or creates one (auto-generated reference `CL-XXXXXXXX`)
+- validates the bed belongs to the selected centre, with a clear error ahead of the raw constraint
+- computes the planned discharge date via the new `app.calculate_planned_discharge()`
+- opens the room allocation — refused by 0005's exclusion constraint on a double-booking, including
+  under concurrency; this function supplies the friendly error in front of that constraint
+- records focal therapist, buddy and doctor as `staff_assignments`, unresolved-by-label by default
+  (Q41)
+- generates the admission's 20 tasks
+- audit is written by the existing triggers on `clients`/`admissions`/`room_allocations`/
+  `staff_assignments` — not duplicated in this function
+
+**`app.calculate_planned_discharge()`** is the SQL twin of `calculatePlannedDischargeDate` in
+`src/domain/discharge.ts` — same duplication rationale as `compute_due_at`: the browser previews, the
+database enforces, and both must agree.
+
+### Verified — 14 assertions, all against the live function, not a mock
+
+Full admission end to end: client created, reference auto-generated, discharge computed as
+admission + 28 − 1 (inclusive), bed allocated, therapist/buddy/doctor all recorded, 20 tasks
+generated, both the admission and the client creation appear in `audit_events`.
+
+**All four things brief section 9 requires the workflow to prevent, all refused:**
+- a duplicate active admission for the same client — `23505`
+- allocating an already-occupied bed — `23P01` (the exclusion constraint)
+- an invalid duration (zero)
+- missing required identity information
+
+And permission enforcement: a fictional helpdesk account (no `admissions.create`) was refused the
+same call — `42501`.
+
+Test data fully removed afterward; confirmed zero stray clients, zero stray admissions, zero
+leftover fictional accounts.
+
+---
+
 ## 2026-08-05 — Rooms & Beds administration screen (first screen on real Supabase data)
 
 Since the bed-count questions were closed on "staff will enter this themselves", that decision is
