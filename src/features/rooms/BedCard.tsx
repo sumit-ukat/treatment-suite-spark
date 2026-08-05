@@ -1,6 +1,6 @@
-import type { BoardBed, Occupant } from '../demo-data.js';
-import { formatDate } from '../format.js';
-import { Chip } from './ui.tsx';
+import type { BoardBed, Occupant } from './board-data.js';
+import { formatDate } from '../../lib/format.js';
+import { Chip } from '../../components/ui.tsx';
 
 /**
  * Photograph placeholder.

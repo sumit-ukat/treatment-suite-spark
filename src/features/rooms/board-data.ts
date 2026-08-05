@@ -22,11 +22,11 @@
  * with RLS, not in a JavaScript file.
  */
 
-import { PRIMROSE_LODGE_SETTINGS } from '../domain/centre-settings.js';
-import { calculatePlannedDischargeDate } from '../domain/discharge.js';
-import { assessEligibility } from '../domain/eligibility.js';
-import { computeDueAt, isOverdue, type TaskTemplate } from '../domain/tasks.js';
-import { calendarDaysBetween, fromZonedDateString } from '../domain/zoned-time.js';
+import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
+import { calculatePlannedDischargeDate } from '../../domain/discharge.js';
+import { assessEligibility } from '../../domain/eligibility.js';
+import { computeDueAt, isOverdue, type TaskTemplate } from '../../domain/tasks.js';
+import { calendarDaysBetween, fromZonedDateString } from '../../domain/zoned-time.js';
 
 const settings = PRIMROSE_LODGE_SETTINGS;
 const TZ = settings.timezone;

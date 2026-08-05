@@ -1,4 +1,4 @@
-import markUrl from '../brand/ukat-mark.png';
+import markUrl from '../../assets/brand/ukat-mark.png';
 import { useAuth } from '../auth/AuthProvider.tsx';
 
 /**

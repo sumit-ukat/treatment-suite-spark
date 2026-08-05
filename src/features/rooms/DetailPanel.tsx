@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import type { BoardBed } from '../demo-data.js';
-import { formatDate, formatDateWithDay } from '../format.js';
+import type { BoardBed } from './board-data.js';
+import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
-import { Chip } from './ui.tsx';
+import { Chip } from '../../components/ui.tsx';
 
 const CATEGORY_LABEL: Record<string, string> = {
   family_contact: 'Family contact',

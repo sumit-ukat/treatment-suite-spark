@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { BoardBed } from '../demo-data.js';
-import { formatDate } from '../format.js';
+import type { BoardBed } from './board-data.js';
+import { formatDate } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
-import { Chip } from './ui.tsx';
+import { Chip } from '../../components/ui.tsx';
 
 /**
  * Dense list view.

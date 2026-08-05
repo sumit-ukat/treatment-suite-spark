@@ -1,21 +1,21 @@
 import { useMemo, useState } from 'react';
-import { buildBoard, summarise, NOW, type BoardBed } from './demo-data.js';
-import { buildCentres } from './centres-data.js';
-import { formatDateWithDay } from './format.js';
-import markUrl from './brand/ukat-mark.png';
-import { useAuth } from './auth/AuthProvider.tsx';
+import { buildBoard, summarise, NOW, type BoardBed } from '../rooms/board-data.js';
+import { buildCentres } from '../centres/centres-data.js';
+import { formatDateWithDay } from '../../lib/format.js';
+import markUrl from '../../assets/brand/ukat-mark.png';
+import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   AccessErrorScreen,
   LoadingScreen,
   LoginScreen,
   NoAccessScreen,
-} from './auth/LoginScreen.tsx';
-import { AvailableCard, OccupiedCard } from './components/BedCard.tsx';
-import { BedList } from './components/BedList.tsx';
-import { DetailPanel } from './components/DetailPanel.tsx';
-import { GroupDashboard } from './components/GroupDashboard.tsx';
-import { NAV_GROUPS, Sidebar } from './components/Sidebar.tsx';
-import { Chip, FilterPill, StatTile } from './components/ui.tsx';
+} from '../auth/LoginScreen.tsx';
+import { AvailableCard, OccupiedCard } from '../rooms/BedCard.tsx';
+import { BedList } from '../rooms/BedList.tsx';
+import { DetailPanel } from '../rooms/DetailPanel.tsx';
+import { GroupDashboard } from '../centres/GroupDashboard.tsx';
+import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
+import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
 
 /**
  * Gate the whole application on the session.

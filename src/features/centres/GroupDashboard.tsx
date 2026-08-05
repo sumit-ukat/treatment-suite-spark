@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { buildCentres, groupTotals, REGIONS, type CentreSummary } from '../centres-data.js';
-import { Chip, FilterPill, StatTile } from './ui.tsx';
+import { buildCentres, groupTotals, REGIONS, type CentreSummary } from './centres-data.js';
+import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
 
 type SortKey = 'name' | 'occupancy' | 'overdue' | 'onTime';
 

@@ -16,7 +16,7 @@
  * the room board, so the one centre with real configuration behaves consistently in both views.
  */
 
-import { buildBoard, summarise, NOW } from './demo-data.js';
+import { buildBoard, summarise, NOW } from '../rooms/board-data.js';
 
 export interface CentreSummary {
   slug: string;

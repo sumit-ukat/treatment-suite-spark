@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import markUrl from '../brand/ukat-mark.png';
-import wordmarkUrl from '../brand/ukat-wordmark.png';
+import markUrl from '../../assets/brand/ukat-mark.png';
+import wordmarkUrl from '../../assets/brand/ukat-wordmark.png';
 import { useAuth } from './AuthProvider.tsx';
 
 /**
