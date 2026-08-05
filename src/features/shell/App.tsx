@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { buildBoard, summarise, NOW, type BoardBed } from '../rooms/board-data.js';
+import { useEffect, useMemo, useState } from 'react';
+import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
+import { buildRealBoard } from '../rooms/real-board-data.js';
 import { buildCentres } from '../centres/centres-data.js';
 import { formatDateWithDay } from '../../lib/format.js';
 import markUrl from '../../assets/brand/ukat-mark.png';
@@ -135,10 +136,23 @@ function HubHeader() {
   );
 }
 
-function Dashboard() {
-  const board = useMemo(() => buildBoard(NOW), []);
-  const summary = useMemo(() => summarise(board), [board]);
+const EMPTY_SUMMARY: BoardSummary = {
+  bedsTotal: 0,
+  bedsOccupied: 0,
+  bedsAvailable: 0,
+  occupancyPercent: 0,
+  dueToday: 0,
+  overdue: 0,
+  notApplicable: 0,
+  photoAttention: 0,
+  restrictedAlerts: 0,
+  dischargingWithin7Days: 0,
+  pastPlannedDischarge: 0,
+  missingTherapist: 0,
+  dischargeMismatches: 0,
+};
 
+function Dashboard() {
   const [section, setSection] = useState('group');
   const [collapsed, setCollapsed] = useState(false);
   const [filter, setFilter] = useState<FilterId>('all');
@@ -146,17 +160,51 @@ function Dashboard() {
   const [query, setQuery] = useState('');
   const [openBed, setOpenBed] = useState<string | null>(null);
 
-  // Which centre the Centre-level views are scoped to. Only Primrose Lodge is configured; selecting
-  // any other shows an honest empty state rather than invented rooms.
+  // Which centre the Centre-level views are scoped to. Fictional summary stats (occupancy, overdue
+  // counts) for the GROUP hub still come from centres-data.ts — that screen is a separate, larger
+  // piece of work. The centre-level room board below reads real data.
   const centres = useMemo(() => buildCentres(), []);
   const [centreSlug, setCentreSlug] = useState('primrose-lodge');
   const centre = centres.find((c) => c.slug === centreSlug) ?? centres[0]!;
 
-  // The REAL centre from Supabase, matched by slug. This is a bridge, not the destination: the
-  // group dashboard still runs on fictional summary figures (centres-data.ts), but Administration
-  // must write real rows, so it needs the real uuid rather than the fictional slug.
+  // The REAL centre from Supabase, matched by slug.
   const { centres: authCentres } = useAuth();
   const authCentre = authCentres.find((c) => c.slug === centreSlug) ?? null;
+
+  // The real room board. Replaces the fictional/frozen board that used to render unconditionally —
+  // admitting a client through the real admission form now shows up here, because this is the same
+  // database that form writes to.
+  const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
+  const [boardLoading, setBoardLoading] = useState(true);
+  const [boardError, setBoardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Re-fetches on returning to this section, not only when the centre changes. Without `section`
+    // in the dependency list, admitting a client and navigating back to the board showed the stale
+    // pre-admission state — found by actually doing that in the browser, not by inspection.
+    if (!authCentre || section !== 'board') return;
+    let cancelled = false;
+    setBoardLoading(true);
+    buildRealBoard(authCentre.id)
+      .then((result) => {
+        if (cancelled) return;
+        setRealBoard(result.board);
+        setBoardError(null);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setBoardError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setBoardLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authCentre, section]);
+
+  const board = realBoard;
+  const summary = useMemo(() => (board.length ? summarise(board) : EMPTY_SUMMARY), [board]);
 
   const q = query.trim().toLowerCase();
   const visible = board.filter((bed) => {
@@ -286,7 +334,7 @@ function Dashboard() {
             </label>
             <div className="nums hidden text-right text-[11px] leading-tight text-[var(--color-ink-muted)] lg:block">
               <div className="font-medium text-[var(--color-ink)]">
-                {formatDateWithDay(NOW)}, 09:30
+                {formatDateWithDay(new Date())}
               </div>
               <div>Europe/London</div>
             </div>
@@ -294,7 +342,13 @@ function Dashboard() {
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          {isBoard && !centre.isConfigured ? (
+          {isBoard && boardLoading ? (
+            <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading the room board…</div>
+          ) : isBoard && boardError ? (
+            <div className="m-4 rounded-lg border border-red-300 bg-red-50 p-3 text-[13px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+              Could not load the room board: {boardError}
+            </div>
+          ) : isBoard && board.length === 0 ? (
             <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
               <div
                 aria-hidden="true"
@@ -306,16 +360,15 @@ function Dashboard() {
                 {centre.name} is not configured yet
               </h2>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-                Its rooms and bed spaces have not been set up, and its capacity is still a placeholder.
-                Rather than show invented rooms, this page stays empty until the real configuration is
-                entered — which is administration, not development.
+                It has no rooms or bed spaces in the database yet. Rather than show invented rooms,
+                this page stays empty until they are entered under Administration.
               </p>
               <button
                 type="button"
-                onClick={() => setCentreSlug('primrose-lodge')}
+                onClick={() => setSection('admin')}
                 className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
               >
-                Switch to Primrose Lodge
+                Go to Administration
               </button>
             </div>
           ) : isBoard ? (

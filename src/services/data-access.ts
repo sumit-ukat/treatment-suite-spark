@@ -317,6 +317,117 @@ export const admissions = {
   },
 };
 
+export interface AdmissionRow {
+  id: string;
+  client_id: string;
+  admitted_at: string;
+  planned_duration: number;
+  planned_duration_unit: 'days' | 'weeks';
+  current_planned_discharge_date: string;
+  treatment_group: string | null;
+  primary_substance_id: string | null;
+  peep_required: boolean;
+}
+
+export interface ClientRow {
+  id: string;
+  reference: string;
+  first_name: string;
+  last_name: string;
+  preferred_name: string | null;
+}
+
+export interface RoomAllocationRow {
+  admission_id: string;
+  bed_id: string;
+}
+
+export interface StaffAssignmentRow {
+  admission_id: string;
+  role_code: string;
+  display_label: string | null;
+}
+
+export interface ClientTaskRow {
+  admission_id: string;
+  code: string | null;
+  category: string;
+  title: string;
+  due_at: string | null;
+  completed_at: string | null;
+  status: string;
+}
+
+export interface ClientPhotoRow {
+  client_id: string;
+}
+
+/**
+ * Everything needed to render the room board from real data, for one centre. Five independent
+ * queries rather than one nested `select`, for the same reason the rest of this file avoids deep
+ * embeds: a nested select's exact shape is easy to get wrong silently, and RLS already scopes every
+ * one of these to what the signed-in user may see — there is nothing to join across a security
+ * boundary here.
+ */
+export const roomBoard = {
+  async forCentre(centreId: string) {
+    const [admissions, allocations, staffAssignments, tasks, substances] = await Promise.all([
+      run<AdmissionRow[]>(
+        'roomBoard.admissions',
+        client()
+          .from('admissions')
+          .select(
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required',
+          )
+          .eq('centre_id', centreId)
+          .eq('status', 'active'),
+      ),
+      run<RoomAllocationRow[]>(
+        'roomBoard.allocations',
+        client()
+          .from('room_allocations')
+          .select('admission_id,bed_id')
+          .eq('centre_id', centreId)
+          .is('ended_at', null),
+      ),
+      run<StaffAssignmentRow[]>(
+        'roomBoard.staffAssignments',
+        client()
+          .from('staff_assignments')
+          .select('admission_id,role_code,display_label')
+          .eq('centre_id', centreId)
+          .is('ended_at', null),
+      ),
+      run<ClientTaskRow[]>(
+        'roomBoard.tasks',
+        client()
+          .from('client_tasks')
+          .select('admission_id,code,category,title,due_at,completed_at,status')
+          .eq('centre_id', centreId),
+      ),
+      clinicalLookups.substances(),
+    ]);
+
+    // Clients are fetched separately because RLS on `clients` is keyed off having an admission at an
+    // accessible centre, not off centre_id directly — see migration 0014.
+    const clientIds = [...new Set(admissions.map((a) => a.client_id))];
+    const clients = clientIds.length
+      ? await run<ClientRow[]>(
+          'roomBoard.clients',
+          client().from('clients').select('id,reference,first_name,last_name,preferred_name').in('id', clientIds),
+        )
+      : [];
+    const photos = clientIds.length
+      ? await run<ClientPhotoRow[]>(
+          'roomBoard.photos',
+          client().from('client_photos').select('client_id').eq('is_active', true).in('client_id', clientIds),
+        )
+      : [];
+
+    return { admissions, clients, allocations, staffAssignments, tasks, substances, photos };
+  },
+};
+
 type AuthChangeCallback = Parameters<
   ReturnType<typeof client>['auth']['onAuthStateChange']
 >[0];

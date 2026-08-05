@@ -4,6 +4,54 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-05 — The room board now reads real data
+
+The gap this closes: the admission form (previous entry) proved it could write a real client into
+Supabase, but nothing in the app ever displayed the result — the room board still rendered the
+fictional/frozen file, so an admission just made was invisible everywhere. That inconsistency was
+the single biggest thing undermining trust in what has been built so far, worth fixing before
+anything else.
+
+`src/features/rooms/real-board-data.ts` reads `admissions`, `room_allocations`, `staff_assignments`
+and `client_tasks` directly and assembles them into the exact `BoardBed`/`Occupant` shape
+`board-data.ts` already exports. **`BedCard`, `BedList` and `DetailPanel` render this with no changes
+of their own** — the whole presentation layer built for the fictional board turned out to generalise
+to real data without modification, which is the payoff of having kept that layer free of import-
+specific assumptions.
+
+Three fields on `Occupant` exist only to describe a workbook import (`recorded`,
+`calculatedDischargeDate`, `dischargeMismatchDays`) and — checked by grep rather than assumed — are
+not read by any UI component. They get inert placeholders for real data rather than being left
+undefined, since a real admission has exactly one source of truth and no import discrepancy to
+describe.
+
+**Deliberately not wired: the restricted-alert flag.** Showing it for real needs
+`app.safeguarding_indicator` / `app.risk_indicator`, which are exactly as unreachable from the
+browser today as `admit_client` was before its `public` wrapper — and no safeguarding or risk
+records exist yet regardless, since the UI to create them hasn't been built. Wiring the flag now
+would be decoration with nothing behind it, so it stays `false` until there is something to report.
+
+**Scope boundary:** only the centre-level room board moved to real data. The group hub's occupancy
+and overdue figures still come from the fictional `centres-data.ts` — a separate, larger piece of
+work, since it spans all ten centres rather than one.
+
+### A second real bug, found the same way as the first — by using it, not by reading it
+
+After admitting a client and navigating back to the room board, the newly admitted client did not
+appear. The board only re-fetched when the *centre* changed, not when the *view* was re-entered — so
+returning to an already-loaded board silently showed the pre-admission state. Fixed by re-fetching
+whenever the board view becomes active, not only when the centre selection changes.
+
+### Verified against a real, fresh page load — not the same session that built it
+
+Reloaded the app cold, signed in for real, navigated to Primrose Lodge: **0/18 occupied**, 18 real
+bed rows — accurate, since no real admissions existed. Admitted a client through the real form,
+returned to the board, and saw it update to **1/18**, the correct client on bed 7, correct
+reference, correct discharge date (28 days from today), correct task counts, "No therapist" flagged
+because none was given. Test data removed afterward; confirmed the board reads 0/18 again.
+
+---
+
 ## 2026-08-05 — Admission form, and a real gap found by using it for real
 
 `src/features/admissions/AdmitClientForm.tsx` — the first screen that calls `admit_client` rather
