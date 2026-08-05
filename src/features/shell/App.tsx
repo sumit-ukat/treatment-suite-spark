@@ -67,7 +67,7 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
     case 'discharging':
       return o !== null && o.daysUntilDischarge <= 7;
     case 'photo':
-      return o !== null && o.photoState !== 'verified';
+      return o !== null && o.photoState === 'missing';
     case 'alerts':
       return o?.hasRestrictedAlert === true;
   }
@@ -175,7 +175,7 @@ function Dashboard() {
       overdue: board.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
       dueToday: board.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
       discharging: board.filter((b) => b.occupant && b.occupant.daysUntilDischarge <= 7).length,
-      photo: board.filter((b) => b.occupant && b.occupant.photoState !== 'verified').length,
+      photo: board.filter((b) => b.occupant?.photoState === 'missing').length,
       alerts: board.filter((b) => b.occupant?.hasRestrictedAlert).length,
     }),
     [board],
@@ -345,15 +345,14 @@ function Dashboard() {
                   onClick={() => setFilter(filter === 'discharging' ? 'all' : 'discharging')}
                 />
                 <StatTile
-                  label="Unclear"
-                  value={summary.unclear}
-                  hint="recorded as X"
-                  tone={summary.unclear > 0 ? 'warn' : 'neutral'}
+                  label="Not applicable"
+                  value={summary.notApplicable}
+                  hint="beyond programme end"
                 />
                 <StatTile
-                  label="Photo attention"
+                  label="No photo"
                   value={summary.photoAttention}
-                  hint="missing / unverified"
+                  hint="no photograph on file"
                   tone={summary.photoAttention > 0 ? 'warn' : 'neutral'}
                   active={filter === 'photo'}
                   onClick={() => setFilter(filter === 'photo' ? 'all' : 'photo')}

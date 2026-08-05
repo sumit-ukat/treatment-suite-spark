@@ -8,6 +8,48 @@ Legend: 🔴 open · 🟢 answered (with date and answer) · ⚪ superseded
 
 ---
 
+## Answered 2026-08-05
+
+### Q2 🟢 What does `X` mean?
+**The client is not booked for that week — the programme does not reach it.** A two-week stay has no
+week 3 or week 4.
+
+So `X` is **not applicable**, which is distinct from outstanding and distinct again from unknown.
+
+**Checked against the data before implementing.** Seven of the eight `X` marks are tasks whose
+deadline falls after that client's discharge date — exactly as described. The eighth does not fit:
+bed 1's week-3 session would fall due 6 Aug against a 12 Aug discharge, six days *inside* the stay.
+Either a keying slip or a different reason for the mark. Flagged rather than forced to fit.
+
+**Implemented as a rule, not a one-off translation.** Task generation now creates such tasks as
+`not_applicable` with the reason *"Planned programme ends before this falls due"*. They are created
+rather than skipped on purpose: if the stay is extended they must come back, and they cannot come
+back if they were never written down. Extending or shortening a stay flips them automatically, while
+leaving alone anything a human marked not applicable for their own reason, and anything completed.
+
+### Q41 🟢 Is a buddy staff or a peer client?
+**Staff — provided by the centre for every client.**
+
+The earlier evidence pointing at "peer" (one buddy value matching a client name) was a coincidence of
+first names. `assignee_kind` is now `staff | unresolved`; the `peer` option and
+`peer_admission_id` column have been removed rather than left as a dead option that invites misuse.
+
+Follow-on worth noting: since buddies are staff, they will eventually need user accounts to complete
+their own tasks. Not urgent, but it affects the eventual user count.
+
+### Q43 🟢 Is photograph verification required?
+**No.** Photographs are taken at admission and that is the whole process.
+
+Not deleted, because the master brief requires the capability and another centre may want it —
+implemented as `centres.settings.photoVerificationRequired`, set false everywhere. With verification
+off, a photograph is accepted on upload, and the dashboard counts only *missing* photographs.
+
+The reasoning for making it configurable rather than removing it: "awaiting verification" would
+otherwise be a status nobody ever clears, and an indicator that never resolves trains people to
+ignore indicators.
+
+---
+
 ## Round 4 — asked 2026-08-04
 
 ### Q43 🔴 May the person who uploads a photograph also verify it?

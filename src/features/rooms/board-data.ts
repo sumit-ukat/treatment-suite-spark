@@ -85,7 +85,7 @@ export const TASK_TEMPLATES: readonly TaskTemplate[] = [
  *
  *   'YYYY-MM-DD'  a date
  *   'TRUE'        the tick box, with no date
- *   'X' / 'x'     the letter X — meaning genuinely unknown, see OPEN_QUESTIONS Q2
+ *   'X' / 'x'     the programme does not reach that week — not applicable (Q2, answered)
  *   ''            blank
  */
 type Cell = string;
@@ -108,7 +108,9 @@ interface RealRow {
 
 /** Pseudonyms. Index positions preserve the real sharing pattern; the names are invented. */
 const THERAPISTS = ['R. Ellery', 'S. Brandt', 'L. Vance', 'M. Achebe'];
-const BUDDIES = ['T. Nkemi', 'A. Whitfield', 'D. Fenwick', 'J. Calloway', 'H. Duignan', 'P. Ridley'];
+// Buddies are centre STAFF (Q41, answered), so these are staff pseudonyms - distinct from the
+// client names below. The earlier overlap was a coincidence of first names, not a peer link.
+const BUDDIES = ['T. Nkemi', 'G. Halloran', 'B. Ozturk', 'F. Adeyemi', 'N. Kowalski', 'V. Sandhu'];
 const CLIENT_NAMES: Record<string, string> = {
   '1': 'A. Whitfield',
   '3': 'M. Oyelaran',
@@ -236,7 +238,7 @@ export type RecordedState =
   | { kind: 'completed'; on: Date }
   | { kind: 'scheduled'; on: Date }
   | { kind: 'done_no_date' }
-  | { kind: 'unclear'; raw: string }
+  | { kind: 'not_applicable'; raw: string }
   | { kind: 'nothing_recorded' };
 
 /**
@@ -246,13 +248,16 @@ export type RecordedState =
  * a fact the workbook states — one cell cannot say both when a thing was due and when it was done,
  * which is the central defect of the format and the reason this product separates the two.
  *
- * `X` is left explicitly unresolved rather than guessed. It appears in two different senses in the
- * source, and picking one silently would turn an open question into a false record.
+ * `X` means the programme does not reach that week — confirmed 2026-08-04, and checked against the
+ * data: seven of the eight X marks are tasks whose deadline falls after that client's discharge
+ * date. So it is **not applicable**, which is a different thing from outstanding and different again
+ * from unknown. The eighth (bed 1, week 3, due six days before discharge) does not fit the rule and
+ * is flagged rather than forced.
  */
 function interpret(cell: Cell, now: Date): RecordedState {
   if (cell === '') return { kind: 'nothing_recorded' };
   if (cell === 'TRUE') return { kind: 'done_no_date' };
-  if (cell === 'X' || cell === 'x') return { kind: 'unclear', raw: cell };
+  if (cell === 'X' || cell === 'x') return { kind: 'not_applicable', raw: cell };
   const at = fromZonedDateString(cell, TZ, { hour: 12, minute: 0 });
   return at.getTime() <= now.getTime() ? { kind: 'completed', on: at } : { kind: 'scheduled', on: at };
 }
@@ -266,7 +271,7 @@ export interface BoardTask {
   isComplete: boolean;
   isOverdue: boolean;
   isDueToday: boolean;
-  isUnclear: boolean;
+  isNotApplicable: boolean;
 }
 
 export interface Occupant {
@@ -286,7 +291,7 @@ export interface Occupant {
   buddy: string;
   group: string;
   peeps: boolean;
-  photoState: 'verified' | 'unverified' | 'missing';
+  photoState: 'present' | 'missing';
   hasRestrictedAlert: boolean;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
@@ -294,7 +299,7 @@ export interface Occupant {
   overdueCount: number;
   dueTodayCount: number;
   completedCount: number;
-  unclearCount: number;
+  notApplicableCount: number;
   totalCount: number;
 }
 
@@ -328,7 +333,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     });
     const recorded = interpret(row.cells[tpl.code] ?? '', now);
     const isComplete = recorded.kind === 'completed' || recorded.kind === 'done_no_date';
-    const isUnclear = recorded.kind === 'unclear';
+    const isNotApplicable = recorded.kind === 'not_applicable';
     return {
       code: tpl.code,
       title: tpl.name,
@@ -336,16 +341,16 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
       dueAt,
       recorded,
       isComplete,
-      isUnclear,
-      // An unclear cell is not counted as overdue. It might already be done, or not apply at all;
-      // asserting lateness on top of an unknown would be inventing a finding.
+      isNotApplicable,
+      // A not-applicable task is never overdue. The programme does not reach it, so there is no
+      // work to be late for — counting it would manufacture a failure out of a shorter stay.
       isOverdue:
-        !isUnclear &&
+        !isNotApplicable &&
         isOverdue(
           { dueAt, completedAt: isComplete ? admittedAt : null, status: isComplete ? 'completed' : 'not_started' },
           now,
         ),
-      isDueToday: !isComplete && !isUnclear && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
+      isDueToday: !isComplete && !isNotApplicable && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
     };
   });
 
@@ -371,7 +376,11 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     peeps: row.peeps,
     // The workbook holds eight photographs but no verification state — it has no concept of one.
     // Every client therefore starts unverified, which is the honest import outcome.
-    photoState: 'unverified',
+    // Verification is not required (Q43, answered): photographs are taken at admission and that is
+    // that. All eight clients have one in the source workbook, so "present" is the honest state —
+    // though the images themselves are not imported, since attaching the wrong photo to the wrong
+    // client is the one import error that matters most.
+    photoState: 'present',
     hasRestrictedAlert: row.hasSafeguardingNote,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
@@ -379,7 +388,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     overdueCount: tasks.filter((t) => t.isOverdue).length,
     dueTodayCount: tasks.filter((t) => t.isDueToday).length,
     completedCount: tasks.filter((t) => t.isComplete).length,
-    unclearCount: tasks.filter((t) => t.isUnclear).length,
+    notApplicableCount: tasks.filter((t) => t.isNotApplicable).length,
     totalCount: tasks.length,
   };
 }
@@ -399,7 +408,7 @@ export interface BoardSummary {
   occupancyPercent: number;
   dueToday: number;
   overdue: number;
-  unclear: number;
+  notApplicable: number;
   photoAttention: number;
   restrictedAlerts: number;
   dischargingWithin7Days: number;
@@ -417,8 +426,8 @@ export function summarise(board: readonly BoardBed[]): BoardSummary {
     occupancyPercent: Math.round((occupants.length / board.length) * 100),
     dueToday: occupants.reduce((n, o) => n + o.dueTodayCount, 0),
     overdue: occupants.reduce((n, o) => n + o.overdueCount, 0),
-    unclear: occupants.reduce((n, o) => n + o.unclearCount, 0),
-    photoAttention: occupants.filter((o) => o.photoState !== 'verified').length,
+    notApplicable: occupants.reduce((n, o) => n + o.notApplicableCount, 0),
+    photoAttention: occupants.filter((o) => o.photoState === 'missing').length,
     restrictedAlerts: occupants.filter((o) => o.hasRestrictedAlert).length,
     dischargingWithin7Days: occupants.filter(
       (o) => o.daysUntilDischarge >= 0 && o.daysUntilDischarge <= 7,

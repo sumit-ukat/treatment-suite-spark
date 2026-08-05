@@ -57,12 +57,8 @@ export function DetailPanel({ bed, onClose }: { bed: BoardBed; onClose: () => vo
               {o.hasRestrictedAlert ? (
                 <Chip icon="&#9873;" label="Restricted alert" tone="alert" />
               ) : null}
-              {o.photoState !== 'verified' ? (
-                <Chip
-                  icon="!"
-                  label={o.photoState === 'missing' ? 'No photograph' : 'Photo unverified'}
-                  tone="warn"
-                />
+              {o.photoState === 'missing' ? (
+                <Chip icon="!" label="No photograph" tone="warn" />
               ) : null}
             </div>
           </div>

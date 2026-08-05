@@ -25,7 +25,7 @@ const attentionScore = (b: BoardBed): number => {
   return (
     o.overdueCount * 10 +
     (o.daysUntilDischarge < 0 ? 30 : 0) +
-    o.unclearCount * 2 +
+    o.notApplicableCount * 2 +
     (o.therapist === null ? 15 : 0)
   );
 };
@@ -226,7 +226,13 @@ export function BedList({
                     {o.dueTodayCount > 0 ? (
                       <Chip icon="&#9679;" label={`${o.dueTodayCount}`} tone="warn" />
                     ) : null}
-                    {o.unclearCount > 0 ? <Chip icon="?" label={`${o.unclearCount}`} /> : null}
+                    {o.notApplicableCount > 0 ? (
+                      <Chip
+                        icon="&#8212;"
+                        label={`${o.notApplicableCount}`}
+                        title="Not applicable - the planned programme ends before these fall due."
+                      />
+                    ) : null}
                     {o.therapist === null ? (
                       <Chip icon="!" label="No therapist" tone="warn" />
                     ) : null}

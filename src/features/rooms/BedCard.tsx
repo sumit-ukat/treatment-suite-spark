@@ -6,8 +6,15 @@ import { Chip } from '../../components/ui.tsx';
  * Photograph placeholder.
  *
  * Renders initials, never an image. Real client photographs are not used in any preview, fixture or
- * screenshot. Verification state is shown as a badge AND a screen-reader label, so it never depends
- * on colour alone.
+ * screenshot.
+ *
+ * Two states, not three. Verification was removed (Q43, answered): photographs are taken at
+ * admission and that is the whole process, so "awaiting verification" would be a status nobody ever
+ * clears — and an indicator that never resolves teaches people to ignore indicators. The only
+ * question left is whether a photograph exists, and a missing one still matters, because
+ * identification at handover is what the photo is for.
+ *
+ * State is shown as a badge AND a screen-reader label, so it never depends on colour alone.
  */
 export function PhotoBadge({
   occupant,
@@ -16,22 +23,11 @@ export function PhotoBadge({
   occupant: Occupant;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const { photoState: state } = occupant;
-  const ring =
-    state === 'verified'
-      ? 'ring-emerald-500/55'
-      : state === 'unverified'
-        ? 'ring-amber-500/70'
-        : 'ring-red-500/60';
-  const mark = state === 'verified' ? '✓' : state === 'unverified' ? '!' : '?';
-  const markTone =
-    state === 'verified' ? 'bg-emerald-600' : state === 'unverified' ? 'bg-amber-600' : 'bg-red-600';
-  const title =
-    state === 'verified'
-      ? 'Photograph verified'
-      : state === 'unverified'
-        ? 'Photograph awaiting verification'
-        : 'No photograph on file';
+  const missing = occupant.photoState === 'missing';
+  const ring = missing ? 'ring-red-500/60' : 'ring-emerald-500/55';
+  const mark = missing ? '?' : '✓';
+  const markTone = missing ? 'bg-red-600' : 'bg-emerald-600';
+  const title = missing ? 'No photograph on file' : 'Photograph on file';
   const box =
     size === 'lg' ? 'size-12 text-[15px]' : size === 'sm' ? 'size-7 text-[10px]' : 'size-10 text-[13px]';
   const dot = size === 'sm' ? 'size-[11px] text-[7px]' : 'size-[15px] text-[9px]';
@@ -200,12 +196,12 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         {o.dueTodayCount > 0 ? (
           <Chip icon="&#9679;" label={`${o.dueTodayCount} due today`} tone="warn" />
         ) : null}
-        {/* Cells recorded as X. Neither done nor outstanding until someone says which. */}
-        {o.unclearCount > 0 ? (
+        {/* Recorded as X: the programme does not reach that week, so there is nothing to do. */}
+        {o.notApplicableCount > 0 ? (
           <Chip
-            icon="?"
-            label={`${o.unclearCount} unclear`}
-            title="Recorded as X on the whiteboard. Meaning not yet confirmed - could be done, or not applicable."
+            icon="&#8212;"
+            label={`${o.notApplicableCount} n/a`}
+            title="Not applicable - the planned programme ends before these fall due."
           />
         ) : null}
         {!dischargePassed && !dischargeToday && o.overdueCount === 0 && o.dueTodayCount === 0 ? (
