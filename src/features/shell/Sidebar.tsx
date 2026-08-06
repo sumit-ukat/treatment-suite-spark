@@ -4,9 +4,10 @@ import { useAuth } from '../auth/AuthProvider.tsx';
 /**
  * Navigation.
  *
- * Only Room Board is built. The rest are shown as real destinations rather than hidden, because the
- * shape of the product is part of what is being reviewed — but each is explicitly marked "soon" so
- * the preview never implies working features. Nothing here pretends.
+ * Not every destination is built yet. The rest are shown as real destinations rather than hidden,
+ * because the shape of the product is part of what is being reviewed — but each unbuilt one is
+ * explicitly marked "soon" (via `ready: false`) so the preview never implies a working feature.
+ * Nothing here pretends.
  */
 export interface NavItem {
   id: string;
@@ -28,7 +29,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
     heading: 'Centre',
     items: [
       { id: 'board', label: 'Room board', icon: '▦', ready: true },
-      { id: 'clients', label: 'Clients', icon: '☰', ready: false },
+      { id: 'clients', label: 'Clients', icon: '☰', ready: true },
       { id: 'admissions', label: 'Admissions', icon: '↳', ready: true },
     ],
   },

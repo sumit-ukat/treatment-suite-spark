@@ -292,8 +292,15 @@ export interface AdmitClientInput {
   admittedAt: string; // ISO timestamp
   plannedDuration: number;
   plannedDurationUnit: 'days' | 'weeks';
-  firstName: string;
-  lastName: string;
+  /**
+   * Provide EITHER `clientId` (reuse an existing client found via `clients.search`) OR
+   * `firstName`+`lastName` (create a new one) — mirrors `app.admit_client`'s own either/or contract.
+   * The server rejects both missing and both present is simply redundant, not checked here: it is not
+   * this file's job to duplicate a rule the database already enforces.
+   */
+  clientId?: string | undefined;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
   preferredName?: string | undefined;
   treatmentGroup?: string | undefined;
   substanceName?: string | undefined;
@@ -317,9 +324,9 @@ export const admissions = {
       p_admitted_at: input.admittedAt,
       p_planned_duration: input.plannedDuration,
       p_planned_duration_unit: input.plannedDurationUnit,
-      p_client_id: null,
-      p_first_name: input.firstName,
-      p_last_name: input.lastName,
+      p_client_id: input.clientId ?? null,
+      p_first_name: input.firstName ?? null,
+      p_last_name: input.lastName ?? null,
       p_preferred_name: input.preferredName ?? null,
       p_treatment_group: input.treatmentGroup ?? null,
       p_substance_name: input.substanceName ?? null,
@@ -331,6 +338,32 @@ export const admissions = {
     });
     if (error) throw new DataAccessError('admissions.admitClient', error);
     return data as string;
+  },
+};
+
+export interface ClientSearchResult {
+  client_id: string;
+  reference: string;
+  /** Null unless the caller holds `clients.view_identity` — see migration 0028. */
+  display_name: string | null;
+  /** Global, not per-centre: `admissions_one_open_per_client` allows at most one, anywhere. */
+  has_open_admission: boolean;
+  last_admission_status: string | null;
+  last_admitted_at: string | null;
+}
+
+export const clients = {
+  /**
+   * Search for a client at one centre — by reference always, by name only for a caller holding
+   * `clients.view_identity`. See migration 0028: the server withholds a name-based match entirely for
+   * a caller who cannot see names, rather than matching and then hiding the result, which would leak
+   * whether the name exists via a present-but-blank row.
+   */
+  search(centreId: string, query: string): Promise<ClientSearchResult[]> {
+    return run(
+      'clients.search',
+      client().rpc('search_clients', { p_centre_id: centreId, p_query: query }),
+    );
   },
 };
 

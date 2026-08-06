@@ -4,6 +4,61 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-06 — A client directory, and closing the admission-form gap it was named for
+
+Until now the only way to find a client was already having their bed open on the room board — no
+search, no way to look someone up by name or reference. `AdmitClientForm.tsx`'s own header comment
+named this explicitly: it was scoped to creating a new client only, "because... that needs a client
+directory to search, and the Clients screen does not exist yet." `app.admit_client` (migration 0022)
+has supported reusing an existing client via `p_client_id` since it was written — the frontend gap was
+the only thing missing.
+
+**`app.search_clients(p_centre_id, p_query)`** (migration 0028, `public` wrapper per 0024) closes both
+gaps with one function. Scoped to a single centre, not the organisation — "every centre operates on
+its own... there is no data sharing between those" is a standing decision for this product, so a
+client only appears in a centre's directory if they have at least one admission (any status, so a
+discharged client is still findable) *at that centre*. The identity split mirrors `client_summary`
+(migration 0025) exactly: `clients.view_operational` can search by reference; `clients.view_identity`
+is additionally required to search by name or see one back. A caller lacking `view_identity` is not
+given a "does this name exist" side channel by matching on it and then hiding the result — the name
+match itself is withheld, never attempted, not just the display.
+
+**Two new UI surfaces from one search:**
+- **Clients** (`ClientDirectory.tsx`), a new per-centre screen — the sidebar's `clients` nav slot has
+  existed unused since the shell was built, now wired up. Read-only: there is no client file screen to
+  link a result to yet (tracked in the backlog), so a result shows exactly what search returns and
+  nothing more.
+- **`AdmitClientForm.tsx`** now has "Existing client" / "New client" tabs. "Existing client" searches
+  and picks; a client already showing an open admission (checked via `has_open_admission`, which is
+  global — the `admissions_one_open_per_client` index from migration 0004 allows at most one anywhere,
+  not per centre) is visible but not selectable. "New client" is disabled, not hidden, for a role
+  lacking `clients.edit_identity` — the server's own rule (migration 0022: creating a client needs that
+  permission, reusing one does not), surfaced honestly rather than failing silently at submit.
+
+### Verified with 11 SQL assertions across two fictional roles and two centres
+
+helpdesk (operational only) searching by name gets zero rows — not a blank-name row, no row at all;
+the same role searching by reference gets the reference with a null name; a name search that would
+also coincidentally match no reference substring confirmed no side channel exists. An identity-holder
+searching by name gets the name; the same works for a discharged client, correctly reporting
+`has_open_admission = false`. **Centre scoping, the one most worth getting wrong**: a client admitted
+only at Providence Projects is invisible when searching from Primrose Lodge, and found when searching
+from Providence Projects — proven with the same signed-in user holding access to both, so the
+difference is provably the centre parameter, not the caller's permissions. A query under 2 characters,
+and a blank one, both return nothing. All fictional data removed afterward; zero rows left.
+
+### Verified end-to-end in the browser, including the reuse path
+
+Directory search rendered both a currently-admitted and a discharged fictional client with the correct
+status chips. In the admission form: switched to "Existing client", searched, confirmed the
+already-admitted client was shown but disabled, selected the discharged one, and admitted them —
+the review screen read "(existing)"; confirmed via direct query that the **same `client_id`** was used
+across both admissions, not a new client row. The room board picked it up immediately: 0/18 → 1/18,
+correct reference, 20 tasks generated. All test data removed afterward; confirmed 0/18 again on a cold
+reload.
+
+---
+
 ## 2026-08-06 — The discharge workflow, and a second live bug found while proving it in the browser
 
 Admission and daily task tracking both worked, but nothing could ever end a stay: a bed, once filled,
