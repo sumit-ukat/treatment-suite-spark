@@ -282,7 +282,21 @@ export interface BoardTask {
   requiresCompletionNote: boolean;
 }
 
+/** Current state of a non-routine discharge request. See migration 0027 — 'rejected'/'finalised' are not "current" and never appear here. */
+export interface DischargeRequestSummary {
+  id: string;
+  dischargeType: 'early' | 'transfer' | 'other';
+  status: 'pending' | 'approved';
+  reason: string;
+  requestedBy: string | null;
+  approvalNotes: string | null;
+}
+
 export interface Occupant {
+  /** The `admissions` row id, when real — see BoardTask.id for why this is null on the fictional boards. */
+  admissionId: string | null;
+  /** Null unless a non-routine discharge is pending approval or approved and awaiting finalisation. */
+  dischargeRequest: DischargeRequestSummary | null;
   reference: string;
   displayName: string;
   initials: string;
@@ -369,6 +383,9 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
   const eligibility = assessEligibility(admittedAt, settings, now);
 
   return {
+    // No database row behind this board — see admissionId's doc comment.
+    admissionId: null,
+    dischargeRequest: null,
     reference: CLIENT_REFS[row.bed] ?? `PL-${row.bed}`,
     displayName: CLIENT_NAMES[row.bed] ?? `Client ${row.bed}`,
     initials: initialsOf(CLIENT_NAMES[row.bed] ?? `C ${row.bed}`),

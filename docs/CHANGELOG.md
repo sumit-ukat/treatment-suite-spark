@@ -4,6 +4,83 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-06 — The discharge workflow, and a second live bug found while proving it in the browser
+
+Admission and daily task tracking both worked, but nothing could ever end a stay: a bed, once filled,
+stayed filled forever. Occupancy could only go up — one real discharge and every downstream number
+(available beds, the group hub's occupancy percentage) is permanently wrong.
+
+Three permission codes have existed since migration 0014 with nothing behind them:
+`discharge.initiate` ("Initiate an early discharge"), `discharge.approve` ("Approve an early
+discharge"), `discharge.finalise` ("Finalise a discharge" — no "early" in that one). Read literally,
+that is two paths, not three steps of one: a routine discharge on the planned date needs only
+`discharge.finalise`; anything else (early / transfer / other) needs a **different person** to approve
+it first. This reading is inferred from the permission text and the seeded role grants (centre_manager
+holds initiate + finalise but not approve; supervisor holds only approve; only platform_admin holds all
+three) — nothing in the brief specifies the workflow explicitly, so it is stated plainly in migration
+0027 rather than assumed silently, and worth confirming against how UKAT actually wants transfers
+handled.
+
+**`app.request_early_discharge` → `app.decide_discharge_request` → `app.finalise_discharge`**
+(migration 0027, `public` wrappers per 0024), backed by a new `discharge_requests` table. Following the
+`client_tasks` precedent (migration 0026): every write goes through a SECURITY DEFINER function, DML is
+revoked from `authenticated`/`anon` entirely, and — the one rule specific to this table — **the person
+who requested a discharge cannot approve or reject it themselves**, enforced server-side, not just
+hidden in the UI. A routine planned discharge skips the request table entirely and calls `finalise`
+directly.
+
+The UI lives in the room board's detail panel: a **Discharge…** button that either finalises directly
+(planned) or submits for approval (early/transfer/other); the resulting pending/approved state renders
+there until someone else decides it and someone with `discharge.finalise` closes it out.
+
+### Verified with 22 SQL assertions across three fictional roles
+
+helpdesk can finalise nothing; centre_manager finalises a routine discharge directly (bed freed,
+admission marked discharged); an already-discharged admission can't be discharged again; finalising
+`early` with no approved request is refused; centre_manager initiates a request; helpdesk can't approve
+it; **platform_admin, holding both initiate and approve, is refused when trying to approve their own
+request** — the separation-of-duties rule holds even for the one role that could otherwise bypass it; a
+second pending request on the same admission is refused; a different person (supervisor) approves it;
+re-deciding an already-decided request is refused; centre_manager finalises the approved request (bed
+freed, request consumed to `finalised`); rejection with a reason works and does not block a later
+retry; future-dated and pre-admission-dated discharges are both refused. All fictional data removed
+afterward; zero rows left.
+
+### Two real bugs found while proving this in the browser, neither hypothetical
+
+**The date field defaulted to today, combined with a fixed noon-London time-of-day — a convention used
+safely elsewhere in this codebase for calendar dates, but `finalise_discharge` refuses anything after
+"now", and noon is in the future for anyone signing in before midday.** Every discharge attempted before
+noon would have been refused with a confusing "cannot be recorded in the future" error. Fixed by using
+the actual current instant whenever the naive noon value would be later than it, falling back to noon
+only for a genuinely backdated entry where the exact time was never known anyway.
+
+**`identity.profile()` queried `user_profiles` with no `.eq('id', ...)` filter, relying entirely on RLS
+to narrow the result to one row.** `profiles_read_self` (migration 0006) reads `(id = auth.uid()) OR
+app.can_read('administration.manage_users')` — RLS only narrows to "my own row" for someone who
+*cannot* also read every profile. For platform_admin, who can, it legitimately returns every row, and
+`.maybeSingle()` throws the moment a second profile exists. That moment is not rare: it is the first
+time any platform_admin signs in after a second staff account is created — which is exactly what
+happened here, live, creating fictional users for this feature's own browser test, on a database that
+until now had only ever had one real profile in it. **Every previous "verified in the browser" claim in
+this changelog was tested with exactly one profile in existence and could not have caught this.** Fixed
+by filtering to `auth.getUser().id` explicitly — the one deliberate exception to this file's own "RLS
+does the filtering" rule, documented in `data-access.ts` as such so it is not "corrected" back later by
+someone citing that same rule.
+
+### Verified end-to-end in the browser, both paths, one real login
+
+Planned: discharged a fictional occupant directly — occupancy 2/18 → 1/18, bed showed Available, no
+manual refresh. Early: requested as platform_admin, confirmed the UI correctly hid the approve/reject
+controls and showed "You requested this" (the separation-of-duties rule reflected in the UI, not just
+enforced server-side); approved via a fictional supervisor at the SQL layer (no second real login
+exists); reloaded and confirmed the panel picked up "approved — ready to finalise" with the supervisor's
+notes; finalised through the real UI — occupancy 1/18 → 0/18, request consumed. All test data,
+including the fictional supervisor account, removed afterward; confirmed via a further cold reload that
+Bilal's own session is unaffected.
+
+---
+
 ## 2026-08-05 — Tasks can finally be completed — and a second bypass closed
 
 Until now the task system was read-only decoration. 20 templates were seeded, tasks were generated on

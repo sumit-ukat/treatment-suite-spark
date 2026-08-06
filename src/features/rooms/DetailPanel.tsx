@@ -1,10 +1,36 @@
 import { useEffect, useState } from 'react';
-import type { BoardBed, BoardTask } from './board-data.js';
+import type { BoardBed, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip } from '../../components/ui.tsx';
-import { tasks as taskService } from '../../services/data-access.js';
+import { discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
+import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
+import { fromZonedDateString } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
+
+// TODO: same scoped simplification as real-board-data.ts — every configured centre today is
+// Europe/London.
+const TZ = PRIMROSE_LODGE_SETTINGS.timezone;
+
+const DISCHARGE_TYPE_LABEL: Record<DischargeRequestSummary['dischargeType'], string> = {
+  early: 'Early discharge',
+  transfer: 'Transfer',
+  other: 'Other',
+};
+
+/**
+ * The date field has no time component, so a time of day has to be invented for a date-only pick.
+ * Noon is the convention used everywhere else in this codebase for a past or future calendar date —
+ * but `app.finalise_discharge` refuses anything after "now" (with a small tolerance), and noon on
+ * *today* is in the future for every user signing in before midday. Using the real current instant
+ * whenever the naive noon value would be later than it keeps "today" always valid, and still gives a
+ * stable noon timestamp for a genuinely backdated entry, where the exact time is not known anyway.
+ */
+function dischargeTimestamp(dateStr: string): Date {
+  const noon = fromZonedDateString(dateStr, TZ, { hour: 12, minute: 0 });
+  const now = new Date();
+  return noon.getTime() > now.getTime() ? now : noon;
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   family_contact: 'Family contact',
@@ -19,12 +45,16 @@ const CATEGORY_LABEL: Record<string, string> = {
 export function DetailPanel({
   bed,
   onClose,
-  onTaskChanged,
+  onChanged,
 }: {
   bed: BoardBed;
   onClose: () => void;
-  /** Called after a completion or reopen lands, so the board re-reads rather than guessing the new state. */
-  onTaskChanged?: (() => void) | undefined;
+  /**
+   * Called after a task completion/reopen or a discharge action lands, so the board re-reads rather
+   * than guessing the new state — a discharge in particular changes which bed this occupant is even
+   * on (none, once discharged), which is not something to reconstruct locally.
+   */
+  onChanged?: (() => void) | undefined;
 }) {
   const o = bed.occupant;
 
@@ -100,6 +130,8 @@ export function DetailPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <DischargeSection occupant={o} onChanged={onChanged} />
+
           <div className="mb-2.5 flex items-baseline justify-between">
             <h3 className="text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
               Required actions
@@ -117,7 +149,7 @@ export function DetailPanel({
 
           <ul className="flex flex-col gap-1">
             {sorted.map((t) => (
-              <TaskRow key={t.id ?? t.code} task={t} onChanged={onTaskChanged} />
+              <TaskRow key={t.id ?? t.code} task={t} onChanged={onChanged} />
             ))}
           </ul>
         </div>
@@ -291,6 +323,295 @@ function TaskRow({ task: t, onChanged }: { task: BoardTask; onChanged?: (() => v
         </p>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * The discharge workflow — see migration 0027 for the reasoning behind the two paths this mirrors:
+ *
+ * - `discharge_type: 'planned'` is routine and needs only `discharge.finalise`, so the form submits
+ *   straight to `finalise`.
+ * - Anything else needs a different person to approve it first, so the same form instead calls
+ *   `request`, and the resulting pending/approved state renders here until someone with
+ *   `discharge.approve` — never the requester themselves, enforced server-side — decides it, and then
+ *   someone with `discharge.finalise` closes it out.
+ *
+ * `occupant.admissionId === null` (the fictional and frozen boards) renders nothing: there is no real
+ * admission to discharge.
+ */
+function DischargeSection({
+  occupant: o,
+  onChanged,
+}: {
+  occupant: Occupant;
+  onChanged?: (() => void) | undefined;
+}) {
+  const { can, session } = useAuth();
+  const canInitiate = can('discharge.initiate');
+  const canApprove = can('discharge.approve');
+  const canFinalise = can('discharge.finalise');
+
+  const [mode, setMode] = useState<'idle' | 'form' | 'reject'>('idle');
+  const [dischargeType, setDischargeType] = useState<DischargeRequestSummary['dischargeType'] | 'planned'>(
+    () => (canFinalise ? 'planned' : 'early'),
+  );
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // No database row behind this occupant — see the doc comment on Occupant.admissionId.
+  if (!o.admissionId) return null;
+  const admissionId = o.admissionId;
+
+  const req = o.dischargeRequest;
+  const isOwnRequest = req?.requestedBy != null && req.requestedBy === session?.user.id;
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      setMode('idle');
+      setReason('');
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const submitNewDischarge = () => {
+    if (!reason.trim()) return;
+    const at = dischargeTimestamp(date).toISOString();
+    if (dischargeType === 'planned') {
+      void run(() => dischargeService.finalise(admissionId, 'planned', at, reason));
+    } else {
+      // request() returns the new request's id, which nothing here needs — run() only wants void.
+      void run(async () => {
+        await dischargeService.request(admissionId, dischargeType, reason);
+      });
+    }
+  };
+
+  const finaliseApprovedRequest = () => {
+    if (!req) return;
+    const at = dischargeTimestamp(date).toISOString();
+    void run(() => dischargeService.finalise(admissionId, req.dischargeType, at, reason || null));
+  };
+
+  const dateField = (
+    <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+      Date
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+      />
+    </label>
+  );
+
+  return (
+    <div className="mb-4 rounded-lg border border-[var(--color-line)] p-3">
+      <h3 className="mb-2 text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+        Discharge
+      </h3>
+
+      {!req && mode === 'idle' ? (
+        canInitiate || canFinalise ? (
+          <button
+            type="button"
+            onClick={() => setMode('form')}
+            className="rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            Discharge&hellip;
+          </button>
+        ) : (
+          <p className="text-[11.5px] text-[var(--color-ink-muted)]">No discharge in progress.</p>
+        )
+      ) : null}
+
+      {!req && mode === 'form' ? (
+        <div className="flex flex-col gap-2">
+          <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+            Type
+            <select
+              value={dischargeType}
+              onChange={(e) => setDischargeType(e.target.value as typeof dischargeType)}
+              className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+            >
+              {canFinalise ? <option value="planned">Planned (on schedule)</option> : null}
+              {canInitiate ? <option value="early">Early discharge</option> : null}
+              {canInitiate ? <option value="transfer">Transfer</option> : null}
+              {canInitiate ? <option value="other">Other</option> : null}
+            </select>
+          </label>
+          {dateField}
+          <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+            Reason
+            <textarea
+              autoFocus
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+            />
+          </label>
+          {dischargeType !== 'planned' ? (
+            <p className="text-[10px] text-[var(--color-ink-muted)]">
+              This needs sign-off from a different person before it can be finalised.
+            </p>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={busy || !reason.trim()}
+              onClick={submitNewDischarge}
+              className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+            >
+              {busy ? 'Saving…' : dischargeType === 'planned' ? 'Discharge' : 'Submit for approval'}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setMode('idle');
+                setReason('');
+                setError(null);
+              }}
+              className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {req && req.status === 'pending' ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11.5px]">
+            <span className="font-medium">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</span> requested
+            &mdash; awaiting approval.
+          </p>
+          <p className="text-[11px] text-[var(--color-ink-muted)]">{req.reason}</p>
+
+          {canApprove && !isOwnRequest && mode === 'idle' ? (
+            <div className="mt-1 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => dischargeService.decide(req.id, true, null))}
+                className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setMode('reject')}
+                className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Reject
+              </button>
+            </div>
+          ) : canApprove && isOwnRequest ? (
+            <p className="text-[10px] text-[var(--color-ink-muted)]">
+              You requested this &mdash; a different person must approve it.
+            </p>
+          ) : null}
+
+          {mode === 'reject' ? (
+            <div className="mt-1">
+              <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                Why is this being rejected?
+              </label>
+              <textarea
+                autoFocus
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="mt-0.5 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+              />
+              <div className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !reason.trim()}
+                  onClick={() => void run(() => dischargeService.decide(req.id, false, reason))}
+                  className="rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+                >
+                  {busy ? 'Saving…' : 'Reject'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setMode('idle');
+                    setReason('');
+                  }}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {req && req.status === 'approved' ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11.5px]">
+            <span className="font-medium">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</span> approved
+            &mdash; ready to finalise.
+          </p>
+          {req.approvalNotes ? (
+            <p className="text-[11px] text-[var(--color-ink-muted)]">{req.approvalNotes}</p>
+          ) : null}
+
+          {canFinalise && mode === 'idle' ? (
+            <button
+              type="button"
+              onClick={() => setMode('form')}
+              className="mt-1 self-start rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Finalise discharge&hellip;
+            </button>
+          ) : null}
+
+          {mode === 'form' ? (
+            <div className="mt-1 flex flex-col gap-2">
+              {dateField}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={finaliseApprovedRequest}
+                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+                >
+                  {busy ? 'Saving…' : 'Finalise discharge'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setMode('idle')}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {error ? (
+        <p role="alert" className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

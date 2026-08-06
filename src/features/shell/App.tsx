@@ -177,8 +177,9 @@ function Dashboard() {
   const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);
   const [boardError, setBoardError] = useState<string | null>(null);
-  // Bumped after a task is completed or reopened, to re-read the board rather than patch local state
-  // to what we assume the server did. The server owns task state; this asks it what happened.
+  // Bumped after a task is completed/reopened or a discharge action lands, to re-read the board rather
+  // than patch local state to what we assume the server did. The server owns this state; this asks it
+  // what happened — a discharge in particular can move an occupant off the board entirely.
   const [boardVersion, setBoardVersion] = useState(0);
 
   useEffect(() => {
@@ -585,7 +586,7 @@ function Dashboard() {
         <DetailPanel
           bed={selected}
           onClose={() => setOpenBed(null)}
-          onTaskChanged={() => setBoardVersion((v) => v + 1)}
+          onChanged={() => setBoardVersion((v) => v + 1)}
         />
       ) : null}
     </div>

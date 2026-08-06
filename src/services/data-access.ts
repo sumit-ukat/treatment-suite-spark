@@ -76,10 +76,27 @@ export interface CentreRow {
  */
 
 export const identity = {
+  /**
+   * The one deliberate exception to this file's "RLS does the filtering, not this file" rule (see the
+   * header comment) — and it exists because of a real bug, not a style choice. `profiles_read_self`
+   * (migration 0006) reads `(id = auth.uid()) OR app.can_read('administration.manage_users')`: RLS
+   * alone narrows to "my own row" only for someone who *cannot* also read every profile. For anyone
+   * who can — platform_admin, and any future role with that permission — RLS legitimately returns
+   * every `user_profiles` row, and `.maybeSingle()` throws the moment a second one exists. That
+   * "moment" is not rare: it is the first time a platform_admin ever signs in after a second person
+   * gets an account. Found live, here, by that exact sequence happening during testing of an unrelated
+   * feature — not a hypothetical. `.eq('id', ...)` is the fix, and it is correct specifically because
+   * "my own profile" is not something a broader read grant should ever change.
+   */
   async profile(): Promise<ProfileRow | null> {
+    const { data: auth, error: authError } = await client().auth.getUser();
+    if (authError) throw new DataAccessError('identity.profile', authError);
+    if (!auth.user) return null;
+
     const { data, error } = await client()
       .from('user_profiles')
       .select('display_name,email,job_title')
+      .eq('id', auth.user.id)
       .maybeSingle();
     if (error) throw new DataAccessError('identity.profile', error);
     return data as ProfileRow | null;
@@ -394,6 +411,65 @@ export interface ClientPhotoRow {
   client_id: string;
 }
 
+export interface DischargeRequestRow {
+  id: string;
+  admission_id: string;
+  discharge_type: 'early' | 'transfer' | 'other';
+  status: 'pending' | 'approved';
+  reason: string;
+  requested_by: string | null;
+  approval_notes: string | null;
+}
+
+export const discharge = {
+  /**
+   * The whole workflow goes through these three RPCs — see migration 0027. Read literally, the
+   * permission descriptions split into two paths: a routine discharge on the planned date needs only
+   * `discharge.finalise`, called directly. Anything else (early / transfer / other) needs a different
+   * person to approve it first: `discharge.initiate` proposes, `discharge.approve` — enforced
+   * server-side to be someone other than the requester — signs off, then `discharge.finalise` executes.
+   */
+  async request(admissionId: string, dischargeType: 'early' | 'transfer' | 'other', reason: string): Promise<string> {
+    const { data, error } = await client().rpc('request_early_discharge', {
+      p_admission_id: admissionId,
+      p_discharge_type: dischargeType,
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('discharge.request', error);
+    return data as string;
+  },
+
+  /** `approve: false` requires a reason; the database records it as the rejection reason. */
+  async decide(requestId: string, approve: boolean, notes: string | null): Promise<void> {
+    const { error } = await client().rpc('decide_discharge_request', {
+      p_request_id: requestId,
+      p_approve: approve,
+      p_notes: notes,
+    });
+    if (error) throw new DataAccessError('discharge.decide', error);
+  },
+
+  /**
+   * Ends the stay: closes the open room allocation and marks the admission discharged, in one
+   * database transaction. For `dischargeType !== 'planned'`, the server requires a matching approved
+   * request and consumes it — this call does not create one.
+   */
+  async finalise(
+    admissionId: string,
+    dischargeType: 'planned' | 'early' | 'transfer' | 'other',
+    actualDischargeAt: string,
+    reason: string | null,
+  ): Promise<void> {
+    const { error } = await client().rpc('finalise_discharge', {
+      p_admission_id: admissionId,
+      p_discharge_type: dischargeType,
+      p_actual_discharge_at: actualDischargeAt,
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('discharge.finalise', error);
+  },
+};
+
 /**
  * Everything needed to render the room board from real data, for one centre. Five independent
  * queries rather than one nested `select`, for the same reason the rest of this file avoids deep
@@ -405,7 +481,7 @@ export const roomBoard = {
   async forCentre(centreId: string) {
     // `clientTasks` rather than `tasks` — the module already exports a `tasks` service, and shadowing
     // it inside this function would be a trap for the next person adding a call here.
-    const [admissions, allocations, staffAssignments, clientTasks, substances, taskTemplates] =
+    const [admissions, allocations, staffAssignments, clientTasks, substances, taskTemplates, dischargeRequests] =
       await Promise.all([
       run<AdmissionRow[]>(
         'roomBoard.admissions',
@@ -447,6 +523,16 @@ export const roomBoard = {
         'roomBoard.taskTemplates',
         client().from('task_templates').select('id,requires_completion_note'),
       ),
+      // Only 'pending' and 'approved' — 'rejected' does not block a new request and 'finalised' means
+      // the admission is already discharged, so neither is "current" state the board needs to show.
+      run<DischargeRequestRow[]>(
+        'roomBoard.dischargeRequests',
+        client()
+          .from('discharge_requests')
+          .select('id,admission_id,discharge_type,status,reason,requested_by,approval_notes')
+          .eq('centre_id', centreId)
+          .in('status', ['pending', 'approved']),
+      ),
     ]);
 
     // Clients are read via the `client_summary` RPC, not a direct `select` on `clients` — migration
@@ -476,6 +562,7 @@ export const roomBoard = {
       tasks: clientTasks,
       substances,
       taskTemplates,
+      dischargeRequests,
       photos,
     };
   },

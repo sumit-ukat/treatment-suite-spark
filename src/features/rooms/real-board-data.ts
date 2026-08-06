@@ -29,6 +29,7 @@ import type {
   ClientPhotoRow,
   ClientRow,
   ClientTaskRow,
+  DischargeRequestRow,
   RoomAllocationRow,
   StaffAssignmentRow,
   SubstanceRow,
@@ -38,7 +39,7 @@ import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { assessEligibility } from '../../domain/eligibility.js';
 import { isOverdue } from '../../domain/tasks.js';
 import { calendarDaysBetween, fromZonedDateString } from '../../domain/zoned-time.js';
-import type { BoardBed, BoardSummary, BoardTask, Occupant } from './board-data.js';
+import type { BoardBed, BoardSummary, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
 import { summarise } from './board-data.js';
 
 // TODO: read from `centres.timezone` once the room-board query fetches it. Every configured centre
@@ -57,6 +58,7 @@ function buildRealOccupant(
   substancesById: Map<string, SubstanceRow>,
   photographedClientIds: Set<string>,
   noteRequiredByTemplateId: Map<string, boolean>,
+  dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
   now: Date,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
@@ -109,7 +111,22 @@ function buildRealOccupant(
   // clients.view_identity — the bed is still occupied and known, just not by name.
   const displayName = c.display_name ?? c.reference;
 
+  const req = dischargeRequestByAdmission.get(admission.id);
+  const dischargeRequest: DischargeRequestSummary | null = req
+    ? {
+        id: req.id,
+        dischargeType: req.discharge_type,
+        status: req.status,
+        reason: req.reason,
+        requestedBy: req.requested_by,
+        approvalNotes: req.approval_notes,
+      }
+    : null;
+
   return {
+    // A real row, so this admission can actually be discharged — see the doc comment on Occupant.
+    admissionId: admission.id,
+    dischargeRequest,
     reference: c.reference,
     displayName,
     initials: initialsOf(c.display_name ?? c.reference),
@@ -160,6 +177,11 @@ export async function buildRealBoard(
   const noteRequiredByTemplateId = new Map(
     data.taskTemplates.map((t) => [t.id, t.requires_completion_note]),
   );
+  // At most one row per admission in practice: the unique index in migration 0027 allows only one
+  // 'pending' request at a time, and an 'approved' one is consumed the moment it is finalised.
+  const dischargeRequestByAdmission = new Map(
+    (data.dischargeRequests as DischargeRequestRow[]).map((r) => [r.admission_id, r]),
+  );
   const photographedClientIds = new Set<string>(
     (data.photos as ClientPhotoRow[]).map((p) => p.client_id),
   );
@@ -198,6 +220,7 @@ export async function buildRealBoard(
             substancesById,
             photographedClientIds,
             noteRequiredByTemplateId,
+            dischargeRequestByAdmission,
             now,
           )
         : null;
