@@ -365,7 +365,40 @@ export const clients = {
       client().rpc('search_clients', { p_centre_id: centreId, p_query: query }),
     );
   },
+
+  /**
+   * Every admission a client has had at one centre, past and present — the data behind the client
+   * file panel. See migration 0029: scoped to (clientId, centreId) together, same "no data sharing
+   * between centres" boundary as `search`, so a stay recorded elsewhere never appears here.
+   */
+  history(clientId: string, centreId: string): Promise<ClientAdmissionHistoryRow[]> {
+    return run(
+      'clients.history',
+      client().rpc('client_admission_history', { p_client_id: clientId, p_centre_id: centreId }),
+    );
+  },
 };
+
+export interface ClientAdmissionHistoryRow {
+  admission_id: string;
+  status: string;
+  admitted_at: string;
+  planned_duration: number;
+  planned_duration_unit: 'days' | 'weeks';
+  original_planned_discharge_date: string;
+  current_planned_discharge_date: string;
+  actual_discharge_at: string | null;
+  discharge_type: string | null;
+  treatment_group: string | null;
+  substance_name: string | null;
+  peep_required: boolean;
+  bed_label: string | null;
+  therapist_label: string | null;
+  buddy_label: string | null;
+  doctor_label: string | null;
+  completed_task_count: number;
+  total_task_count: number;
+}
 
 export interface AdmissionRow {
   id: string;

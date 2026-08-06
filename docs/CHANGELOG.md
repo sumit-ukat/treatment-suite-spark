@@ -4,6 +4,50 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-06 — The client file: a discharged client finally has somewhere to be seen
+
+Once a client was discharged, they vanished from the app entirely — the room board only reads active
+admissions, and yesterday's directory search (migration 0028) showed a one-line result with a status
+chip and nothing behind it. There was nowhere, at all, to see a discharged client's stay, let alone
+more than one stay at the same centre.
+
+**`app.client_admission_history(p_client_id, p_centre_id)`** (migration 0029, `public` wrapper per
+0024) returns every admission a client has had at one centre — past and present — with bed, staff
+labels and a task-completion tally per admission. Same centre-scoping as `search_clients`: a stay
+recorded at a different centre never appears, matching the standing "no data sharing between centres"
+rule. Staff labels (therapist/buddy/doctor) are shown regardless of `clients.view_identity` — those
+describe the admission, not the client's identity, and the room board already shows them to anyone who
+can see it at all, so a client file has no reason to be stricter about the same facts.
+
+**Deliberately not duplicated: live task management.** An active admission's tasks already have a full
+Mark done / Reopen UI on the room board (migration 0026) with its own permission checks; this returns
+only a completed/total count per admission — enough to show "2 of 20 complete" in a history list
+without a second copy of that logic to keep in sync.
+
+**`ClientFilePanel.tsx`**, opened by clicking a directory search result — the link the directory's own
+header comment said didn't exist anywhere to point to yet. One card per admission, most recent first,
+each showing status, bed, planned or actual discharge (with type, for a discharge), staff, substance,
+treatment group, PEEP, and the task tally.
+
+### Verified with 8 SQL assertions
+
+A fictional client with two admissions at the same centre (one discharged, one active, readmitted
+later) returns both, newest first, each with its OWN bed and therapist label — not bled across stays.
+The task tally matched an actual count (3 of 20, after completing three real rows). helpdesk
+(`clients.view_operational` only) sees the full history, confirming staff labels and task counts are
+correctly not identity-gated. **Centre scoping**: the same client's history at the wrong centre is
+empty; a different client with no accessible admission returns nothing regardless of match. All
+fictional data removed afterward; zero rows left.
+
+### Verified end-to-end in the browser
+
+Searched a fictional client with two real stays, opened the file, and saw both admissions rendered
+correctly — the active one first with its own bed/therapist/task count, the discharged one below with
+"Discharged 7 Jul 26 (Early)" and its own, different bed/therapist/task count. Closed via both the ✕
+button and Escape. Test data removed; confirmed a cold reload still loads cleanly.
+
+---
+
 ## 2026-08-06 — A client directory, and closing the admission-form gap it was named for
 
 Until now the only way to find a client was already having their bed open on the room board — no

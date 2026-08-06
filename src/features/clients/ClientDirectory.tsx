@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import type { ClientSearchResult } from '../../services/data-access.js';
 import { formatDate } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
 import { useClientSearch } from './useClientSearch.js';
+import { ClientFilePanel } from './ClientFilePanel.tsx';
 
 /**
  * The first screen that lets staff find a client by name or reference, rather than only by already
@@ -10,13 +13,13 @@ import { useClientSearch } from './useClientSearch.js';
  * that migration for why this is scoped to one centre rather than the whole organisation, and why a
  * caller lacking `clients.view_identity` can search by reference but not by name.
  *
- * Deliberately read-only: there is no client file screen yet to link a result to (tracked in the
- * backlog), so a result renders exactly what the search returned and nothing more. Building a link
- * to a screen that does not exist would be decoration, not a shortcut.
+ * A result opens `ClientFilePanel` — every admission this client has had at this centre, the first
+ * place in the app a discharged client's history can be seen at all.
  */
 export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
   const { can } = useAuth();
   const { query, setQuery, results, loading, error } = useClientSearch(centre.id);
+  const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
@@ -68,27 +71,30 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
         ) : results.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {results.map((r) => (
-              <li
-                key={r.client_id}
-                className="flex items-center gap-3 rounded-lg border border-[var(--color-line)] px-3 py-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium">{r.display_name ?? r.reference}</div>
-                  <div className="nums text-[11px] text-[var(--color-ink-muted)]">
-                    {r.reference}
-                    {r.last_admitted_at ? (
-                      <>
-                        {' '}
-                        &middot; last admitted {formatDate(new Date(r.last_admitted_at))}
-                      </>
-                    ) : null}
+              <li key={r.client_id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenClient(r)}
+                  className="flex w-full items-center gap-3 rounded-lg border border-[var(--color-line)] px-3 py-2 text-left transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium">{r.display_name ?? r.reference}</div>
+                    <div className="nums text-[11px] text-[var(--color-ink-muted)]">
+                      {r.reference}
+                      {r.last_admitted_at ? (
+                        <>
+                          {' '}
+                          &middot; last admitted {formatDate(new Date(r.last_admitted_at))}
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-                {r.has_open_admission ? (
-                  <Chip icon="&#9679;" label="Currently admitted" tone="good" />
-                ) : r.last_admission_status ? (
-                  <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
-                ) : null}
+                  {r.has_open_admission ? (
+                    <Chip icon="&#9679;" label="Currently admitted" tone="good" />
+                  ) : r.last_admission_status ? (
+                    <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
+                  ) : null}
+                </button>
               </li>
             ))}
           </ul>
@@ -98,11 +104,15 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
           </p>
         )}
       </div>
+
+      {openClient ? (
+        <ClientFilePanel client={openClient} centre={centre} onClose={() => setOpenClient(null)} />
+      ) : null}
     </div>
   );
 }
 
-const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   discharged: 'Discharged',
   cancelled: 'Cancelled',
   planned: 'Planned',
