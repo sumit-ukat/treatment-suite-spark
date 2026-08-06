@@ -634,6 +634,163 @@ export const roomBoard = {
   },
 };
 
+export interface UserProfileRow {
+  id: string;
+  email: string;
+  display_name: string;
+  job_title: string | null;
+  is_active: boolean;
+}
+
+export interface RoleRow {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+export interface PermissionRow {
+  id: string;
+  code: string;
+  description: string;
+  sensitivity_level: number;
+}
+
+export interface RolePermissionRow {
+  role_id: string;
+  permission_id: string;
+}
+
+export interface OrganisationRow {
+  id: string;
+  name: string;
+}
+
+export interface ZoneRow {
+  id: string;
+  name: string;
+}
+
+export interface AccessAssignmentRow {
+  id: string;
+  user_id: string;
+  role_id: string;
+  scope_type: 'organisation' | 'zone' | 'centre';
+  organisation_id: string | null;
+  zone_id: string | null;
+  centre_id: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  reason: string | null;
+  granted_by: string | null;
+  is_read_only: boolean;
+}
+
+/**
+ * Users & roles administration. Every read here is a plain RLS-gated `select` — `roles`,
+ * `permissions` and `role_permissions` are `using (true)` for anyone signed in (a fixed,
+ * migration-seeded catalog, not runtime-editable — see migration 0030), and `user_profiles` /
+ * `user_access_assignments` are readable in full by anyone holding `administration.manage_users`
+ * (`profiles_read_self` / `assignments_read`, migration 0006). Only the two writes that matter —
+ * granting and revoking — go through RPCs; see migration 0030 for why a raw write, though technically
+ * permitted by RLS, can't reliably record a reason or enforce the lockout guard.
+ *
+ * NOTE ON SCOPE: this manages access for someone who already has a Supabase Auth login. Creating that
+ * login needs the service_role key, which must never reach the browser — that is a separate piece of
+ * infrastructure (a Supabase Edge Function) this screen deliberately does not attempt to build.
+ */
+export const userAdmin = {
+  listUsers(): Promise<UserProfileRow[]> {
+    return run(
+      'userAdmin.listUsers',
+      client().from('user_profiles').select('id,email,display_name,job_title,is_active').order('display_name'),
+    );
+  },
+
+  listRoles(): Promise<RoleRow[]> {
+    return run(
+      'userAdmin.listRoles',
+      client().from('roles').select('id,code,name,description').order('name'),
+    );
+  },
+
+  listPermissions(): Promise<PermissionRow[]> {
+    return run(
+      'userAdmin.listPermissions',
+      client().from('permissions').select('id,code,description,sensitivity_level').order('code'),
+    );
+  },
+
+  listRolePermissions(): Promise<RolePermissionRow[]> {
+    return run(
+      'userAdmin.listRolePermissions',
+      client().from('role_permissions').select('role_id,permission_id'),
+    );
+  },
+
+  listOrganisations(): Promise<OrganisationRow[]> {
+    return run('userAdmin.listOrganisations', client().from('organisations').select('id,name').order('name'));
+  },
+
+  listZones(): Promise<ZoneRow[]> {
+    return run('userAdmin.listZones', client().from('zones').select('id,name').order('name'));
+  },
+
+  /** Every assignment, active or ended — the frontend separates them by `ends_at`, not this query. */
+  listAssignments(): Promise<AccessAssignmentRow[]> {
+    return run(
+      'userAdmin.listAssignments',
+      client()
+        .from('user_access_assignments')
+        .select(
+          'id,user_id,role_id,scope_type,organisation_id,zone_id,centre_id,starts_at,ends_at,reason,granted_by,is_read_only',
+        )
+        .order('starts_at', { ascending: false }),
+    );
+  },
+
+  async grant(input: {
+    userId: string;
+    roleId: string;
+    scopeType: 'organisation' | 'zone' | 'centre';
+    scopeId: string;
+    reason: string;
+    isReadOnly?: boolean | undefined;
+    endsAt?: string | undefined;
+  }): Promise<string> {
+    const { data, error } = await client().rpc('grant_access', {
+      p_user_id: input.userId,
+      p_role_id: input.roleId,
+      p_scope_type: input.scopeType,
+      p_scope_id: input.scopeId,
+      p_reason: input.reason,
+      p_is_read_only: input.isReadOnly ?? false,
+      p_ends_at: input.endsAt ?? null,
+    });
+    if (error) throw new DataAccessError('userAdmin.grant', error);
+    return data as string;
+  },
+
+  async revoke(assignmentId: string, reason: string): Promise<void> {
+    const { error } = await client().rpc('revoke_access', {
+      p_assignment_id: assignmentId,
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('userAdmin.revoke', error);
+  },
+
+  /**
+   * A direct write, not an RPC: `profiles_write` already permits it for an
+   * `administration.manage_users` holder, and unlike grant/revoke there is no reason to capture and
+   * no lockout-style guard to enforce — just a reversible flag for a departed or returning staff
+   * member.
+   */
+  async setActive(userId: string, isActive: boolean): Promise<void> {
+    const { error } = await client().from('user_profiles').update({ is_active: isActive }).eq('id', userId);
+    if (error) throw new DataAccessError('userAdmin.setActive', error);
+  },
+};
+
 type AuthChangeCallback = Parameters<
   ReturnType<typeof client>['auth']['onAuthStateChange']
 >[0];

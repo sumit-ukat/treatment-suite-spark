@@ -4,6 +4,87 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-06 — Users & roles administration, and two real bugs its own tests caught
+
+Every permission check in this system depends on `user_access_assignments`, and until now the only
+way a row was ever created in it was a direct SQL insert run by hand — every fictional test user in
+this project's history, and every real one, was onboarded that way. There was no UI for it at all.
+
+**Scope, stated plainly rather than glossed over**: this closes one of two gaps blocking real staff
+onboarding, not both. A role can only be granted to someone who already has a Supabase Auth login;
+creating that login needs the `service_role` key, which this project's standing rule forbids ever
+reaching the browser. That needs a Supabase Edge Function — genuinely different infrastructure, not
+something to fold into this change. Today, a genuinely new person still gets their login created in
+the Supabase dashboard first; this screen picks up from there.
+
+**`app.grant_access` / `app.revoke_access`** (migration 0030, `public` wrappers per 0024). RLS already
+has a working write path for `user_access_assignments` (`assignments_write`, gated on
+`administration.manage_users`) that would let a direct insert/update succeed today — RPCs exist
+anyway for two things RLS cannot do: reliably attach a reason to the audit trail (the audit trigger
+reads a GUC that only survives within one transaction, and PostgREST does not guarantee two separate
+calls share one), and a lockout guard that depends on every OTHER row in the table, which a per-row
+`USING` clause cannot see.
+
+**The lockout guard**: revoking the system's LAST active, non-read-only grant of
+`administration.manage_users` is refused outright, regardless of whose assignment it is — the danger
+of ending up with nobody able to manage access is the same either way. `roles`, `permissions` and
+`role_permissions` get no write path at all (checked directly: FORCE ROW LEVEL SECURITY with no
+write policy denies everything) — they stay a fixed, migration-seeded catalog; this screen only ever
+assigns an EXISTING role.
+
+**`UsersAndRoles.tsx`**, added as a second tab alongside Rooms & Beds under Administration.
+Deliberately organisation-wide, not scoped to whichever centre the sidebar happens to show — a
+person's access can span an organisation, a zone, or one centre, and has no bearing on how you
+navigated to the screen. Grant a role with a scope and a required reason; revoke one with a required
+reason; deactivate/reactivate a user (a direct write — `profiles_write` already permits it, and
+there's no lockout-style guard a toggle needs). A revoked assignment stays visible (behind a "show
+ended" toggle) rather than being deleted — the history is the point.
+
+### Two real bugs, found by this migration's own test, not hypothetical
+
+**Postgres's `now()` is fixed for the whole transaction, not wall-clock — `clock_timestamp()` reads
+the real clock at each call.** A grant followed immediately by its own revoke, landing in the same
+transaction (exactly what a same-transaction test does, and not impossible from a real bulk-action or
+script), computed the identical instant for both `starts_at` and `ends_at`, tripping the
+`ends_at > starts_at` CHECK constraint outright. Fixed by switching `revoke_access` to
+`clock_timestamp()`.
+
+**That fix then broke something more serious on its own**: a first attempt clamped `ends_at` forward
+past `starts_at` to satisfy the constraint, which made the *next* statement's "already ended" check —
+still comparing against the frozen `now()` — see that clamped value as still in the future, silently
+allowing the same assignment to be revoked a second time. Worse, the SAME stale-`now()` bug existed
+independently in the **lockout guard's own query**: a prior revoke's `ends_at`, set moments earlier in
+the same transaction via `clock_timestamp()`, is always later than the transaction's frozen `now()` —
+so the guard's "is that other assignment still active" check saw a just-revoked row as still active,
+and let a revoke through that should have been the system's last one. Fixed by switching every
+timestamp comparison inside `revoke_access` to the same `clock_timestamp()`-derived value. This is not
+a same-transaction-only concern: any real bulk-revoke action or script calling `revoke_access` more
+than once per transaction would have hit exactly this.
+
+### Verified with SQL, including the lockout guard tested without ever touching real access
+
+15 assertions total. Permission gate, blank-reason refusal, invalid scope, nonexistent role/user/centre
+all refused with the right message; a centre-scoped admin correctly blocked from granting access to a
+centre they cannot themselves reach, and correctly permitted at one they can; revoke sets `ends_at` and
+records the reason in `audit_events`; re-revoking an ended assignment is refused. The lockout guard
+itself was proven **without ever leaving Bilal's real access altered**: his assignment's
+`is_read_only` flag was flipped to `true` (making it not count) only long enough to run two fictional
+admins through revoke — first succeeding while the other still counted, then correctly refused once it
+would have been the last one — followed by an explicit, verified restoration back to the exact original
+state (`is_read_only=false`, `ends_at=null`), confirmed by a fresh read afterward. All fictional data
+removed; a final count confirmed exactly one assignment exists in the system — the real one.
+
+### Verified end-to-end in the browser
+
+Opened the new tab, granted a fictional existing-login user the Therapist role at Primrose Lodge
+through the real form (including the "Grants: …" preview listing the role's actual permission codes),
+watched it appear immediately; revoked it with a reason, watched it disappear from the default view and
+reappear correctly marked "Ended" once "show ended assignments" was checked; deactivated the user and
+saw the toggle flip to "Reactivate". All test data removed; confirmed a cold reload still shows exactly
+Bilal's one real assignment.
+
+---
+
 ## 2026-08-06 — The client file: a discharged client finally has somewhere to be seen
 
 Once a client was discharged, they vanished from the app entirely — the room board only reads active

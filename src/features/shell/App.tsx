@@ -15,7 +15,7 @@ import { AvailableCard, OccupiedCard } from '../rooms/BedCard.tsx';
 import { BedList } from '../rooms/BedList.tsx';
 import { DetailPanel } from '../rooms/DetailPanel.tsx';
 import { GroupDashboard } from '../centres/GroupDashboard.tsx';
-import { RoomsAndBedsAdmin } from '../administration/RoomsAndBeds.tsx';
+import { Administration } from '../administration/Administration.tsx';
 import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
@@ -540,7 +540,7 @@ function Dashboard() {
               </p>
             </div>
           ) : section === 'admin' && authCentre ? (
-            <RoomsAndBedsAdmin centre={authCentre} />
+            <Administration centre={authCentre} />
           ) : section === 'admissions' && authCentre ? (
             <AdmitClientForm centre={authCentre} />
           ) : section === 'clients' && authCentre ? (
