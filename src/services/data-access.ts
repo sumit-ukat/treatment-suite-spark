@@ -789,6 +789,38 @@ export const userAdmin = {
     const { error } = await client().from('user_profiles').update({ is_active: isActive }).eq('id', userId);
     if (error) throw new DataAccessError('userAdmin.setActive', error);
   },
+
+  /**
+   * The one call in this file that reaches an Edge Function instead of PostgREST directly — see
+   * `supabase/functions/invite-user/`. Creates a real Supabase Auth login (the new person sets their
+   * own password via the emailed invite) and its `user_profiles` row. Does not grant any access —
+   * `userAdmin.grant` is a separate, deliberate second step once the login exists.
+   */
+  async invite(input: {
+    email: string;
+    displayName: string;
+    jobTitle?: string | undefined;
+  }): Promise<string> {
+    const { data, error } = await client().functions.invoke('invite-user', {
+      body: { email: input.email, displayName: input.displayName, jobTitle: input.jobTitle ?? null },
+    });
+    if (error) {
+      // supabase-js does not surface the function's own JSON error body as error.message — on a
+      // non-2xx response that has to be read from the Response object on error.context.
+      let message = error.message;
+      const context = (error as { context?: Response }).context;
+      if (context && typeof context.json === 'function') {
+        try {
+          const parsed = (await context.json()) as { error?: string };
+          if (typeof parsed.error === 'string') message = parsed.error;
+        } catch {
+          // Nothing usable in the body — fall back to error.message.
+        }
+      }
+      throw new DataAccessError('userAdmin.invite', { message });
+    }
+    return (data as { userId: string }).userId;
+  },
 };
 
 type AuthChangeCallback = Parameters<

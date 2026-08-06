@@ -26,11 +26,11 @@ import { formatDate } from '../../lib/format.js';
  * item as Rooms & Beds because both are administrative concerns, not because either is centre-scoped
  * the same way.
  *
- * SCOPE, stated plainly: this grants and revokes a role for someone who ALREADY has a Supabase Auth
- * login. It cannot create that login — doing so needs the service_role key, which must never reach
- * the browser, so real account creation needs a Supabase Edge Function this project does not have
- * yet. Onboarding a genuinely new person today still means creating their login in the Supabase
- * dashboard first; this screen picks up from there.
+ * Real account creation (`InviteUserForm` below) goes through the `invite-user` Edge Function
+ * (migration 0031) — the one place in this project that ever touches the `service_role` key, which
+ * must never reach the browser. It creates the Supabase Auth login and sends an invite email; the new
+ * person sets their own password themselves, no admin ever sees or sets one. It grants no access on
+ * its own — granting is `GrantAccessForm` below, a deliberate separate step.
  *
  * Also deliberately absent: any way to create a new role or permission. `roles`/`permissions`/
  * `role_permissions` have no write policy at all (migration 0030) — they are a fixed, migration-seeded
@@ -157,11 +157,12 @@ export function UsersAndRoles() {
     <div className="mx-auto max-w-[860px] px-5 py-8">
       <h2 className="text-[16px] font-semibold">Users &amp; roles</h2>
       <p className="mt-1 max-w-[640px] text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-        Every user here already has a sign-in. Creating a new one needs a Supabase dashboard step this
-        screen does not do — see this screen&rsquo;s intent for why. Access can be granted at the whole
-        organisation, a zone, or one centre, independent of which centre you navigated through to reach
-        this page.
+        Invite a new person to create their sign-in, then grant them a role. Access can be granted at
+        the whole organisation, a zone, or one centre, independent of which centre you navigated
+        through to reach this page.
       </p>
+
+      <InviteUserForm onInvited={reload} />
 
       <GrantAccessForm
         users={users}
@@ -369,6 +370,119 @@ function AssignmentRow({
 
 const inputCls =
   'rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] focus:border-[var(--color-accent)] focus:outline-none';
+
+/**
+ * Real account creation, via the `invite-user` Edge Function — see this file's header comment and
+ * migration 0031. No password field anywhere here: the new person sets their own via the emailed
+ * invite link. This form grants no access; the person appears below with "No access assigned" until
+ * `GrantAccessForm` is used separately.
+ */
+function InviteUserForm({ onInvited }: { onInvited: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  const canSubmit = email.trim() && displayName.trim();
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await userAdmin.invite({
+        email: email.trim(),
+        displayName: displayName.trim(),
+        jobTitle: jobTitle.trim() || undefined,
+      });
+      setDone(`Invited ${displayName.trim()} — they will get an email to set their password.`);
+      setEmail('');
+      setDisplayName('');
+      setJobTitle('');
+      setOpen(false);
+      onInvited();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(true);
+            setDone(null);
+          }}
+          className="rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Invite a new user&hellip;
+        </button>
+        {done ? <span className="text-[11.5px] text-[var(--color-ink-muted)]">{done}</span> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--color-line)] p-3">
+      <h3 className="text-[12.5px] font-semibold">Invite a new user</h3>
+      <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
+        Creates their sign-in and sends them an email to set their own password. Grants no access —
+        do that separately below once their account exists.
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2.5">
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Email</span>
+          <input
+            type="email"
+            className={inputCls}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Display name</span>
+          <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        </label>
+        <label className="col-span-2 flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Job title (optional)</span>
+          <input className={inputCls} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+        </label>
+      </div>
+
+      {error ? (
+        <div className="mt-2 rounded-lg border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={busy || !canSubmit}
+          onClick={() => void submit()}
+          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition disabled:opacity-40"
+        >
+          {busy ? 'Inviting…' : 'Send invite'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setOpen(false)}
+          className="rounded-lg px-3 py-1.5 text-[12.5px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function GrantAccessForm({
   users,

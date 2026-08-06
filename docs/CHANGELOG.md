@@ -4,6 +4,75 @@ Dated entry for every material change. Newest first.
 
 ---
 
+## 2026-08-06 — Real account creation, the other half of onboarding staff
+
+Migration 0030 closed granting/revoking a role for someone who already has a Supabase Auth login;
+this closes the other half — creating that login for real. Until now, every account this project has
+ever had, fictional or real, was created by a direct SQL insert.
+
+**`supabase/functions/invite-user/`** — the first and only Edge Function in this project, and the
+only place the `service_role` key is ever used. It has to be an Edge Function specifically because
+that key can create an `auth.users` row directly and must never reach the browser; nothing in the
+Vite bundle can hold it.
+
+**Two independent permission checks, not one**: the function first checks the caller's own JWT
+against `public.has_permission('administration.manage_users')` (a new wrapper — nothing had ever
+needed to call `has_permission` directly from a client before) and fails fast with a 403 before the
+`service_role` key is even read. Then, inside `app.create_user_profile` (migration 0031), the actor id
+the function hands it gets re-checked independently against `user_access_assignments` — a
+service-role Postgres connection bypasses RLS and carries no JWT of its own, so if the Edge Function's
+own check ever had a bug, this second one still refuses. Never trust the application layer alone for
+something this sensitive — the database is what actually enforces everything else in this project, and
+account creation does not get an exception.
+
+Uses `inviteUserByEmail`, not a password field: the new person sets their own password via the emailed
+link, and no admin ever sees or handles one. The Edge Function creates no access on its own —
+`userAdmin.grant` (migration 0030) is a separate, deliberate second step once the login exists.
+
+### A real, live trap in Supabase's own defaults, found applying this exact migration
+
+`revoke all on function ... from public` does **not** remove `authenticated`/`anon`'s ability to call
+a new `public` function in this project. This Supabase project has a default-privileges rule that
+grants EXECUTE on every new function there directly to `anon` and `authenticated` — not inherited via
+the `PUBLIC` pseudo-role, so revoking from `PUBLIC` never touches it. Confirmed directly:
+`information_schema.role_routine_grants` still listed both roles with EXECUTE after that revoke ran.
+The actual fix is revoking from `authenticated, anon` by name — done, and then proven under a
+simulated `authenticated` role, which got `permission denied for function` as it should. Every other
+`public.*` wrapper in this project already explicitly grants to `authenticated` on purpose, so this
+never bit before; it is only a trap for a function deliberately meant to exclude ordinary users, which
+this is the first of.
+
+### Verified with SQL
+
+`app.create_user_profile`: a non-admin actor id is refused; a real admin succeeds and the profile is
+created with the fields given; the audit trail attributes the insert to the real actor (not null,
+which a plain service-role insert would have produced); a blank display name is refused; and —
+separately — a simulated `authenticated` role calling the `public` wrapper directly is refused with
+`permission denied for function`, proving the grant fix actually holds rather than just looking right
+in `information_schema`. `public.has_permission`: confirmed true for a real admin, false for a
+non-existent user, run correctly within one transaction (a same-transaction role/GUC test earlier in
+this session had already shown that role changes and GUCs set across *separate* top-level statements
+in one call do not reliably persist between them — this was tested the way that actually works, all
+inside one `DO` block).
+
+### Verified live in the browser, with one real gap in how far this could go today
+
+Deployed the function, invited a fictional address through the real form: the permission gate,
+the real reach to Supabase's Admin API, and this project's own error-message surfacing (reading the
+Edge Function's JSON error body off a non-2xx response, which supabase-js does not do automatically)
+were all proven with genuine platform responses — `example.invalid` and `example.com` were both
+rejected by Supabase itself as invalid domains (its own anti-abuse blocklist, not a bug here), and a
+plausible-looking test domain was accepted past that check and then hit Supabase's default email rate
+limit (no custom SMTP configured for this project). Retrying further would have kept spending that
+same limited budget, so this session did not complete one fully successful invite live end-to-end.
+What that leaves unverified by a live run: the exact line connecting `inviteUserByEmail`'s returned
+user id to the `create_user_profile` call — trivial code, and the database side of that exact call
+(profile creation given a valid new user id, correct attribution) was independently proven with real
+SQL assertions using a simulated new login. Stated plainly rather than claimed as more thoroughly
+proven than it was.
+
+---
+
 ## 2026-08-06 — Users & roles administration, and two real bugs its own tests caught
 
 Every permission check in this system depends on `user_access_assignments`, and until now the only
