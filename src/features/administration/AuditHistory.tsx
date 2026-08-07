@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { auditEvents, centres as centresService, type AuditEventRow, type CentreRow } from '../../services/data-access.js';
-import { Chip } from '../../components/ui.tsx';
+import { Chip, Panel } from '../../components/ui.tsx';
 import { formatDateWithDay } from '../../lib/format.js';
 
 /**
@@ -136,28 +136,41 @@ export function AuditHistory() {
           placeholder="Filter by actor email…"
           className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
         />
-        <span className="nums ml-auto text-[11.5px] text-[var(--color-ink-muted)]">
-          {filtered.length} of {events.length}
-        </span>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed border-[var(--color-line)] py-14 text-center text-[13px] text-[var(--color-ink-muted)]">
-          No events match these filters.
-        </div>
-      ) : (
-        <ul className="mt-4 flex flex-col gap-1.5">
-          {filtered.map((e) => (
-            <AuditRow
-              key={e.id}
-              event={e}
-              centreName={e.centre_id ? centresById.get(e.centre_id)?.name ?? null : null}
-              expanded={expanded === e.id}
-              onToggle={() => setExpanded(expanded === e.id ? null : e.id)}
-            />
-          ))}
-        </ul>
-      )}
+      <Panel title="Events" subtitle={`${filtered.length} of ${events.length} shown`} className="mt-4">
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--color-line)] py-14 text-center text-[13px] text-[var(--color-ink-muted)]">
+            No events match these filters.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-[12.5px]">
+              <thead>
+                <tr className="border-b border-[var(--color-line)] text-left text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                  <th className="py-2 pr-3">Action</th>
+                  <th className="py-2 pr-3">Record</th>
+                  <th className="py-2 pr-3">Actor</th>
+                  <th className="py-2 pr-3">Centre</th>
+                  <th className="py-2 pr-3">Reason</th>
+                  <th className="py-2 pr-3 text-right">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((e) => (
+                  <AuditRow
+                    key={e.id}
+                    event={e}
+                    centreName={e.centre_id ? centresById.get(e.centre_id)?.name ?? null : null}
+                    expanded={expanded === e.id}
+                    onToggle={() => setExpanded(expanded === e.id ? null : e.id)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }
@@ -167,6 +180,8 @@ const ACTION_TONE: Record<string, 'good' | 'warn' | 'alert' | 'neutral'> = {
   update: 'warn',
   delete: 'alert',
 };
+
+const COLUMN_COUNT = 6;
 
 function AuditRow({
   event: e,
@@ -179,57 +194,72 @@ function AuditRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  // A <tr> isn't natively focusable or activatable like a <button>, so both are added explicitly —
+  // the previous list-based version got this for free from being a real <button>; a table row has to
+  // ask for it.
+  const onKeyDown = (ev: React.KeyboardEvent) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      onToggle();
+    }
+  };
+
   return (
-    <li className="rounded-lg border border-[var(--color-line)]">
-      <button
-        type="button"
+    <>
+      <tr
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-black/5 dark:hover:bg-white/10"
+        onKeyDown={onKeyDown}
+        className="cursor-pointer border-b border-[var(--color-line)] transition last:border-b-0 hover:bg-black/5 dark:hover:bg-white/10"
       >
-        <Chip label={e.action} tone={ACTION_TONE[e.action] ?? 'neutral'} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] font-medium">
-            {e.record_type}
-            <span className="ml-1 font-normal text-[var(--color-ink-muted)]">#{e.record_id.slice(0, 8)}</span>
-          </span>
-          <span className="block truncate text-[11px] text-[var(--color-ink-muted)]">
-            {e.actor_email ?? 'System'}
-            {centreName ? ` · ${centreName}` : ''}
-            {e.reason ? ` · ${e.reason}` : ''}
-          </span>
-        </span>
-        <span className="nums shrink-0 text-right text-[11px] text-[var(--color-ink-muted)]">
+        <td className="py-2 pr-3">
+          <Chip label={e.action} tone={ACTION_TONE[e.action] ?? 'neutral'} />
+        </td>
+        <td className="max-w-[220px] truncate py-2 pr-3">
+          {e.record_type}
+          <span className="ml-1 text-[var(--color-ink-muted)]">#{e.record_id.slice(0, 8)}</span>
+        </td>
+        <td className="max-w-[180px] truncate py-2 pr-3 text-[var(--color-ink-muted)]">
+          {e.actor_email ?? 'System'}
+        </td>
+        <td className="py-2 pr-3 text-[var(--color-ink-muted)]">{centreName ?? '—'}</td>
+        <td className="max-w-[220px] truncate py-2 pr-3 text-[var(--color-ink-muted)]">{e.reason ?? '—'}</td>
+        <td className="nums py-2 pr-3 text-right whitespace-nowrap text-[var(--color-ink-muted)]">
           {formatDateWithDay(new Date(e.occurred_at))}
-        </span>
-      </button>
+        </td>
+      </tr>
 
       {expanded ? (
-        <div className="border-t border-[var(--color-line)] px-3 py-2 text-[11.5px]">
-          {e.changed_fields && e.changed_fields.length > 0 ? (
-            <p className="text-[var(--color-ink-muted)]">
-              Changed: <span className="font-medium text-[var(--color-ink)]">{e.changed_fields.join(', ')}</span>
-            </p>
-          ) : null}
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <div>
-              <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                Before
+        <tr className="border-b border-[var(--color-line)] last:border-b-0">
+          <td colSpan={COLUMN_COUNT} className="bg-black/[0.02] px-3 py-2.5 text-[11.5px] dark:bg-white/[0.03]">
+            {e.changed_fields && e.changed_fields.length > 0 ? (
+              <p className="text-[var(--color-ink-muted)]">
+                Changed: <span className="font-medium text-[var(--color-ink)]">{e.changed_fields.join(', ')}</span>
+              </p>
+            ) : null}
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              <div>
+                <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                  Before
+                </div>
+                <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
+                  {e.previous_value ? JSON.stringify(e.previous_value, null, 2) : '—'}
+                </pre>
               </div>
-              <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
-                {e.previous_value ? JSON.stringify(e.previous_value, null, 2) : '—'}
-              </pre>
-            </div>
-            <div>
-              <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                After
+              <div>
+                <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                  After
+                </div>
+                <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
+                  {e.new_value ? JSON.stringify(e.new_value, null, 2) : '—'}
+                </pre>
               </div>
-              <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
-                {e.new_value ? JSON.stringify(e.new_value, null, 2) : '—'}
-              </pre>
             </div>
-          </div>
-        </div>
+          </td>
+        </tr>
       ) : null}
-    </li>
+    </>
   );
 }

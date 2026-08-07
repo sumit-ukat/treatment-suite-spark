@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { buildCentres, groupTotals, REGIONS, type CentreSummary } from './centres-data.js';
-import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
+import { Chip, FilterPill, Panel, StatTile } from '../../components/ui.tsx';
 
 type SortKey = 'name' | 'occupancy' | 'overdue' | 'onTime';
 
@@ -215,31 +215,37 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         </label>
       </div>
 
-      {/* Column headings, echoing the row grid. */}
-      <div className="mt-4 grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-        <div>Centre</div>
-        <div>Occupancy</div>
-        <div>Available</div>
-        <div>Overdue</div>
-        <div>Completion</div>
-        <div className="text-right">Flags</div>
-      </div>
+      <Panel
+        title="Centres"
+        subtitle={`${sorted.length} shown${region === 'all' ? '' : ` in ${region}`}`}
+        className="mt-4"
+      >
+        {/* Column headings, echoing the row grid. */}
+        <div className="grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+          <div>Centre</div>
+          <div>Occupancy</div>
+          <div>Available</div>
+          <div>Overdue</div>
+          <div>Completion</div>
+          <div className="text-right">Flags</div>
+        </div>
 
-      {grouped.map((group) => (
-        <section key={group.region} className="mt-3" aria-label={`${group.region} region`}>
-          <h3 className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-            {group.region}
-            <span className="nums ml-1.5 font-normal normal-case">
-              ({group.centres.length})
-            </span>
-          </h3>
-          <div className="flex flex-col">
-            {group.centres.map((c) => (
-              <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-            ))}
-          </div>
-        </section>
-      ))}
+        {grouped.map((group) => (
+          <section key={group.region} className="mt-3" aria-label={`${group.region} region`}>
+            <h4 className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+              {group.region}
+              <span className="nums ml-1.5 font-normal normal-case">
+                ({group.centres.length})
+              </span>
+            </h4>
+            <div className="flex flex-col">
+              {group.centres.map((c) => (
+                <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </Panel>
 
       <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
         A regional manager sees only the centres assigned to them. This view shows all ten because the

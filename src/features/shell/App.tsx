@@ -20,7 +20,7 @@ import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
-import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
+import { Chip, FilterPill, Panel, StatTile } from '../../components/ui.tsx';
 
 /**
  * Gate the whole application on the session.
@@ -537,15 +537,11 @@ function Dashboard() {
                   onClick={() => setFilter('discharging')}
                 />
 
-                <span className="nums ml-auto text-[11.5px] text-[var(--color-ink-muted)]">
-                  {visible.length} of {board.length} bed spaces
-                </span>
-
                 {/* Cards to glance, list to scan. Different jobs, so both stay. */}
                 <div
                   role="group"
                   aria-label="View"
-                  className="flex overflow-hidden rounded-lg border border-[var(--color-line)]"
+                  className="ml-auto flex overflow-hidden rounded-lg border border-[var(--color-line)]"
                 >
                   {(['board', 'list'] as const).map((v) => (
                     <button
@@ -565,45 +561,47 @@ function Dashboard() {
                 </div>
               </div>
 
-              {visible.length === 0 ? (
-                <div className="mt-10 rounded-xl border border-dashed border-[var(--color-line)] py-14 text-center">
-                  <div className="text-[13px] font-medium">No bed spaces match</div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFilter('all');
-                      setQuery('');
-                    }}
-                    className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
+              <Panel title="Bed spaces" subtitle={`${visible.length} of ${board.length} shown`} className="mt-4">
+                {visible.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--color-line)] py-14 text-center">
+                    <div className="text-[13px] font-medium">No bed spaces match</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilter('all');
+                        setQuery('');
+                      }}
+                      className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                ) : view === 'list' ? (
+                  <section aria-label="Bed spaces">
+                    <BedList beds={visible} onOpen={setOpenBed} />
+                  </section>
+                ) : (
+                  <section
+                    aria-label="Bed spaces"
+                    className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                   >
-                    Clear filters
-                  </button>
-                </div>
-              ) : view === 'list' ? (
-                <section aria-label="Bed spaces" className="mt-3">
-                  <BedList beds={visible} onOpen={setOpenBed} />
-                </section>
-              ) : (
-                <section
-                  aria-label="Bed spaces"
-                  className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-                >
-                  {visible.map((bed) =>
-                    bed.occupant ? (
-                      <OccupiedCard key={bed.label} bed={bed} onOpen={() => setOpenBed(bed.label)} />
-                    ) : (
-                      <AvailableCard key={bed.label} bed={bed} />
-                    ),
-                  )}
-                </section>
-              )}
+                    {visible.map((bed) =>
+                      bed.occupant ? (
+                        <OccupiedCard key={bed.label} bed={bed} onOpen={() => setOpenBed(bed.label)} />
+                      ) : (
+                        <AvailableCard key={bed.label} bed={bed} />
+                      ),
+                    )}
+                  </section>
+                )}
 
-              <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-                Room cards omit clinical detail by design. Substance, detox, medical and safeguarding
-                content appear nowhere on this board at any permission level — a restricted alert
-                shows as a flag only, with detail reachable through the client file by authorised
-                roles.
-              </p>
+                <p className="mt-4 max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+                  Room cards omit clinical detail by design. Substance, detox, medical and safeguarding
+                  content appear nowhere on this board at any permission level — a restricted alert
+                  shows as a flag only, with detail reachable through the client file by authorised
+                  roles.
+                </p>
+              </Panel>
             </div>
           ) : section === 'admin' && authCentre ? (
             <Administration centre={authCentre} />

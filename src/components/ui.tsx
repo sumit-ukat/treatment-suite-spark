@@ -1,5 +1,7 @@
 /** Shared primitives. Status is always icon + text, never colour alone. */
 
+import type { ReactNode } from 'react';
+
 export type Tone = 'neutral' | 'good' | 'warn' | 'alert' | 'accent';
 
 /**
@@ -36,6 +38,51 @@ export function Chip({
       {icon ? <span aria-hidden="true">{icon}</span> : null}
       {label}
     </span>
+  );
+}
+
+/**
+ * The base unit content is grouped into: a titled white card, with an optional right-aligned link for
+ * whatever "see more of this" already means on the page — never invented just to fill the corner.
+ * `action` is a plain button, not a nested `<a>`/`<button>` pretending to be something bigger; the
+ * card itself never intercepts clicks, so there is nothing for it to conflict with.
+ */
+export function Panel({
+  title,
+  subtitle,
+  action,
+  children,
+  className = '',
+}: {
+  title: string;
+  subtitle?: string;
+  action?: { label: string; onClick: () => void };
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4 ${className}`}
+    >
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-[13.5px] font-semibold">{title}</h3>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink-muted)]">{subtitle}</p>
+          ) : null}
+        </div>
+        {action ? (
+          <button
+            type="button"
+            onClick={action.onClick}
+            className="shrink-0 text-[12px] font-medium text-[var(--color-accent)] transition hover:underline"
+          >
+            {action.label} →
+          </button>
+        ) : null}
+      </div>
+      {children}
+    </section>
   );
 }
 
