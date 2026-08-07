@@ -1,3 +1,4 @@
+import { CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -11,6 +12,7 @@ import {
   type SubstanceRow,
 } from '../../services/data-access.js';
 import { Chip } from '../../components/ui.tsx';
+import { PageHeader } from '../../components/metric-card.tsx';
 import { useClientSearch } from '../clients/useClientSearch.js';
 
 /**
@@ -215,10 +217,10 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   if (step === 'done' && result) {
     return (
       <div className="mx-auto max-w-[480px] px-5 py-16 text-center">
-        <div className="mx-auto grid size-12 place-items-center rounded-xl bg-emerald-500/12 text-[18px] text-emerald-600 dark:text-emerald-400">
-          &#10003;
+        <div className="mx-auto grid size-12 place-items-center rounded-xl bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="size-6" />
         </div>
-        <h2 className="mt-3.5 text-[16px] font-semibold">Admission created</h2>
+        <h2 className="mt-3.5 font-display text-[16px] font-semibold">Admission created</h2>
         <p className="mt-1.5 text-[12.5px] text-[var(--color-ink-muted)]">
           {clientLabel} has been admitted to bed {selectedBed?.bed.label} at {centre.name}. 20 tasks
           were generated automatically.
@@ -243,13 +245,13 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   if (step === 'review' && selectedBed) {
     return (
       <div className="mx-auto max-w-[560px] px-5 py-8">
-        <h2 className="text-[16px] font-semibold">Review before admitting</h2>
-        <p className="mt-1 text-[12.5px] text-[var(--color-ink-muted)]">
-          Nothing is saved until you confirm. The server will still refuse this if the bed has since
-          been taken, or anything else is wrong — this screen cannot override that.
-        </p>
+        <PageHeader
+          eyebrow={centre.name}
+          title="Review before admitting"
+          description="Nothing is saved until you confirm. The server will still refuse this if the bed has since been taken, or anything else is wrong — this screen cannot override that."
+        />
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-[var(--color-line)] p-4 text-[13px]">
+        <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border bg-card p-4 text-[13px] shadow-soft">
           <div>
             <dt className="text-[11px] text-[var(--color-ink-muted)]">Client</dt>
             <dd className="font-medium">
@@ -342,15 +344,17 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
 
   return (
     <div className="mx-auto max-w-[640px] px-5 py-8">
-      <h2 className="text-[16px] font-semibold">Admit a client — {centre.name}</h2>
-      <p className="mt-1 text-[12.5px] text-[var(--color-ink-muted)]">
-        {beds.length} bed{beds.length === 1 ? '' : 's'} currently available.
-      </p>
+      <PageHeader
+        eyebrow={centre.name}
+        title="Admit a client"
+        description={`${beds.length} bed${beds.length === 1 ? '' : 's'} currently available.`}
+      />
 
+      <div className="mt-5 rounded-2xl border bg-card p-5 shadow-soft">
       <div
         role="tablist"
         aria-label="Client"
-        className="mt-4 inline-flex rounded-lg border border-[var(--color-line)] p-0.5"
+        className="inline-flex rounded-lg border border-[var(--color-line)] p-0.5"
       >
         <button
           type="button"
@@ -624,6 +628,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           Review admission
         </button>
       </form>
+      </div>
     </div>
   );
 }
