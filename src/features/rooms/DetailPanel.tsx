@@ -1,8 +1,10 @@
+import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { BoardBed, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip, Panel, Timeline } from '../../components/ui.tsx';
+import { StatusBadge } from '../../components/status-badge.tsx';
 import { discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
@@ -115,10 +117,10 @@ export function DetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-[13px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
             aria-label="Close panel"
           >
-            &#10005;
+            <X className="size-4" />
           </button>
         </header>
 
@@ -152,7 +154,7 @@ export function DetailPanel({
           ) : null}
 
           <Panel title="Required actions" subtitle={`${o.completedCount} of ${o.totalCount} complete`}>
-            <p className="mb-3 rounded-lg bg-[var(--color-accent-soft)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+            <p className="mb-3 rounded-lg bg-primary-soft px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
               Each action carries a <strong className="font-semibold">due date</strong> separate from
               its completion. That is what makes lateness measurable &mdash; the whiteboard stores one
               value per action, so it cannot record &ldquo;due Monday, done Wednesday&rdquo;.
@@ -225,22 +227,10 @@ function TaskRow({ task: t, onChanged }: { task: BoardTask; onChanged?: (() => v
   };
 
   return (
-    <li className="rounded-lg border border-[var(--color-line)] px-2.5 py-2">
+    <li
+      className={`rounded-lg border border-[var(--color-line)] px-2.5 py-2 ${t.isOverdue ? 'border-l-4 border-l-overdue' : ''}`}
+    >
       <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`grid size-[17px] shrink-0 place-items-center rounded-full text-[9.5px] font-bold ${
-            t.isComplete
-              ? 'bg-emerald-600 text-white'
-              : t.isOverdue
-                ? 'bg-red-600 text-white'
-                : t.isDueToday
-                  ? 'bg-amber-500 text-white'
-                  : 'border border-[var(--color-line)]'
-          }`}
-        >
-          {t.isComplete ? '✓' : t.isOverdue ? '!' : t.isDueToday ? '●' : ''}
-        </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12.5px] leading-tight">{t.title}</span>
           <span className="text-[10px] text-[var(--color-ink-muted)]">
@@ -251,13 +241,13 @@ function TaskRow({ task: t, onChanged }: { task: BoardTask; onChanged?: (() => v
           {t.dueAt ? formatDate(t.dueAt) : '—'}
         </span>
         {t.isComplete ? (
-          <Chip icon="&#10003;" label="Done" tone="good" />
+          <StatusBadge status="complete" label="Done" size="sm" />
         ) : t.isOverdue ? (
-          <Chip icon="&#9650;" label="Overdue" tone="alert" />
+          <StatusBadge status="overdue" size="sm" />
         ) : t.isDueToday ? (
-          <Chip icon="&#9679;" label="Today" tone="warn" />
+          <StatusBadge status="attention" label="Today" size="sm" />
         ) : (
-          <Chip icon="&#9719;" label="Open" />
+          <StatusBadge status="neutral" label="Open" size="sm" />
         )}
 
         {canComplete && mode === 'idle' ? (
