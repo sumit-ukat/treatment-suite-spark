@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* animate-in/fade-in/zoom-in/slide-in-from-* — used by the dropdown-menu primitive ported below and
+   by anything else lifted from the same source that expects Tailwind's entrance-animation utilities. */
+@import 'tw-animate-css';
 
 /**
  * Brand palette — derived from the three supplied base colours.
@@ -73,32 +76,35 @@
     color-scheme: light dark;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-surface: #17131d;
-      --color-panel: #1f1a26;
-      --color-ink: #f5f2f8;
-      --color-ink-muted: #a79fb3;
-      --color-line: #322b3c;
+  /* Was a `prefers-color-scheme` media query; moved onto the `.dark` class that ThemeToggle now
+     manages, so a manual choice there governs this app's original tokens too, not just the ones
+     ported alongside it below. Only the system setting's role changed — from "always in charge" to
+     "the default before anyone has chosen" (handled in ThemeToggle's own mount effect, not in CSS) —
+     so first paint before that effect runs is briefly light regardless of OS setting; the ported
+     tokens' own .dark block has the same characteristic, for the same reason. */
+  .dark {
+    --color-surface: #17131d;
+    --color-panel: #1f1a26;
+    --color-ink: #f5f2f8;
+    --color-ink-muted: #a79fb3;
+    --color-line: #322b3c;
 
-      /* Lightened so purple still reads on a dark panel (6.5:1). */
-      --color-accent: #b98fd8;
-      --color-accent-hover: #c9a5e3;
-      --color-accent-soft: #2e2340;
-      --color-accent-ring: #77499f;
+    /* Lightened so purple still reads on a dark panel (6.5:1). */
+    --color-accent: #b98fd8;
+    --color-accent-hover: #c9a5e3;
+    --color-accent-soft: #2e2340;
+    --color-accent-ring: #77499f;
 
-      --color-info: #97cae6;
-      --color-info-soft: #1e2c36;
+    --color-info: #97cae6;
+    --color-info-soft: #1e2c36;
 
-      --brand-pink-ink: #e992c8;
-      --brand-blue-ink: #97cae6;
+    --brand-pink-ink: #e992c8;
+    --brand-blue-ink: #97cae6;
 
-      /* Dark-mode values for the two brand tokens shared with the ported foundation below — kept on
-         this existing prefers-color-scheme mechanism (not the .dark class) since nothing yet toggles
-         that class. See the header comment in the next section for why. */
-      --brand-pink: oklch(0.74 0.155 342);
-      --brand-blue: oklch(0.79 0.07 234);
-    }
+    /* The two brand tokens shared with the ported foundation below now share this same .dark class
+       for their dark values too — see that section's header comment for the rest of the story. */
+    --brand-pink: oklch(0.74 0.155 342);
+    --brand-blue: oklch(0.79 0.07 234);
   }
 
   html {
@@ -180,9 +186,9 @@
  * intends. Until then, `--surface` and `--accent` exist as plain custom properties (usable via
  * `bg-[var(--surface)]` etc.) but do not yet have generated `bg-surface` / `bg-accent` utilities.
  *
- * Dark mode for this whole section is the `.dark` class (matching the source, which toggles it via a
- * theme-toggle component) rather than this file's existing `prefers-color-scheme` media query — so
- * none of it responds to the system theme yet. That starts working once a theme toggle exists.
+ * Dark mode for this whole section is the `.dark` class, managed by src/components/theme-toggle.tsx
+ * — this file's original tokens moved onto the same class (see that block above) so one toggle now
+ * covers both systems consistently.
  */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

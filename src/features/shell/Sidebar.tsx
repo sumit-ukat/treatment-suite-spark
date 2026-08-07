@@ -1,4 +1,19 @@
-import markUrl from '../../assets/brand/ukat-mark.png';
+import {
+  BedDouble,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  History,
+  LayoutGrid,
+  ListChecks,
+  Phone,
+  Shield,
+  Stethoscope,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { BrandMark } from '../../components/brand.tsx';
 
 /**
  * Navigation.
@@ -6,12 +21,13 @@ import markUrl from '../../assets/brand/ukat-mark.png';
  * Not every destination is built yet. The rest are shown as real destinations rather than hidden,
  * because the shape of the product is part of what is being reviewed — but each unbuilt one is
  * explicitly marked "soon" (via `ready: false`) so the preview never implies a working feature.
- * Nothing here pretends.
+ * Nothing here pretends. (The Lovable source this rail's styling is ported from has no equivalent —
+ * its demo only models what's already built, so this grouping/badging is this app's own addition.)
  */
 export interface NavItem {
   id: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   ready: boolean;
   badge?: number;
 }
@@ -27,26 +43,25 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
   {
     heading: 'Centre',
     items: [
-      { id: 'board', label: 'Room board', icon: '▦', ready: true },
-      { id: 'clients', label: 'Clients', icon: '☰', ready: true },
-      { id: 'admissions', label: 'Admissions', icon: '↳', ready: true },
+      { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
+      { id: 'clients', label: 'Clients', icon: Users, ready: true },
+      { id: 'admissions', label: 'Admissions', icon: UserPlus, ready: true },
     ],
   },
   {
     heading: 'Work',
     items: [
-      { id: 'my-work', label: 'My work', icon: '◉', ready: false },
-      { id: 'tasks', label: 'All tasks', icon: '✓', ready: false },
-      { id: 'family', label: 'Family contact', icon: '☏', ready: false },
-      { id: 'medical', label: 'Medical reviews', icon: '✚', ready: false },
+      { id: 'my-work', label: 'My work', icon: ListChecks, ready: false },
+      { id: 'tasks', label: 'All tasks', icon: ClipboardList, ready: false },
+      { id: 'family', label: 'Family contact', icon: Phone, ready: false },
+      { id: 'medical', label: 'Medical reviews', icon: Stethoscope, ready: false },
     ],
   },
   {
     heading: 'Oversight',
     items: [
-      { id: 'reports', label: 'Reports', icon: '▤', ready: false },
-      { id: 'audit', label: 'Audit history', icon: '◷', ready: true },
-      { id: 'admin', label: 'Administration', icon: '⚙', ready: true },
+      { id: 'audit', label: 'Audit history', icon: History, ready: true },
+      { id: 'admin', label: 'Administration', icon: Shield, ready: true },
     ],
   },
 ];
@@ -70,57 +85,25 @@ export function Sidebar({
     <nav
       aria-label="Main navigation"
       className={`flex shrink-0 flex-col bg-[var(--color-chrome)] text-[var(--color-chrome-ink)] transition-[width] duration-200 ${
-        collapsed ? 'w-[68px]' : 'w-[228px]'
+        collapsed ? 'w-[68px]' : 'w-[240px]'
       }`}
     >
-      {/*
-        The textless mark, not the wordmark.
-        The supplied wordmark has navy "UK" and grey "Centres" set for a white background; on this
-        dark chrome it would be close to illegible, and recolouring someone's logo is not an option.
-        The mark is full-colour on transparent, so it reads on any background — which is exactly what
-        a compact, collapsible rail needs. The wordmark gets used unmodified on the sign-in screen,
-        where the background is white.
-      */}
-      <div
-        className="flex h-[60px] items-center gap-2.5 border-b border-[var(--color-chrome-line)] px-4"
-        style={{
-          backgroundImage:
-            'linear-gradient(100deg,' +
-            ' color-mix(in oklab, var(--brand-purple) 45%, transparent) 0%,' +
-            ' color-mix(in oklab, var(--brand-pink) 24%, transparent) 50%,' +
-            ' color-mix(in oklab, var(--brand-blue) 14%, transparent) 100%)',
-        }}
-      >
-        <img
-          src={markUrl}
-          alt="UK Addiction Treatment Centres"
-          width={256}
-          height={256}
-          className={`h-8 w-8 shrink-0 object-contain ${collapsed ? 'mx-auto' : ''}`}
-        />
+      {/* Always-dark chrome: the supplied UKAT mark is a white-on-transparent glyph, so this rail
+          stays dark regardless of light/dark mode — recolouring someone's logo isn't an option, and a
+          rail that flips brightness under it would make it unreadable half the time. */}
+      <div className="flex h-16 items-center gap-2.5 border-b border-[var(--color-chrome-line)] px-3.5">
+        <BrandMark className={collapsed ? 'mx-auto' : ''} />
         {!collapsed ? (
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-[12.5px] font-semibold text-[var(--color-chrome-ink)]">
+            <span className="block truncate font-display text-[13px] font-semibold text-[var(--color-chrome-ink)]">
               {centreName}
             </span>
-            <span className="block truncate text-[9.5px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
+            <span className="block truncate text-[10px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
               Treatment Operations
             </span>
           </span>
         ) : null}
       </div>
-
-      {/* The way back out. Always the first thing in the rail, so the current centre is never a
-          place you can get stuck inside. */}
-      <button
-        type="button"
-        onClick={onLeaveCentre}
-        title={collapsed ? 'All centres' : undefined}
-        className="flex items-center gap-2 border-b border-[var(--color-chrome-line)] px-4 py-2.5 text-[11.5px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
-      >
-        <span aria-hidden="true">&#8592;</span>
-        {!collapsed ? <span>All centres</span> : null}
-      </button>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         {NAV_GROUPS.map((group) => (
@@ -157,14 +140,10 @@ export function Sidebar({
                           className="absolute top-1/2 left-0 h-[18px] w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--brand-pink)]"
                         />
                       ) : null}
-                      <span
+                      <item.icon
                         aria-hidden="true"
-                        className={`w-4 shrink-0 text-center text-[13px] ${
-                          isActive ? 'text-[var(--brand-pink)]' : ''
-                        }`}
-                      >
-                        {item.icon}
-                      </span>
+                        className={`size-4 shrink-0 ${isActive ? 'text-[var(--brand-pink)]' : ''}`}
+                      />
                       {!collapsed ? (
                         <>
                           <span className="flex-1 truncate text-left">{item.label}</span>
@@ -182,13 +161,33 @@ export function Sidebar({
             </ul>
           </div>
         ))}
+
+        {/* The way back out, styled as its own nav group (matching the source's "Group" section)
+            rather than a strip above the rail — always reachable, never a dead end inside a centre. */}
+        <div>
+          {!collapsed ? (
+            <div className="px-2.5 pb-1.5 text-[10px] font-semibold tracking-[0.08em] text-[var(--color-chrome-ink-dim)] uppercase">
+              Group
+            </div>
+          ) : (
+            <div className="mx-2.5 mb-2 border-t border-[var(--color-chrome-line)]" />
+          )}
+          <button
+            type="button"
+            onClick={onLeaveCentre}
+            title={collapsed ? 'Back to group hub' : undefined}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
+          >
+            <LayoutGrid aria-hidden="true" className="size-4 shrink-0" />
+            {!collapsed ? <span className="flex-1 truncate text-left">Back to group hub</span> : null}
+          </button>
+        </div>
       </div>
 
       <div className="border-t border-[var(--color-chrome-line)] p-2">
-        {/* Who's signed in moved to the top bar (App.tsx's UserIdentityChip) — every screen shows it
-            there now, hub included, so it no longer needs a second copy here. This card is centre
-            context instead: which centre "here" currently means, plus the nearest thing to a centre
-            profile this product has today. */}
+        {/* Who's signed in lives in the top bar now — every screen shows it there, hub included, so it
+            no longer needs a second copy here. This card is centre context instead: which centre
+            "here" currently means, plus the nearest thing to a centre profile this product has today. */}
         {!collapsed ? (
           <div className="mb-2 rounded-lg bg-white/[0.06] px-2.5 py-2">
             <div className="text-[10px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
@@ -210,7 +209,7 @@ export function Sidebar({
           className="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
           aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
         >
-          <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+          {collapsed ? <ChevronRight aria-hidden="true" className="size-4" /> : <ChevronLeft aria-hidden="true" className="size-4" />}
           {!collapsed ? 'Collapse' : null}
         </button>
       </div>

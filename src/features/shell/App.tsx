@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ClipboardList, LogOut, Search } from 'lucide-react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { buildRealBoard } from '../rooms/real-board-data.js';
-import { buildCentres } from '../centres/centres-data.js';
+import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { formatDateWithDay } from '../../lib/format.js';
-import markUrl from '../../assets/brand/ukat-mark.png';
+import { BrandMark } from '../../components/brand.tsx';
+import { ThemeToggle } from '../../components/theme-toggle.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   AccessErrorScreen,
@@ -98,40 +108,103 @@ const initialsOf = (name: string): string =>
   name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
 
 /**
- * Identity + sign-out, shown the same way on every screen — hub and centre workspace alike — rather
- * than living only in the sidebar footer where it used to sit. `variant` picks light-on-dark for the
- * hub/chrome header or dark-on-light for the centre workspace's panel header; the content is identical.
+ * Identity, shown the same way on every screen — hub and centre workspace alike — rather than living
+ * only in the sidebar footer where it used to sit. `variant` picks light-on-dark for the hub/chrome
+ * header or dark-on-light for the centre workspace's panel header; the content is identical.
+ *
+ * A dropdown rather than a chip with its own "Sign out" button — matching the pattern ported from the
+ * Lovable redesign's app shell. `onOpenAdmin` is omitted on the hub, which has no current centre for
+ * "Administration" to mean anything about.
  */
-function UserIdentityChip({ variant }: { variant: 'chrome' | 'panel' }) {
+function UserMenu({
+  variant,
+  onOpenAdmin,
+}: {
+  variant: 'chrome' | 'panel';
+  onOpenAdmin?: (() => void) | undefined;
+}) {
   const { displayName, email, roleNames, signOut } = useAuth();
   const name = displayName ?? email ?? 'Unknown user';
   const ink = variant === 'chrome' ? 'text-[var(--color-chrome-ink)]' : 'text-[var(--color-ink)]';
   const inkDim =
     variant === 'chrome' ? 'text-[var(--color-chrome-ink-dim)]' : 'text-[var(--color-ink-muted)]';
-  const border = variant === 'chrome' ? 'border-white/20' : 'border-[var(--color-line)]';
   const hoverBg = variant === 'chrome' ? 'hover:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/10';
 
   return (
-    <div className="flex items-center gap-2.5">
-      <div
-        aria-hidden="true"
-        className={`grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-purple)]/20 text-[11px] font-semibold ${ink}`}
-      >
-        {initialsOf(name)}
-      </div>
-      <div className="hidden text-right leading-tight sm:block">
-        <div className={`text-[12.5px] font-medium ${ink}`}>{name}</div>
-        <div className={`text-[10.5px] ${inkDim}`}>{roleNames.length ? roleNames.join(', ') : 'No role'}</div>
-      </div>
-      <button
-        type="button"
-        onClick={() => void signOut()}
-        title="Sign out"
-        className={`rounded-lg border ${border} px-2.5 py-1.5 text-[11.5px] ${inkDim} transition ${hoverBg}`}
-      >
-        Sign out
-      </button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition ${hoverBg}`}
+        >
+          <span
+            aria-hidden="true"
+            className={`grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-purple)]/20 text-[11px] font-semibold ${ink}`}
+          >
+            {initialsOf(name)}
+          </span>
+          <span className="hidden text-left leading-tight sm:block">
+            <span className={`block text-[12.5px] font-medium ${ink}`}>{name}</span>
+            <span className={`block text-[10.5px] ${inkDim}`}>
+              {roleNames.length ? roleNames.join(', ') : 'No role'}
+            </span>
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>{email}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {onOpenAdmin ? (
+          <DropdownMenuItem onSelect={onOpenAdmin}>
+            <ClipboardList className="size-4" /> Administration
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem onSelect={() => void signOut()}>
+          <LogOut className="size-4" /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The centre switcher — a dropdown rather than a bare `<select>`, matching the source's own pattern.
+ * Fictional occupancy/region figures still come from `centres-data.ts` (see the caveat where this is
+ * built); this only changes how a centre is picked, not what's known about it. */
+function CentreSwitcher({
+  centres,
+  value,
+  onChange,
+}: {
+  centres: readonly CentreSummary[];
+  value: string;
+  onChange: (slug: string) => void;
+}) {
+  const current = centres.find((c) => c.slug === value);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:border-[var(--color-accent-ring)] sm:flex"
+        >
+          <span className="max-w-[160px] truncate">{current?.name ?? 'Select centre'}</span>
+          <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 overflow-auto">
+        <DropdownMenuLabel>Switch centre</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {centres.map((c) => (
+          <DropdownMenuItem key={c.slug} onSelect={() => onChange(c.slug)}>
+            <span className="min-w-0 flex-1 truncate">
+              {c.name}
+              {c.isConfigured ? '' : ' — no data'}
+            </span>
+            <span className="text-muted-foreground ml-auto shrink-0 text-xs">{c.region}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -150,9 +223,9 @@ function HubHeader() {
           ' color-mix(in oklab, var(--brand-blue) 12%, transparent) 100%)',
       }}
     >
-      <img src={markUrl} alt="" width={256} height={256} className="h-9 w-9 shrink-0" />
+      <BrandMark />
       <div className="min-w-0">
-        <div className="truncate text-[15px] leading-tight font-semibold">
+        <div className="truncate font-display text-[15px] leading-tight font-semibold">
           UK Addiction Treatment Centres
         </div>
         <div className="nums truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
@@ -160,8 +233,9 @@ function HubHeader() {
         </div>
       </div>
 
-      <div className="ml-auto">
-        <UserIdentityChip variant="chrome" />
+      <div className="ml-auto flex items-center gap-1">
+        <ThemeToggle className="text-[var(--color-chrome-ink-dim)] hover:bg-white/10 hover:text-[var(--color-chrome-ink)]" />
+        <UserMenu variant="chrome" />
       </div>
     </header>
   );
@@ -339,7 +413,7 @@ function Dashboard() {
               ) : null}
             </div>
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-[15px] leading-tight font-semibold">
+              <h1 className="truncate font-display text-[15px] leading-tight font-semibold">
                 {section === 'group' ? 'All centres' : centre.name}
               </h1>
               <Chip label="Development" tone="warn" />
@@ -349,30 +423,14 @@ function Dashboard() {
           <div className="ml-auto flex items-center gap-2.5">
             {/* Centre selector. Hidden on the group view, which spans every centre by definition. */}
             {section !== 'group' ? (
-              <label className="hidden items-center gap-1.5 text-[11.5px] text-[var(--color-ink-muted)] sm:flex">
-                <span className="sr-only">Centre</span>
-                <select
-                  value={centreSlug}
-                  onChange={(e) => setCentreSlug(e.target.value)}
-                  className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-                >
-                  {centres.map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                      {c.isConfigured ? '' : ' — no data'}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CentreSwitcher centres={centres} value={centreSlug} onChange={setCentreSlug} />
             ) : null}
             <label className="relative hidden sm:block">
               <span className="sr-only">Search beds, clients, staff</span>
-              <span
+              <Search
                 aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[12px] text-[var(--color-ink-muted)]"
-              >
-                ⌕
-              </span>
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
+              />
               <input
                 ref={searchInputRef}
                 type="search"
@@ -396,7 +454,8 @@ function Dashboard() {
               </div>
               <div>Europe/London</div>
             </div>
-            <UserIdentityChip variant="panel" />
+            <ThemeToggle />
+            <UserMenu variant="panel" onOpenAdmin={authCentre ? () => setSection('admin') : undefined} />
           </div>
         </header>
 
@@ -643,9 +702,9 @@ function Dashboard() {
             <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
               <div
                 aria-hidden="true"
-                className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[18px] text-[var(--color-accent)]"
+                className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
               >
-                {activeNav?.icon ?? '◻'}
+                {activeNav ? <activeNav.icon className="size-5" /> : null}
               </div>
               <h2 className="mt-3.5 text-[16px] font-semibold">{activeNav?.label}</h2>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
