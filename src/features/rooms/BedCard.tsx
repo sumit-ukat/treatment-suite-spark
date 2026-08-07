@@ -83,6 +83,17 @@ export function BedLabel({
   );
 }
 
+/**
+ * Overall status, in one colour rather than four separate numbers — for scanning a grid of a dozen
+ * cards at once, before dropping into any one card's own detail. Same priority order the bottom-row
+ * chips already use, so the dot never disagrees with the chips beneath it.
+ */
+const STATUS_DOT_TONE: Record<'alert' | 'warn' | 'good', string> = {
+  alert: 'bg-red-500 dark:bg-red-400',
+  warn: 'bg-amber-500 dark:bg-amber-400',
+  good: 'bg-emerald-500 dark:bg-emerald-400',
+};
+
 export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => void }) {
   const o = bed.occupant;
   if (!o) return null;
@@ -99,17 +110,41 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
       ? 'text-amber-600 dark:text-amber-400'
       : '';
 
+  const overdueOrPastDue = dischargePassed || o.overdueCount > 0;
+  const dueSoon = !overdueOrPastDue && (dischargeToday || o.dueTodayCount > 0);
+  const statusTone: 'alert' | 'warn' | 'good' = overdueOrPastDue ? 'alert' : dueSoon ? 'warn' : 'good';
+  const statusLabel = overdueOrPastDue ? 'Needs attention' : dueSoon ? 'Due soon' : 'On track';
+  // Just the counts already shown as chips below, added up — a corner badge for "how many things",
+  // not a new judgement about what matters. Restricted alerts stay out of it: that flag is deliberately
+  // kept separate and undiluted, not folded into a generic number.
+  const attentionCount = o.overdueCount + o.dueTodayCount + (dischargePassed ? 1 : 0);
+
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group flex w-full flex-col gap-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-3.5 text-left transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      className="group relative flex w-full flex-col gap-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-3.5 text-left transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
+      {attentionCount > 0 ? (
+        <span
+          aria-hidden="true"
+          title={`${attentionCount} item${attentionCount === 1 ? '' : 's'} need attention`}
+          className="absolute -top-1.5 -right-1.5 grid min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[10px] leading-[18px] font-bold text-white ring-2 ring-[var(--color-panel)]"
+        >
+          {attentionCount}
+        </span>
+      ) : null}
       <div className="flex items-start gap-3">
         <PhotoBadge occupant={o} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <BedLabel label={bed.label} shared={bed.shared} />
+            <span
+              aria-hidden="true"
+              title={statusLabel}
+              className={`size-2 shrink-0 rounded-full ${STATUS_DOT_TONE[statusTone]}`}
+            />
+            <span className="sr-only">{statusLabel}</span>
             {o.hasRestrictedAlert ? (
               <span
                 className="ml-auto shrink-0 text-[13px] text-red-600 dark:text-red-400"
