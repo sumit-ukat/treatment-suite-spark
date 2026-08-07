@@ -28,12 +28,17 @@
  *
  * Alerts use red (hue ~0) rather than rose (hue ~350) specifically to buy maximum distance from the
  * brand pink.
+ *
+ * --brand-pink and --brand-blue below are expressed in oklch, matching the redesign sourced from
+ * Lovable (see the "ported design foundation" section further down) — same brand colours, re-encoded
+ * for smoother interpolation. --brand-purple stays hex: the redesign carries the same purple as its
+ * own --primary token instead of this name, so there was nothing to port it *to*.
  */
 @theme {
   /* --- raw brand --- */
-  --brand-pink: #dc61b0;
+  --brand-pink: oklch(0.65 0.185 342);
   --brand-purple: #77499f;
-  --brand-blue: #97cae6;
+  --brand-blue: oklch(0.81 0.068 234);
 
   /* text-safe darkened variants (5.3:1 and 5.4:1 on white) */
   --brand-pink-ink: #b23d8a;
@@ -87,6 +92,12 @@
 
       --brand-pink-ink: #e992c8;
       --brand-blue-ink: #97cae6;
+
+      /* Dark-mode values for the two brand tokens shared with the ported foundation below — kept on
+         this existing prefers-color-scheme mechanism (not the .dark class) since nothing yet toggles
+         that class. See the header comment in the next section for why. */
+      --brand-pink: oklch(0.74 0.155 342);
+      --brand-blue: oklch(0.79 0.07 234);
     }
   }
 
@@ -98,10 +109,25 @@
     margin: 0;
     background: var(--color-surface);
     color: var(--color-ink);
-    font-family:
-      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Bare `border` (no explicit colour utility) now reads this instead of a browser default black —
+     part of the ported foundation below. Nothing currently in this codebase relies on the old
+     default: every existing use already pairs `border` with an explicit `border-[var(--color-line)]`
+     or similar, which — being a class selector — always wins over this universal-selector rule. */
+  * {
+    border-color: var(--color-border);
   }
 
   /* Dates and counts line up in columns. */
@@ -125,4 +151,227 @@
   nav::-webkit-scrollbar-track {
     background: transparent;
   }
+}
+
+/**
+ * ============================================================================
+ * Ported design foundation (from the Lovable-generated redesign)
+ * ============================================================================
+ *
+ * Everything below is copied from the Lovable source's styles.css as closely as this project's
+ * existing Tailwind setup allows, so that component and page markup lifted from that source later
+ * can reuse its exact utility classes (bg-card, text-muted-foreground, bg-overdue-soft, and so on)
+ * without translation. Two names are held back rather than merged into the block above:
+ *
+ * - `--color-surface` already exists (this file's own page-background token, e.g. #faf8fc) and means
+ *   something different from Lovable's --surface (a subtle inset-panel tone, close to white/card).
+ * - `--color-accent` already exists (this file's own primary interactive purple) and means something
+ *   different from Lovable's --accent (a soft neutral highlight tint, not an interactive colour).
+ *
+ * Letting either collide would silently repaint every current use of the old meaning — buttons
+ * turning pale, page backgrounds going the wrong shade of white in dark mode — before the components
+ * that actually need the new meaning exist. Once the old Sidebar/App shell/Panel/etc. are replaced
+ * (later steps), retire the two tokens above from the block at the top of this file and add:
+ *
+ *   --color-surface: var(--surface);
+ *   --color-accent: var(--accent);
+ *
+ * to the @theme inline block below, and `bg-surface` / `bg-accent` will work exactly as the source
+ * intends. Until then, `--surface` and `--accent` exist as plain custom properties (usable via
+ * `bg-[var(--surface)]` etc.) but do not yet have generated `bg-surface` / `bg-accent` utilities.
+ *
+ * Dark mode for this whole section is the `.dark` class (matching the source, which toggles it via a
+ * theme-toggle component) rather than this file's existing `prefers-color-scheme` media query — so
+ * none of it responds to the system theme yet. That starts working once a theme toggle exists.
+ */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-pink-foreground: var(--brand-pink-foreground);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-foreground: var(--brand-blue-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-ontrack: var(--ontrack);
+  --color-ontrack-soft: var(--ontrack-soft);
+  --color-attention: var(--attention);
+  --color-attention-soft: var(--attention-soft);
+  --color-overdue: var(--overdue);
+  --color-overdue-soft: var(--overdue-soft);
+  --color-neutral-status: var(--neutral-status);
+  --color-neutral-status-soft: var(--neutral-status-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --shadow-soft: 0 1px 2px oklch(0.35 0.09 305 / 0.06), 0 8px 24px -12px oklch(0.35 0.09 305 / 0.18);
+  --shadow-lift: 0 2px 4px oklch(0.35 0.09 305 / 0.07), 0 18px 40px -18px oklch(0.35 0.09 305 / 0.28);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  --background: oklch(0.985 0.006 320);
+  --foreground: oklch(0.24 0.035 305);
+  --surface: oklch(0.998 0.003 320);
+  --surface-foreground: oklch(0.24 0.035 305);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.035 305);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.035 305);
+
+  --primary: oklch(0.45 0.155 305);
+  --primary-foreground: oklch(0.99 0.005 320);
+  --primary-soft: oklch(0.95 0.025 305);
+
+  --secondary: oklch(0.955 0.014 310);
+  --secondary-foreground: oklch(0.32 0.07 305);
+  --muted: oklch(0.955 0.012 310);
+  --muted-foreground: oklch(0.52 0.035 305);
+  --accent: oklch(0.94 0.03 320);
+  --accent-foreground: oklch(0.32 0.09 315);
+
+  --brand-pink-foreground: oklch(0.99 0.005 340);
+  --brand-blue-foreground: oklch(0.28 0.06 250);
+
+  --destructive: oklch(0.56 0.2 20);
+  --destructive-foreground: oklch(0.99 0.005 320);
+
+  --border: oklch(0.915 0.012 310);
+  --input: oklch(0.9 0.014 310);
+  --ring: oklch(0.45 0.155 305);
+
+  --ontrack: oklch(0.5 0.11 195);
+  --ontrack-soft: oklch(0.95 0.03 195);
+  --attention: oklch(0.58 0.13 65);
+  --attention-soft: oklch(0.955 0.04 75);
+  --overdue: oklch(0.53 0.19 5);
+  --overdue-soft: oklch(0.955 0.028 5);
+  --neutral-status: oklch(0.52 0.02 305);
+  --neutral-status-soft: oklch(0.95 0.008 305);
+
+  --chart-1: oklch(0.45 0.155 305);
+  --chart-2: oklch(0.65 0.185 342);
+  --chart-3: oklch(0.72 0.09 234);
+  --chart-4: oklch(0.6 0.12 265);
+  --chart-5: oklch(0.58 0.13 65);
+
+  --sidebar: oklch(0.995 0.004 320);
+  --sidebar-foreground: oklch(0.3 0.035 305);
+  --sidebar-primary: oklch(0.45 0.155 305);
+  --sidebar-primary-foreground: oklch(0.99 0.005 320);
+  --sidebar-accent: oklch(0.955 0.02 310);
+  --sidebar-accent-foreground: oklch(0.32 0.09 305);
+  --sidebar-border: oklch(0.92 0.012 310);
+  --sidebar-ring: oklch(0.45 0.155 305);
+}
+
+.dark {
+  --background: oklch(0.19 0.028 300);
+  --foreground: oklch(0.96 0.008 320);
+  --surface: oklch(0.225 0.03 300);
+  --surface-foreground: oklch(0.96 0.008 320);
+  --card: oklch(0.235 0.031 300);
+  --card-foreground: oklch(0.96 0.008 320);
+  --popover: oklch(0.235 0.031 300);
+  --popover-foreground: oklch(0.96 0.008 320);
+
+  --primary: oklch(0.7 0.13 305);
+  --primary-foreground: oklch(0.18 0.04 300);
+  --primary-soft: oklch(0.3 0.06 305);
+
+  --secondary: oklch(0.29 0.032 300);
+  --secondary-foreground: oklch(0.94 0.01 320);
+  --muted: oklch(0.29 0.03 300);
+  --muted-foreground: oklch(0.74 0.022 305);
+  --accent: oklch(0.32 0.05 320);
+  --accent-foreground: oklch(0.95 0.02 330);
+
+  --brand-pink-foreground: oklch(0.2 0.05 340);
+  --brand-blue-foreground: oklch(0.2 0.04 250);
+
+  --destructive: oklch(0.68 0.18 20);
+  --destructive-foreground: oklch(0.18 0.04 300);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7 0.13 305);
+
+  --ontrack: oklch(0.76 0.1 195);
+  --ontrack-soft: oklch(0.3 0.05 195);
+  --attention: oklch(0.8 0.12 78);
+  --attention-soft: oklch(0.32 0.055 70);
+  --overdue: oklch(0.75 0.15 10);
+  --overdue-soft: oklch(0.32 0.07 8);
+  --neutral-status: oklch(0.74 0.02 305);
+  --neutral-status-soft: oklch(0.3 0.02 305);
+
+  --chart-1: oklch(0.7 0.13 305);
+  --chart-2: oklch(0.74 0.155 342);
+  --chart-3: oklch(0.79 0.07 234);
+  --chart-4: oklch(0.7 0.11 265);
+  --chart-5: oklch(0.8 0.12 78);
+
+  --sidebar: oklch(0.215 0.03 300);
+  --sidebar-foreground: oklch(0.93 0.01 320);
+  --sidebar-primary: oklch(0.7 0.13 305);
+  --sidebar-primary-foreground: oklch(0.18 0.04 300);
+  --sidebar-accent: oklch(0.3 0.045 305);
+  --sidebar-accent-foreground: oklch(0.96 0.01 320);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.7 0.13 305);
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    oklch(from var(--color-primary) l c h) 30%,
+    var(--color-brand-pink) 100%
+  );
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }
