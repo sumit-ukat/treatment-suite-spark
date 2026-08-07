@@ -39,20 +39,40 @@ export function Chip({
   );
 }
 
+/** Same mapping as `CHIP_TONES`, softened for a larger icon chip rather than inline text. */
+const ICON_TONES: Record<Tone, string> = {
+  neutral: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]',
+  good: 'bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300',
+  warn: 'bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300',
+  alert: 'bg-red-500/13 text-red-700 dark:bg-red-400/15 dark:text-red-300',
+  accent: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]',
+};
+
 export function StatTile({
   label,
   value,
   hint,
+  icon,
   tone = 'neutral',
   active = false,
   onClick,
+  actionLabel,
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  /** A single glyph, rendered in a tone-coloured chip — the same icon language used by `Chip`. */
+  icon?: string;
   tone?: Tone;
   active?: boolean;
   onClick?: () => void;
+  /**
+   * Shown instead of `hint`, styled as the tile's own affordance rather than a second, separately
+   * clickable link — the whole tile is already the click target, so a nested link would just be two
+   * controls doing one job. Only rendered when `onClick` is also given: a tile with nothing to do on
+   * click gets plain `hint` text, never a "View" label pointing nowhere.
+   */
+  actionLabel?: string;
 }) {
   const valueTone =
     tone === 'alert'
@@ -67,14 +87,32 @@ export function StatTile({
       : 'border-[var(--color-line)] bg-[var(--color-panel)]'
   } ${onClick ? 'hover:border-[var(--color-accent)]/60 cursor-pointer' : ''}`;
 
+  const showAction = Boolean(onClick && actionLabel);
+
   const inner = (
-    <>
-      <div className="text-[10.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-        {label}
+    <div className="flex items-start gap-2.5">
+      {icon ? (
+        <span
+          aria-hidden="true"
+          className={`grid size-7 shrink-0 place-items-center rounded-lg text-[13px] ${ICON_TONES[tone]}`}
+        >
+          {icon}
+        </span>
+      ) : null}
+      <div className="min-w-0 flex-1">
+        <div className="text-[10.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+          {label}
+        </div>
+        <div className={`nums mt-1.5 text-[26px] leading-none font-semibold ${valueTone}`}>{value}</div>
+        <div
+          className={`mt-1 h-3.5 text-[11px] ${
+            showAction ? 'font-medium text-[var(--color-accent)]' : 'text-[var(--color-ink-muted)]'
+          }`}
+        >
+          {showAction ? `${actionLabel} →` : hint ?? ''}
+        </div>
       </div>
-      <div className={`nums mt-1.5 text-[26px] leading-none font-semibold ${valueTone}`}>{value}</div>
-      <div className="mt-1 h-3.5 text-[11px] text-[var(--color-ink-muted)]">{hint ?? ''}</div>
-    </>
+    </div>
   );
 
   return onClick ? (

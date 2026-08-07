@@ -437,51 +437,63 @@ function Dashboard() {
                 className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7"
               >
                 <StatTile
+                  icon="▦"
                   label="Occupancy"
                   value={`${summary.bedsOccupied}/${summary.bedsTotal}`}
                   hint={`${summary.occupancyPercent}% · ${summary.bedsAvailable} free`}
                 />
                 <StatTile
+                  icon="▲"
                   label="Overdue"
                   value={summary.overdue}
                   hint="actions, all clients"
                   tone={summary.overdue > 0 ? 'alert' : 'neutral'}
                   active={filter === 'overdue'}
+                  actionLabel={filter === 'overdue' ? 'Clear filter' : 'View overdue'}
                   onClick={() => setFilter(filter === 'overdue' ? 'all' : 'overdue')}
                 />
                 <StatTile
+                  icon="●"
                   label="Due today"
                   value={summary.dueToday}
                   hint="actions"
                   tone={summary.dueToday > 0 ? 'warn' : 'neutral'}
                   active={filter === 'due_today'}
+                  actionLabel={filter === 'due_today' ? 'Clear filter' : 'View due today'}
                   onClick={() => setFilter(filter === 'due_today' ? 'all' : 'due_today')}
                 />
                 <StatTile
+                  icon="→"
                   label="Discharging"
                   value={summary.dischargingWithin7Days}
                   hint="within 7 days"
                   active={filter === 'discharging'}
+                  actionLabel={filter === 'discharging' ? 'Clear filter' : 'View discharging'}
                   onClick={() => setFilter(filter === 'discharging' ? 'all' : 'discharging')}
                 />
                 <StatTile
+                  icon="—"
                   label="Not applicable"
                   value={summary.notApplicable}
                   hint="beyond programme end"
                 />
                 <StatTile
+                  icon="!"
                   label="No photo"
                   value={summary.photoAttention}
                   hint="no photograph on file"
                   tone={summary.photoAttention > 0 ? 'warn' : 'neutral'}
                   active={filter === 'photo'}
+                  actionLabel={filter === 'photo' ? 'Clear filter' : 'Review photos'}
                   onClick={() => setFilter(filter === 'photo' ? 'all' : 'photo')}
                 />
                 <StatTile
+                  icon="⚑"
                   label="Restricted"
                   value={summary.restrictedAlerts}
                   hint="detail withheld"
                   active={filter === 'alerts'}
+                  actionLabel={filter === 'alerts' ? 'Clear filter' : 'View alerts'}
                   onClick={() => setFilter(filter === 'alerts' ? 'all' : 'alerts')}
                 />
               </section>

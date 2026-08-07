@@ -137,34 +137,41 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7"
       >
         <StatTile
+          icon="⌂"
           label="Centres"
           value={totals.centres}
           hint={`${REGIONS.length} regions`}
         />
         <StatTile
+          icon="▦"
           label="Occupancy"
           value={`${totals.occupied}/${totals.capacity}`}
           hint={`${totals.occupancyPercent}% · ${totals.available} free`}
         />
         <StatTile
+          icon="▲"
           label="Overdue"
           value={totals.overdue}
           hint="actions, all centres"
           tone={totals.overdue > 0 ? 'alert' : 'neutral'}
         />
-        <StatTile label="Due today" value={totals.dueToday} hint="actions" tone="warn" />
+        <StatTile icon="●" label="Due today" value={totals.dueToday} hint="actions" tone="warn" />
         <StatTile
+          icon="▲"
           label="Past discharge"
           value={totals.pastPlannedDischarge}
           hint="still in a bed"
           tone={totals.pastPlannedDischarge > 0 ? 'alert' : 'neutral'}
         />
         <StatTile
+          icon="✓"
           label="On time"
           value={`${totals.onTimePercent}%`}
           hint="actions by due date"
+          tone="good"
         />
         <StatTile
+          icon="!"
           label="Need attention"
           value={needsAttention}
           hint={`of ${totals.centres} centres`}
