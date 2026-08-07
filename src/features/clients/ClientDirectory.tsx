@@ -1,11 +1,26 @@
+import { Search } from 'lucide-react';
 import { useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import type { ClientSearchResult } from '../../services/data-access.js';
 import { formatDate } from '../../lib/format.js';
-import { Chip } from '../../components/ui.tsx';
+import { Chip, Panel } from '../../components/ui.tsx';
+import { PageHeader } from '../../components/metric-card.tsx';
+import { StatusBadge } from '../../components/status-badge.tsx';
+import { ClientAvatar } from '../../components/brand.tsx';
 import { useClientSearch } from './useClientSearch.js';
 import { ClientFilePanel } from './ClientFilePanel.tsx';
+
+/** Initials and a stable 0-2 hue, both derived from real fields rather than stored — a client search
+ * result has no "avatar colour" of its own, and shouldn't grow one just to feed ClientAvatar. */
+function initialsOf(name: string): string {
+  return name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
+}
+function hueOf(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 
 /**
  * The first screen that lets staff find a client by name or reference, rather than only by already
@@ -36,22 +51,26 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
 
   return (
     <div className="mx-auto max-w-[720px] px-5 py-8">
-      <h2 className="text-[16px] font-semibold">Clients — {centre.name}</h2>
-      <p className="mt-1 text-[12.5px] text-[var(--color-ink-muted)]">
-        {canSeeNames
-          ? 'Search by name or reference. Only clients with an admission at this centre — past or present — appear here.'
-          : 'Search by reference. Names are withheld for your role; only clients with an admission at this centre — past or present — appear here.'}
-      </p>
+      <PageHeader
+        eyebrow={centre.name}
+        title="Client directory"
+        description={
+          canSeeNames
+            ? 'Search by name or reference. Only clients with an admission at this centre — past or present — appear here.'
+            : 'Search by reference. Names are withheld for your role; only clients with an admission at this centre — past or present — appear here.'
+        }
+      />
 
-      <label className="mt-5 block">
+      <label className="relative mt-5 block">
         <span className="sr-only">Search clients</span>
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <input
           type="search"
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={canSeeNames ? 'Search by name or reference…' : 'Search by reference…'}
-          className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[13.5px] focus:border-[var(--color-accent)] focus:outline-none"
+          className="w-full rounded-lg border border-[var(--color-line)] bg-card py-2 pr-3 pl-9 text-[13.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
         />
       </label>
 
@@ -63,43 +82,49 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
 
       <div className="mt-4">
         {query.trim().length > 0 && query.trim().length < 2 ? (
-          <p className="text-[12px] text-[var(--color-ink-muted)]">Keep typing — at least 2 characters.</p>
+          <p className="text-[12px] text-muted-foreground">Keep typing — at least 2 characters.</p>
         ) : loading ? (
-          <p className="text-[12px] text-[var(--color-ink-muted)]">Searching…</p>
+          <p className="text-[12px] text-muted-foreground">Searching…</p>
         ) : query.trim().length >= 2 && results.length === 0 ? (
-          <p className="text-[12px] text-[var(--color-ink-muted)]">No clients matched at {centre.name}.</p>
+          <p className="text-[12px] text-muted-foreground">No clients matched at {centre.name}.</p>
         ) : results.length > 0 ? (
-          <ul className="flex flex-col gap-1.5">
-            {results.map((r) => (
-              <li key={r.client_id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenClient(r)}
-                  className="flex w-full items-center gap-3 rounded-lg border border-[var(--color-line)] px-3 py-2 text-left transition hover:bg-black/5 dark:hover:bg-white/10"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-medium">{r.display_name ?? r.reference}</div>
-                    <div className="nums text-[11px] text-[var(--color-ink-muted)]">
-                      {r.reference}
-                      {r.last_admitted_at ? (
-                        <>
-                          {' '}
-                          &middot; last admitted {formatDate(new Date(r.last_admitted_at))}
-                        </>
+          <Panel title="Results" subtitle={`${results.length} matched`}>
+            <ul className="flex flex-col gap-1.5">
+              {results.map((r) => {
+                const label = r.display_name ?? r.reference;
+                return (
+                  <li key={r.client_id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenClient(r)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition hover:border-[var(--color-line)] hover:bg-muted/50"
+                    >
+                      <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-medium">{label}</div>
+                        <div className="nums text-[11px] text-muted-foreground">
+                          {r.reference}
+                          {r.last_admitted_at ? (
+                            <>
+                              {' '}
+                              &middot; last admitted {formatDate(new Date(r.last_admitted_at))}
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      {r.has_open_admission ? (
+                        <StatusBadge status="ontrack" label="Currently admitted" size="sm" />
+                      ) : r.last_admission_status ? (
+                        <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
                       ) : null}
-                    </div>
-                  </div>
-                  {r.has_open_admission ? (
-                    <Chip icon="&#9679;" label="Currently admitted" tone="good" />
-                  ) : r.last_admission_status ? (
-                    <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
         ) : (
-          <p className="text-[12px] text-[var(--color-ink-muted)]">
+          <p className="text-[12px] text-muted-foreground">
             Type at least 2 characters to search.
           </p>
         )}
