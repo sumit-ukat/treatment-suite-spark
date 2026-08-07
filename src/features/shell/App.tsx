@@ -18,6 +18,7 @@ import { GroupDashboard } from '../centres/GroupDashboard.tsx';
 import { Administration } from '../administration/Administration.tsx';
 import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
+import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip, FilterPill, StatTile } from '../../components/ui.tsx';
 
@@ -545,6 +546,8 @@ function Dashboard() {
             <AdmitClientForm centre={authCentre} />
           ) : section === 'clients' && authCentre ? (
             <ClientDirectory centre={authCentre} />
+          ) : section === 'audit' ? (
+            <AuditHistory />
           ) : section === 'admin' || section === 'admissions' || section === 'clients' ? (
             <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
               <div

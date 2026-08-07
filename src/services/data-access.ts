@@ -823,6 +823,43 @@ export const userAdmin = {
   },
 };
 
+export interface AuditEventRow {
+  id: number;
+  actor_id: string | null;
+  actor_email: string | null;
+  action: string;
+  record_type: string;
+  record_id: string;
+  centre_id: string | null;
+  occurred_at: string;
+  changed_fields: string[] | null;
+  previous_value: unknown;
+  new_value: unknown;
+  reason: string | null;
+}
+
+/**
+ * Read-only. `audit_read` (migration 0009) already gates this by `audit.view` and centre access —
+ * there is nothing to write here (the table has no write grant at all; only `app.audit_row`'s
+ * trigger, running SECURITY DEFINER, ever inserts into it), so no RPC is needed, unlike every other
+ * screen in this file that mutates something.
+ */
+export const auditEvents = {
+  /** Most recent first, capped — a browsing window, not an export. */
+  list(limit = 300): Promise<AuditEventRow[]> {
+    return run(
+      'auditEvents.list',
+      client()
+        .from('audit_events')
+        .select(
+          'id,actor_id,actor_email,action,record_type,record_id,centre_id,occurred_at,changed_fields,previous_value,new_value,reason',
+        )
+        .order('occurred_at', { ascending: false })
+        .limit(limit),
+    );
+  },
+};
+
 type AuthChangeCallback = Parameters<
   ReturnType<typeof client>['auth']['onAuthStateChange']
 >[0];
