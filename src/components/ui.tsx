@@ -86,6 +86,66 @@ export function Panel({
   );
 }
 
+export interface TimelineStep {
+  label: string;
+  date?: string | undefined;
+  /** Reuses the same tone vocabulary as `Chip`: good = done, alert = overdue, warn = due now, neutral = upcoming. */
+  tone: Tone;
+}
+
+/** Marker + icon for each step. Numbers appear only where there is no status glyph to show instead —
+ *  the same convention `TaskRow` already uses for its own status circles, kept identical here so a
+ *  "done"/"overdue"/"due now" step reads the same way wherever it appears in the app. */
+const STEP_ICON: Record<Tone, string> = { good: '✓', alert: '!', warn: '●', neutral: '', accent: '' };
+const STEP_TONE_BG: Record<Tone, string> = {
+  good: 'bg-emerald-600 text-white',
+  alert: 'bg-red-600 text-white',
+  warn: 'bg-amber-500 text-white',
+  neutral: 'border border-[var(--color-line)] text-[var(--color-ink-muted)]',
+  accent: 'bg-[var(--color-accent)] text-white',
+};
+
+/**
+ * A numbered pathway rather than a flat list — for progress that has a fixed order (milestones on a
+ * programme), where "how far along" matters as much as "which ones are done." The rail between steps
+ * is the only thing here that is purely decorative; everything else (the number, the icon, the tone)
+ * comes from the caller's real status for that step.
+ */
+export function Timeline({ steps }: { steps: ReadonlyArray<TimelineStep> }) {
+  return (
+    <ol className="flex flex-col">
+      {steps.map((s, i) => {
+        const isLast = i === steps.length - 1;
+        return (
+          <li key={i} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <span
+                aria-hidden="true"
+                className={`grid size-6 shrink-0 place-items-center rounded-full text-[10.5px] font-bold ${STEP_TONE_BG[s.tone]}`}
+              >
+                {STEP_ICON[s.tone] || i + 1}
+              </span>
+              {!isLast ? (
+                <span
+                  className={`mt-0.5 w-px flex-1 ${s.tone === 'good' ? 'bg-emerald-500/50' : 'bg-[var(--color-line)]'}`}
+                />
+              ) : null}
+            </div>
+            <div className={`min-w-0 ${isLast ? '' : 'pb-4'}`}>
+              <div
+                className={`text-[12.5px] font-medium ${s.tone === 'neutral' ? 'text-[var(--color-ink-muted)]' : 'text-[var(--color-ink)]'}`}
+              >
+                {s.label}
+              </div>
+              {s.date ? <div className="nums text-[11px] text-[var(--color-ink-muted)]">{s.date}</div> : null}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /** Same mapping as `CHIP_TONES`, softened for a larger icon chip rather than inline text. */
 const ICON_TONES: Record<Tone, string> = {
   neutral: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]',

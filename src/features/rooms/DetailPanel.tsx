@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { BoardBed, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
-import { Chip } from '../../components/ui.tsx';
+import { Chip, Panel, Timeline } from '../../components/ui.tsx';
 import { discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
@@ -74,6 +74,15 @@ export function DetailPanel({
     return a.dueAt.getTime() - b.dueAt.getTime();
   });
 
+  // The programme's own fixed-order steps (life story, Step 1/2/3, CCP) — a subset of `sorted`, kept
+  // in the same due-date order, rather than a separate notion of "stage" invented for this view.
+  const milestones = sorted.filter((t) => t.category === 'milestone');
+  const milestoneSteps = milestones.map((t) => ({
+    label: t.title,
+    date: t.dueAt ? formatDate(t.dueAt) : undefined,
+    tone: t.isComplete ? ('good' as const) : t.isOverdue ? ('alert' as const) : t.isDueToday ? ('warn' as const) : ('neutral' as const),
+  }));
+
   return (
     <>
       <div
@@ -132,26 +141,29 @@ export function DetailPanel({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <DischargeSection occupant={o} onChanged={onChanged} />
 
-          <div className="mb-2.5 flex items-baseline justify-between">
-            <h3 className="text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-              Required actions
-            </h3>
-            <span className="nums text-[11px] text-[var(--color-ink-muted)]">
-              {o.completedCount} of {o.totalCount} complete
-            </span>
-          </div>
+          {milestoneSteps.length > 0 ? (
+            <Panel
+              title="Treatment journey"
+              subtitle={`${milestones.filter((t) => t.isComplete).length} of ${milestones.length} milestones complete`}
+              className="mb-4"
+            >
+              <Timeline steps={milestoneSteps} />
+            </Panel>
+          ) : null}
 
-          <p className="mb-3 rounded-lg bg-[var(--color-accent-soft)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-            Each action carries a <strong className="font-semibold">due date</strong> separate from
-            its completion. That is what makes lateness measurable &mdash; the whiteboard stores one
-            value per action, so it cannot record &ldquo;due Monday, done Wednesday&rdquo;.
-          </p>
+          <Panel title="Required actions" subtitle={`${o.completedCount} of ${o.totalCount} complete`}>
+            <p className="mb-3 rounded-lg bg-[var(--color-accent-soft)] px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+              Each action carries a <strong className="font-semibold">due date</strong> separate from
+              its completion. That is what makes lateness measurable &mdash; the whiteboard stores one
+              value per action, so it cannot record &ldquo;due Monday, done Wednesday&rdquo;.
+            </p>
 
-          <ul className="flex flex-col gap-1">
-            {sorted.map((t) => (
-              <TaskRow key={t.id ?? t.code} task={t} onChanged={onChanged} />
-            ))}
-          </ul>
+            <ul className="flex flex-col gap-1">
+              {sorted.map((t) => (
+                <TaskRow key={t.id ?? t.code} task={t} onChanged={onChanged} />
+              ))}
+            </ul>
+          </Panel>
         </div>
 
         <footer className="border-t border-[var(--color-line)] px-4 py-3 text-[11px] text-[var(--color-ink-muted)]">
@@ -414,11 +426,7 @@ function DischargeSection({
   );
 
   return (
-    <div className="mb-4 rounded-lg border border-[var(--color-line)] p-3">
-      <h3 className="mb-2 text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-        Discharge
-      </h3>
-
+    <Panel title="Discharge" className="mb-4">
       {!req && mode === 'idle' ? (
         canInitiate || canFinalise ? (
           <button
@@ -611,7 +619,7 @@ function DischargeSection({
           {error}
         </p>
       ) : null}
-    </div>
+    </Panel>
   );
 }
 
