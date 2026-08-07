@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ClipboardList, LogOut, Search } from 'lucide-react';
+import {
+  BedDouble,
+  CalendarClock,
+  ChevronDown,
+  ClipboardList,
+  Clock,
+  Flag,
+  ImageOff,
+  LayoutGrid,
+  List as ListIcon,
+  LogOut,
+  Minus,
+  Plus,
+  Search,
+  TriangleAlert,
+} from 'lucide-react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { buildRealBoard } from '../rooms/real-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { formatDateWithDay } from '../../lib/format.js';
 import { BrandMark } from '../../components/brand.tsx';
+import { MetricCard } from '../../components/metric-card.tsx';
 import { ThemeToggle } from '../../components/theme-toggle.tsx';
 import {
   DropdownMenu,
@@ -30,7 +46,7 @@ import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
-import { Chip, FilterPill, Panel, RingChart, StatTile } from '../../components/ui.tsx';
+import { Chip, FilterPill, Panel, RingChart } from '../../components/ui.tsx';
 
 /**
  * Gate the whole application on the session.
@@ -493,36 +509,34 @@ function Dashboard() {
             <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
               <section
                 aria-label="Centre summary"
-                className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7"
               >
-                <StatTile
-                  icon="▦"
+                <MetricCard
+                  icon={<BedDouble className="size-4" />}
                   label="Occupancy"
                   value={`${summary.bedsOccupied}/${summary.bedsTotal}`}
                   hint={`${summary.occupancyPercent}% · ${summary.bedsAvailable} free`}
+                  accent="primary"
                 />
-                <StatTile
-                  icon="▲"
+                <MetricCard
+                  icon={<TriangleAlert className="size-4" />}
                   label="Overdue"
                   value={summary.overdue}
-                  hint="actions, all clients"
-                  tone={summary.overdue > 0 ? 'alert' : 'neutral'}
+                  accent={summary.overdue > 0 ? 'pink' : 'default'}
                   active={filter === 'overdue'}
                   actionLabel={filter === 'overdue' ? 'Clear filter' : 'View overdue'}
                   onClick={() => setFilter(filter === 'overdue' ? 'all' : 'overdue')}
                 />
-                <StatTile
-                  icon="●"
+                <MetricCard
+                  icon={<Clock className="size-4" />}
                   label="Due today"
                   value={summary.dueToday}
-                  hint="actions"
-                  tone={summary.dueToday > 0 ? 'warn' : 'neutral'}
                   active={filter === 'due_today'}
                   actionLabel={filter === 'due_today' ? 'Clear filter' : 'View due today'}
                   onClick={() => setFilter(filter === 'due_today' ? 'all' : 'due_today')}
                 />
-                <StatTile
-                  icon="→"
+                <MetricCard
+                  icon={<CalendarClock className="size-4" />}
                   label="Discharging"
                   value={summary.dischargingWithin7Days}
                   hint="within 7 days"
@@ -530,27 +544,24 @@ function Dashboard() {
                   actionLabel={filter === 'discharging' ? 'Clear filter' : 'View discharging'}
                   onClick={() => setFilter(filter === 'discharging' ? 'all' : 'discharging')}
                 />
-                <StatTile
-                  icon="—"
+                <MetricCard
+                  icon={<Minus className="size-4" />}
                   label="Not applicable"
                   value={summary.notApplicable}
                   hint="beyond programme end"
                 />
-                <StatTile
-                  icon="!"
+                <MetricCard
+                  icon={<ImageOff className="size-4" />}
                   label="No photo"
                   value={summary.photoAttention}
-                  hint="no photograph on file"
-                  tone={summary.photoAttention > 0 ? 'warn' : 'neutral'}
                   active={filter === 'photo'}
                   actionLabel={filter === 'photo' ? 'Clear filter' : 'Review photos'}
                   onClick={() => setFilter(filter === 'photo' ? 'all' : 'photo')}
                 />
-                <StatTile
-                  icon="⚑"
+                <MetricCard
+                  icon={<Flag className="size-4" />}
                   label="Restricted"
                   value={summary.restrictedAlerts}
-                  hint="detail withheld"
                   active={filter === 'alerts'}
                   actionLabel={filter === 'alerts' ? 'Clear filter' : 'View alerts'}
                   onClick={() => setFilter(filter === 'alerts' ? 'all' : 'alerts')}
@@ -571,7 +582,7 @@ function Dashboard() {
                 </div>
               </Panel>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
                 <FilterPill
                   label="All beds"
                   count={board.length}
@@ -622,16 +633,31 @@ function Dashboard() {
                       type="button"
                       onClick={() => setView(v)}
                       aria-pressed={view === v}
-                      className={`px-2.5 py-1.5 text-[11.5px] font-medium transition ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-medium transition ${
                         view === v
-                          ? 'bg-[var(--brand-purple)] text-white'
-                          : 'bg-[var(--color-panel)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-muted-foreground hover:text-[var(--color-ink)]'
                       }`}
                     >
-                      {v === 'board' ? 'Cards' : 'List'}
+                      {v === 'board' ? (
+                        <>
+                          <LayoutGrid className="size-3.5" /> Cards
+                        </>
+                      ) : (
+                        <>
+                          <ListIcon className="size-3.5" /> List
+                        </>
+                      )}
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSection('admissions')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
+                >
+                  <Plus className="size-3.5" /> Admit client
+                </button>
               </div>
 
               <Panel title="Bed spaces" subtitle={`${visible.length} of ${board.length} shown`} className="mt-4">

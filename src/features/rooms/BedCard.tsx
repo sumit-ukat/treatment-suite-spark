@@ -1,6 +1,7 @@
 import type { BoardBed, Occupant } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
+import { StatusBadge } from '../../components/status-badge.tsx';
 
 /**
  * Photograph placeholder.
@@ -123,7 +124,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex w-full flex-col gap-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-3.5 text-left transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      className="group relative flex w-full flex-col gap-3 rounded-2xl border bg-card p-3.5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
       {attentionCount > 0 ? (
         <span
@@ -219,17 +220,13 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
       </div>
 
       <div className="flex flex-wrap gap-1">
-        {dischargePassed ? (
-          <Chip icon="&#9650;" label="Discharge passed" tone="alert" />
-        ) : null}
-        {dischargeToday ? (
-          <Chip icon="&#8594;" label="Discharging today" tone="warn" />
-        ) : null}
+        {dischargePassed ? <StatusBadge status="overdue" label="Discharge passed" size="sm" /> : null}
+        {dischargeToday ? <StatusBadge status="attention" label="Discharging today" size="sm" /> : null}
         {o.overdueCount > 0 ? (
-          <Chip icon="&#9650;" label={`${o.overdueCount} overdue`} tone="alert" />
+          <StatusBadge status="overdue" label={`${o.overdueCount} overdue`} size="sm" />
         ) : null}
         {o.dueTodayCount > 0 ? (
-          <Chip icon="&#9679;" label={`${o.dueTodayCount} due today`} tone="warn" />
+          <StatusBadge status="attention" label={`${o.dueTodayCount} due today`} size="sm" />
         ) : null}
         {/* Recorded as X: the programme does not reach that week, so there is nothing to do. */}
         {o.notApplicableCount > 0 ? (
@@ -240,7 +237,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           />
         ) : null}
         {!dischargePassed && !dischargeToday && o.overdueCount === 0 && o.dueTodayCount === 0 ? (
-          <Chip icon="&#10003;" label="Nothing due" tone="good" />
+          <StatusBadge status="ontrack" label="Nothing due" size="sm" />
         ) : null}
         {!o.familyMeetingEligibleNow ? (
           <Chip
@@ -266,7 +263,7 @@ export function AvailableCard({ bed }: { bed: BoardBed }) {
   // `bg-[color:…]` — without the explicit `color:` type hint Tailwind reads a color-mix() value as a
   // background-image, and the fill silently never appears.
   return (
-    <div className="flex min-h-[168px] flex-col rounded-xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-3.5 transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)]">
+    <div className="flex min-h-[168px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-3.5 transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)]">
       <BedLabel label={bed.label} shared={bed.shared} variant="available" />
       <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
         <span aria-hidden="true" className="text-[15px] text-[var(--brand-blue-ink)] opacity-70">

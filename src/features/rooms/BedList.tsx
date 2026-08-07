@@ -106,10 +106,10 @@ export function BedList({
   });
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+    <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-card">
       <div className="min-w-[900px]">
         <div
-          className={`${GRID} sticky top-0 z-10 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-3 py-2`}
+          className={`${GRID} sticky top-0 z-10 border-b border-[var(--color-line)] bg-card px-3 py-2`}
         >
           <SortHeader label="Bed" col="bed" sort={sort} dir={dir} onSort={onSort} />
           <SortHeader label="Client" col="name" sort={sort} dir={dir} onSort={onSort} />
