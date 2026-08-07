@@ -42,10 +42,14 @@ export function Chip({
 }
 
 /**
- * The base unit content is grouped into: a titled white card, with an optional right-aligned link for
+ * The base unit content is grouped into: a titled card, with an optional right-aligned link for
  * whatever "see more of this" already means on the page — never invented just to fill the corner.
  * `action` is a plain button, not a nested `<a>`/`<button>` pretending to be something bigger; the
  * card itself never intercepts clicks, so there is nothing for it to conflict with.
+ *
+ * Styling matches the card treatment ported from the Lovable redesign (rounded-2xl, shadow-soft,
+ * bg-card) rather than this component's own original rounded-xl/bg-panel — updated once here so every
+ * page already using Panel picks it up, instead of restyling each one individually.
  */
 export function Panel({
   title,
@@ -61,21 +65,19 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4 ${className}`}
-    >
+    <section className={`rounded-2xl border bg-card p-5 shadow-soft ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-[13.5px] font-semibold">{title}</h3>
+          <h3 className="truncate font-display text-[14px] font-semibold">{title}</h3>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink-muted)]">{subtitle}</p>
+            <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">{subtitle}</p>
           ) : null}
         </div>
         {action ? (
           <button
             type="button"
             onClick={action.onClick}
-            className="shrink-0 text-[12px] font-medium text-[var(--color-accent)] transition hover:underline"
+            className="shrink-0 text-[12px] font-medium text-primary transition hover:underline"
           >
             {action.label} →
           </button>

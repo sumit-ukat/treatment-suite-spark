@@ -1,17 +1,30 @@
 import { useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  Building2,
+  CalendarCheck,
+  Clock,
+  BedDouble as OccupancyIcon,
+  Search,
+  TriangleAlert,
+} from 'lucide-react';
 import { buildCentres, groupTotals, REGIONS, type CentreSummary } from './centres-data.js';
-import { BarChart, Chip, FilterPill, Panel, ProgressBar, RingChart, StatTile } from '../../components/ui.tsx';
+import { OccupancyBar } from '../../components/occupancy-bar.tsx';
+import { MetricCard } from '../../components/metric-card.tsx';
+import { StatusBadge } from '../../components/status-badge.tsx';
+import { BarChart, Chip, FilterPill, Panel, RingChart } from '../../components/ui.tsx';
 
 type SortKey = 'name' | 'occupancy' | 'overdue' | 'onTime';
 
 function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => void }) {
   const attention = centre.overdue + centre.pastPlannedDischarge * 3;
+  const isClear = attention === 0 && centre.photoAttention === 0;
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="grid w-full grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] items-center gap-2 rounded-lg border border-transparent px-3 py-2.5 text-left transition hover:border-[var(--color-line)] hover:bg-[var(--color-panel)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      className="grid w-full grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] items-center gap-2 rounded-lg border border-transparent px-3 py-2.5 text-left transition hover:border-[var(--color-line)] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
       {/* Centre */}
       <div className="min-w-0">
@@ -23,7 +36,7 @@ function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => vo
             <Chip label="No data" />
           )}
         </div>
-        <div className="truncate text-[11px] text-[var(--color-ink-muted)]">
+        <div className="truncate text-[11px] text-muted-foreground">
           {centre.county}
           {!centre.capacityConfirmed ? (
             <span title="Bed capacity not yet confirmed for this centre"> · capacity unconfirmed</span>
@@ -32,56 +45,42 @@ function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => vo
       </div>
 
       {/* Occupancy */}
-      <div>
-        <div className="nums text-[12.5px] font-medium">
-          {centre.occupied}
-          <span className="text-[var(--color-ink-muted)]">/{centre.capacity}</span>
-        </div>
-        <ProgressBar percent={centre.occupancyPercent} />
-      </div>
+      <OccupancyBar value={centre.occupied} capacity={centre.capacity} />
 
       {/* Available */}
       <div className="nums text-[13px] font-medium">
         {centre.available}
-        <span className="ml-1 text-[10.5px] font-normal text-[var(--color-ink-muted)]">free</span>
+        <span className="ml-1 text-[10.5px] font-normal text-muted-foreground">free</span>
       </div>
 
       {/* Overdue */}
       <div>
         {centre.overdue > 0 ? (
-          <span className="nums text-[13px] font-semibold text-red-600 dark:text-red-400">
-            {centre.overdue}
-          </span>
+          <span className="nums text-[13px] font-semibold text-overdue">{centre.overdue}</span>
         ) : (
-          <span className="nums text-[13px] text-[var(--color-ink-muted)]">0</span>
+          <span className="nums text-[13px] text-muted-foreground">0</span>
         )}
         {centre.dueToday > 0 ? (
-          <span className="nums ml-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">
-            +{centre.dueToday} today
-          </span>
+          <span className="nums text-attention ml-1.5 text-[10.5px]">+{centre.dueToday} today</span>
         ) : null}
       </div>
 
       {/* On time */}
       <div className="nums text-[13px] font-medium">
         {centre.onTimePercent}%
-        <span className="ml-1 text-[10.5px] font-normal text-[var(--color-ink-muted)]">on time</span>
+        <span className="ml-1 text-[10.5px] font-normal text-muted-foreground">on time</span>
       </div>
 
       {/* Flags */}
       <div className="flex flex-wrap justify-end gap-1">
         {centre.pastPlannedDischarge > 0 ? (
-          <Chip icon="&#9650;" label="Past discharge" tone="alert" />
+          <StatusBadge status="overdue" label="Past discharge" size="sm" />
         ) : null}
         {centre.photoAttention > 0 ? (
-          <Chip icon="!" label={`${centre.photoAttention} photo`} tone="warn" />
+          <StatusBadge status="attention" label={`${centre.photoAttention} photo`} size="sm" />
         ) : null}
-        {centre.restrictedAlerts > 0 ? (
-          <Chip icon="&#9873;" label={`${centre.restrictedAlerts}`} />
-        ) : null}
-        {attention === 0 && centre.photoAttention === 0 ? (
-          <Chip icon="&#10003;" label="Clear" tone="good" />
-        ) : null}
+        {centre.restrictedAlerts > 0 ? <Chip icon="&#9873;" label={`${centre.restrictedAlerts}`} /> : null}
+        {isClear ? <StatusBadge status="ontrack" size="sm" /> : null}
       </div>
     </button>
   );
@@ -90,10 +89,16 @@ function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => vo
 export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) => void }) {
   const centres = useMemo(() => buildCentres(), []);
   const totals = useMemo(() => groupTotals(centres), [centres]);
+  const [query, setQuery] = useState('');
   const [region, setRegion] = useState<string>('all');
   const [sort, setSort] = useState<SortKey>('name');
 
-  const visible = centres.filter((c) => region === 'all' || c.region === region);
+  const q = query.trim().toLowerCase();
+  const visible = centres.filter((c) => {
+    if (region !== 'all' && c.region !== region) return false;
+    if (q && !`${c.name} ${c.county}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   const sorted = [...visible].sort((a, b) => {
     switch (sort) {
@@ -126,50 +131,42 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
-      <section
-        aria-label="Group summary"
-        className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7"
-      >
-        <StatTile
-          icon="⌂"
-          label="Centres"
-          value={totals.centres}
-          hint={`${REGIONS.length} regions`}
-        />
-        <StatTile
-          icon="▦"
+      <section aria-label="Group summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+        <MetricCard label="Centres" value={totals.centres} hint={`${REGIONS.length} regions`} icon={<Building2 className="size-4" />} />
+        <MetricCard
           label="Occupancy"
           value={`${totals.occupied}/${totals.capacity}`}
           hint={`${totals.occupancyPercent}% · ${totals.available} free`}
+          icon={<OccupancyIcon className="size-4" />}
+          accent="primary"
         />
-        <StatTile
-          icon="▲"
+        <MetricCard
           label="Overdue"
           value={totals.overdue}
           hint="actions, all centres"
-          tone={totals.overdue > 0 ? 'alert' : 'neutral'}
+          icon={<AlertTriangle className="size-4" />}
+          accent={totals.overdue > 0 ? 'pink' : 'default'}
         />
-        <StatTile icon="●" label="Due today" value={totals.dueToday} hint="actions" tone="warn" />
-        <StatTile
-          icon="▲"
+        <MetricCard label="Due today" value={totals.dueToday} hint="actions" icon={<Clock className="size-4" />} />
+        <MetricCard
           label="Past discharge"
           value={totals.pastPlannedDischarge}
           hint="still in a bed"
-          tone={totals.pastPlannedDischarge > 0 ? 'alert' : 'neutral'}
+          icon={<TriangleAlert className="size-4" />}
+          accent={totals.pastPlannedDischarge > 0 ? 'pink' : 'default'}
         />
-        <StatTile
-          icon="✓"
+        <MetricCard
           label="On time"
           value={`${totals.onTimePercent}%`}
           hint="actions by due date"
-          tone="good"
+          icon={<CalendarCheck className="size-4" />}
+          accent="blue"
         />
-        <StatTile
-          icon="!"
+        <MetricCard
           label="Need attention"
           value={needsAttention}
           hint={`of ${totals.centres} centres`}
-          tone={needsAttention > 0 ? 'warn' : 'neutral'}
+          icon={<AlertTriangle className="size-4" />}
         />
       </section>
 
@@ -185,17 +182,8 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <Panel title="At a glance" subtitle="Group totals, all centres">
           <div className="flex items-center justify-around gap-3 py-1">
-            <RingChart
-              percent={totals.occupancyPercent}
-              value={`${totals.occupancyPercent}%`}
-              label="Occupancy"
-            />
-            <RingChart
-              percent={totals.onTimePercent}
-              value={`${totals.onTimePercent}%`}
-              label="On time"
-              tone="good"
-            />
+            <RingChart percent={totals.occupancyPercent} value={`${totals.occupancyPercent}%`} label="Occupancy" />
+            <RingChart percent={totals.onTimePercent} value={`${totals.onTimePercent}%`} label="On time" tone="good" />
           </div>
         </Panel>
         <Panel title="Occupancy by region" subtitle={`${REGIONS.length} regions`}>
@@ -204,6 +192,16 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Find a centre"
+            aria-label="Find a centre"
+            className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none"
+          />
+        </div>
         <FilterPill label="All regions" count={centres.length} active={region === 'all'} onClick={() => setRegion('all')} />
         {REGIONS.map((r) => (
           <FilterPill
@@ -215,12 +213,12 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
           />
         ))}
 
-        <label className="ml-auto flex items-center gap-2 text-[11.5px] text-[var(--color-ink-muted)]">
+        <label className="ml-auto flex items-center gap-2 text-[11.5px] text-muted-foreground">
           Sort
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2 py-1 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            className="rounded-lg border border-[var(--color-line)] bg-card px-2 py-1 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
           >
             <option value="name">Name</option>
             <option value="occupancy">Occupancy, highest</option>
@@ -235,34 +233,38 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         subtitle={`${sorted.length} shown${region === 'all' ? '' : ` in ${region}`}`}
         className="mt-4"
       >
-        {/* Column headings, echoing the row grid. */}
-        <div className="grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-          <div>Centre</div>
-          <div>Occupancy</div>
-          <div>Available</div>
-          <div>Overdue</div>
-          <div>Completion</div>
-          <div className="text-right">Flags</div>
-        </div>
-
-        {grouped.map((group) => (
-          <section key={group.region} className="mt-3" aria-label={`${group.region} region`}>
-            <h4 className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-              {group.region}
-              <span className="nums ml-1.5 font-normal normal-case">
-                ({group.centres.length})
-              </span>
-            </h4>
-            <div className="flex flex-col">
-              {group.centres.map((c) => (
-                <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-              ))}
+        {sorted.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No centres match &ldquo;{query}&rdquo;.</p>
+        ) : (
+          <>
+            {/* Column headings, echoing the row grid. */}
+            <div className="grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+              <div>Centre</div>
+              <div>Occupancy</div>
+              <div>Available</div>
+              <div>Overdue</div>
+              <div>Completion</div>
+              <div className="text-right">Flags</div>
             </div>
-          </section>
-        ))}
+
+            {grouped.map((group) => (
+              <section key={group.region} className="mt-3" aria-label={`${group.region} region`}>
+                <h4 className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                  {group.region}
+                  <span className="nums ml-1.5 font-normal normal-case">({group.centres.length})</span>
+                </h4>
+                <div className="flex flex-col">
+                  {group.centres.map((c) => (
+                    <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
+        )}
       </Panel>
 
-      <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+      <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
         A regional manager sees only the centres assigned to them. This view shows all ten because the
         access model is not built yet — once it is, the same page renders a subset, and nothing beyond
         an assigned centre is reachable even by editing the URL. No clinical detail appears at this
