@@ -1,3 +1,4 @@
+import { MailPlus, ShieldPlus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
@@ -12,7 +13,8 @@ import {
   type UserProfileRow,
   type ZoneRow,
 } from '../../services/data-access.js';
-import { Chip } from '../../components/ui.tsx';
+import { Chip, Panel } from '../../components/ui.tsx';
+import { PageHeader } from '../../components/metric-card.tsx';
 import { formatDate } from '../../lib/format.js';
 
 /**
@@ -155,12 +157,10 @@ export function UsersAndRoles() {
 
   return (
     <div className="mx-auto max-w-[860px] px-5 py-8">
-      <h2 className="text-[16px] font-semibold">Users &amp; roles</h2>
-      <p className="mt-1 max-w-[640px] text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-        Invite a new person to create their sign-in, then grant them a role. Access can be granted at
-        the whole organisation, a zone, or one centre, independent of which centre you navigated
-        through to reach this page.
-      </p>
+      <PageHeader
+        title="Users & roles"
+        description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, a zone, or one centre, independent of which centre you navigated through to reach this page."
+      />
 
       <InviteUserForm onInvited={reload} />
 
@@ -174,28 +174,28 @@ export function UsersAndRoles() {
         onGranted={reload}
       />
 
-      <div className="mt-6 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-          Users
-        </h3>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-muted)]">
-          <input type="checkbox" checked={showEnded} onChange={(e) => setShowEnded(e.target.checked)} />
-          Show ended assignments too
-        </label>
-      </div>
-
-      <ul className="mt-2 flex flex-col gap-2">
-        {users.map((u) => (
-          <UserRow
-            key={u.id}
-            user={u}
-            assignments={assignmentsByUser.get(u.id) ?? []}
-            rolesById={rolesById}
-            scopeLabel={scopeLabel}
-            onChanged={reload}
-          />
-        ))}
-      </ul>
+      <Panel
+        title="Users"
+        subtitle={`${users.length} shown`}
+        className="mt-6"
+        action={{
+          label: showEnded ? 'Hide ended assignments' : 'Show ended assignments',
+          onClick: () => setShowEnded((v) => !v),
+        }}
+      >
+        <ul className="flex flex-col gap-2">
+          {users.map((u) => (
+            <UserRow
+              key={u.id}
+              user={u}
+              assignments={assignmentsByUser.get(u.id) ?? []}
+              rolesById={rolesById}
+              scopeLabel={scopeLabel}
+              onChanged={reload}
+            />
+          ))}
+        </ul>
+      </Panel>
     </div>
   );
 }
@@ -230,7 +230,7 @@ function UserRow({
   };
 
   return (
-    <li className="rounded-lg border border-[var(--color-line)] p-3">
+    <li className="rounded-xl border bg-card p-3 shadow-soft">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -316,9 +316,9 @@ function AssignmentRow({
           <button
             type="button"
             onClick={() => setMode('reason')}
-            className="shrink-0 rounded-md px-2 py-0.5 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
           >
-            Revoke
+            <Trash2 className="size-3" /> Revoke
           </button>
         ) : null}
       </div>
@@ -413,16 +413,16 @@ function InviteUserForm({ onInvited }: { onInvited: () => void }) {
 
   if (!open) {
     return (
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-5 flex items-center gap-2">
         <button
           type="button"
           onClick={() => {
             setOpen(true);
             setDone(null);
           }}
-          className="rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[var(--color-accent-hover)]"
         >
-          Invite a new user&hellip;
+          <MailPlus className="size-3.5" /> Invite a new user&hellip;
         </button>
         {done ? <span className="text-[11.5px] text-[var(--color-ink-muted)]">{done}</span> : null}
       </div>
@@ -430,8 +430,8 @@ function InviteUserForm({ onInvited }: { onInvited: () => void }) {
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-[var(--color-line)] p-3">
-      <h3 className="text-[12.5px] font-semibold">Invite a new user</h3>
+    <div className="mt-5 rounded-2xl border bg-card p-4 shadow-soft">
+      <h3 className="font-display text-[13px] font-semibold">Invite a new user</h3>
       <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
         Creates their sign-in and sends them an email to set their own password. Grants no access —
         do that separately below once their account exists.
@@ -551,16 +551,16 @@ function GrantAccessForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-4 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+        className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
       >
-        Grant access&hellip;
+        <ShieldPlus className="size-3.5" /> Grant access&hellip;
       </button>
     );
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-[var(--color-line)] p-3">
-      <h3 className="text-[12.5px] font-semibold">Grant access</h3>
+    <div className="mt-2.5 rounded-2xl border bg-card p-4 shadow-soft">
+      <h3 className="font-display text-[13px] font-semibold">Grant access</h3>
       <div className="mt-2 grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">User</span>
