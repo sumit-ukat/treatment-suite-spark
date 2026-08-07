@@ -1,9 +1,21 @@
+import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { clients as clientsService, type ClientAdmissionHistoryRow } from '../../services/data-access.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
+import { StatusBadge } from '../../components/status-badge.tsx';
+import { ClientAvatar } from '../../components/brand.tsx';
 import { STATUS_LABEL } from './ClientDirectory.tsx';
+
+function initialsOf(name: string): string {
+  return name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
+}
+function hueOf(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 
 /**
  * The client file: every admission a client has had at this centre, past and present. Opened from a
@@ -68,6 +80,10 @@ export function ClientFilePanel({
         className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[520px] flex-col border-l border-[var(--color-line)] bg-[var(--color-panel)] shadow-2xl"
       >
         <header className="flex items-start gap-3 border-b border-[var(--color-line)] p-4">
+          <ClientAvatar
+            initials={initialsOf(client.display_name ?? client.reference)}
+            hue={hueOf(client.client_id)}
+          />
           <div className="min-w-0 flex-1">
             <div className="truncate text-[15px] font-semibold">
               {client.display_name ?? client.reference}
@@ -79,10 +95,10 @@ export function ClientFilePanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-[13px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
             aria-label="Close panel"
           >
-            &#10005;
+            <X className="size-4" />
           </button>
         </header>
 
@@ -122,11 +138,11 @@ export function ClientFilePanel({
 function AdmissionCard({ row: r }: { row: ClientAdmissionHistoryRow }) {
   const isActive = r.status === 'active';
   return (
-    <li className="rounded-lg border border-[var(--color-line)] p-3">
+    <li className="rounded-xl border bg-card p-3 shadow-soft">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[12.5px] font-medium">{formatDateWithDay(new Date(r.admitted_at))}</span>
         {isActive ? (
-          <Chip icon="&#9679;" label="Active" tone="good" />
+          <StatusBadge status="ontrack" label="Active" size="sm" />
         ) : (
           <Chip label={STATUS_LABEL[r.status] ?? r.status} />
         )}
