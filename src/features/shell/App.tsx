@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { buildRealBoard } from '../rooms/real-board-data.js';
 import { buildCentres } from '../centres/centres-data.js';
@@ -94,9 +94,50 @@ function ProvenanceBanner() {
   );
 }
 
+const initialsOf = (name: string): string =>
+  name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
+
+/**
+ * Identity + sign-out, shown the same way on every screen — hub and centre workspace alike — rather
+ * than living only in the sidebar footer where it used to sit. `variant` picks light-on-dark for the
+ * hub/chrome header or dark-on-light for the centre workspace's panel header; the content is identical.
+ */
+function UserIdentityChip({ variant }: { variant: 'chrome' | 'panel' }) {
+  const { displayName, email, roleNames, signOut } = useAuth();
+  const name = displayName ?? email ?? 'Unknown user';
+  const ink = variant === 'chrome' ? 'text-[var(--color-chrome-ink)]' : 'text-[var(--color-ink)]';
+  const inkDim =
+    variant === 'chrome' ? 'text-[var(--color-chrome-ink-dim)]' : 'text-[var(--color-ink-muted)]';
+  const border = variant === 'chrome' ? 'border-white/20' : 'border-[var(--color-line)]';
+  const hoverBg = variant === 'chrome' ? 'hover:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/10';
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div
+        aria-hidden="true"
+        className={`grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-purple)]/20 text-[11px] font-semibold ${ink}`}
+      >
+        {initialsOf(name)}
+      </div>
+      <div className="hidden text-right leading-tight sm:block">
+        <div className={`text-[12.5px] font-medium ${ink}`}>{name}</div>
+        <div className={`text-[10.5px] ${inkDim}`}>{roleNames.length ? roleNames.join(', ') : 'No role'}</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        title="Sign out"
+        className={`rounded-lg border ${border} px-2.5 py-1.5 text-[11.5px] ${inkDim} transition ${hoverBg}`}
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 /** Header for the hub. Carries identity and sign-out, since there is no rail to hold them. */
 function HubHeader() {
-  const { displayName, email, roleNames, centres, signOut } = useAuth();
+  const { centres } = useAuth();
   return (
     <header
       className="flex h-[64px] shrink-0 items-center gap-3 px-4 text-[var(--color-chrome-ink)] sm:px-6"
@@ -119,20 +160,8 @@ function HubHeader() {
         </div>
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
-        <div className="hidden text-right leading-tight sm:block">
-          <div className="text-[12.5px] font-medium">{displayName ?? email}</div>
-          <div className="text-[10.5px] text-[var(--color-chrome-ink-dim)]">
-            {roleNames.length ? roleNames.join(', ') : 'No role'}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="rounded-lg border border-white/20 px-2.5 py-1.5 text-[11.5px] transition hover:bg-white/10"
-        >
-          Sign out
-        </button>
+      <div className="ml-auto">
+        <UserIdentityChip variant="chrome" />
       </div>
     </header>
   );
@@ -161,6 +190,20 @@ function Dashboard() {
   const [view, setView] = useState<'board' | 'list'>('list');
   const [query, setQuery] = useState('');
   const [openBed, setOpenBed] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K focuses the search bar from anywhere in the centre workspace, matching the shortcut
+  // hint shown next to it. No-op on the hub, which has no search bar to focus.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Which centre the Centre-level views are scoped to. Fictional summary stats (occupancy, overdue
   // counts) for the GROUP hub still come from centres-data.ts — that screen is a separate, larger
@@ -331,12 +374,21 @@ function Dashboard() {
                 ⌕
               </span>
               <input
+                ref={searchInputRef}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search bed, client, staff…"
-                className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-2.5 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+                className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
+              {/* A hint, not a control — the shortcut works everywhere in this workspace regardless
+                  of whether this badge is visible, via the window-level listener above. */}
+              <kbd
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
+              >
+                ⌘K
+              </kbd>
             </label>
             <div className="nums hidden text-right text-[11px] leading-tight text-[var(--color-ink-muted)] lg:block">
               <div className="font-medium text-[var(--color-ink)]">
@@ -344,6 +396,7 @@ function Dashboard() {
               </div>
               <div>Europe/London</div>
             </div>
+            <UserIdentityChip variant="panel" />
           </div>
         </header>
 

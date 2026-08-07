@@ -1,5 +1,4 @@
 import markUrl from '../../assets/brand/ukat-mark.png';
-import { useAuth } from '../auth/AuthProvider.tsx';
 
 /**
  * Navigation.
@@ -67,8 +66,6 @@ export function Sidebar({
   centreName: string;
   onLeaveCentre: () => void;
 }) {
-  const { displayName, email, roleNames, permissions, signOut } = useAuth();
-
   return (
     <nav
       aria-label="Main navigation"
@@ -188,26 +185,22 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-[var(--color-chrome-line)] p-2">
+        {/* Who's signed in moved to the top bar (App.tsx's UserIdentityChip) — every screen shows it
+            there now, hub included, so it no longer needs a second copy here. This card is centre
+            context instead: which centre "here" currently means, plus the nearest thing to a centre
+            profile this product has today. */}
         {!collapsed ? (
           <div className="mb-2 rounded-lg bg-white/[0.06] px-2.5 py-2">
             <div className="text-[10px] tracking-wide text-[var(--color-chrome-ink-dim)] uppercase">
-              Signed in as
+              Current centre
             </div>
-            <div className="truncate text-[12.5px] font-medium">
-              {displayName ?? email ?? 'Unknown user'}
-            </div>
-            <div className="truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
-              {roleNames.length ? roleNames.join(', ') : 'No role'}
-            </div>
-            <div className="nums mt-1 text-[10px] text-[var(--color-chrome-ink-dim)]">
-              <span title="Permissions granted to this account">{permissions.size} permissions</span>
-            </div>
+            <div className="truncate text-[12.5px] font-medium">{centreName}</div>
             <button
               type="button"
-              onClick={() => void signOut()}
-              className="mt-2 w-full rounded-md border border-[var(--color-chrome-line)] px-2 py-1 text-[11.5px] text-[var(--color-chrome-ink-dim)] transition hover:bg-[var(--color-chrome-hover)] hover:text-[var(--color-chrome-ink)]"
+              onClick={() => onSelect('admin')}
+              className="mt-1.5 text-[11px] text-[var(--color-chrome-ink-dim)] underline underline-offset-2 transition hover:text-[var(--color-chrome-ink)]"
             >
-              Sign out
+              Manage this centre
             </button>
           </div>
         ) : null}
