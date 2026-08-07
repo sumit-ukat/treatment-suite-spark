@@ -20,7 +20,7 @@ import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
-import { Chip, FilterPill, Panel, StatTile } from '../../components/ui.tsx';
+import { Chip, FilterPill, Panel, RingChart, StatTile } from '../../components/ui.tsx';
 
 /**
  * Gate the whole application on the session.
@@ -498,7 +498,21 @@ function Dashboard() {
                 />
               </section>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2">
+              <Panel title="Occupancy" subtitle={centre.name} className="mt-4 sm:w-fit">
+                <div className="flex items-center gap-4 py-1">
+                  <RingChart
+                    percent={summary.occupancyPercent}
+                    value={`${summary.bedsOccupied}/${summary.bedsTotal}`}
+                    label="Beds filled"
+                  />
+                  <div className="text-[11.5px] leading-relaxed text-[var(--color-ink-muted)]">
+                    <span className="font-medium text-[var(--color-ink)]">{summary.bedsAvailable}</span>{' '}
+                    available now
+                  </div>
+                </div>
+              </Panel>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <FilterPill
                   label="All beds"
                   count={board.length}

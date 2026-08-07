@@ -1,23 +1,8 @@
 import { useMemo, useState } from 'react';
 import { buildCentres, groupTotals, REGIONS, type CentreSummary } from './centres-data.js';
-import { Chip, FilterPill, Panel, StatTile } from '../../components/ui.tsx';
+import { BarChart, Chip, FilterPill, Panel, ProgressBar, RingChart, StatTile } from '../../components/ui.tsx';
 
 type SortKey = 'name' | 'occupancy' | 'overdue' | 'onTime';
-
-/** A compact occupancy bar. Colour is supporting information; the numbers are always present. */
-function OccupancyBar({ percent }: { percent: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
-        <div
-          className="h-full rounded-full bg-[var(--color-accent)]"
-          style={{ width: `${Math.min(100, percent)}%` }}
-        />
-      </div>
-      <span className="nums w-8 text-[11px] text-[var(--color-ink-muted)]">{percent}%</span>
-    </div>
-  );
-}
 
 function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => void }) {
   const attention = centre.overdue + centre.pastPlannedDischarge * 3;
@@ -52,7 +37,7 @@ function CentreRow({ centre, onOpen }: { centre: CentreSummary; onOpen: () => vo
           {centre.occupied}
           <span className="text-[var(--color-ink-muted)]">/{centre.capacity}</span>
         </div>
-        <OccupancyBar percent={centre.occupancyPercent} />
+        <ProgressBar percent={centre.occupancyPercent} />
       </div>
 
       {/* Available */}
@@ -130,6 +115,15 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
 
   const needsAttention = centres.filter((c) => c.overdue > 0 || c.pastPlannedDischarge > 0).length;
 
+  // Always all four regions, regardless of the region filter above — a comparison chart that shrank
+  // to one bar whenever a region was selected would be a strange way to compare regions.
+  const regionOccupancy = REGIONS.map((r) => {
+    const inRegion = centres.filter((c) => c.region === r);
+    const capacity = inRegion.reduce((n, c) => n + c.capacity, 0);
+    const occupied = inRegion.reduce((n, c) => n + c.occupied, 0);
+    return { label: r, value: capacity ? Math.round((occupied / capacity) * 100) : 0 };
+  });
+
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
       <section
@@ -186,6 +180,27 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         is confirmed for Primrose Lodge only — the other {totals.capacityUnconfirmed} are placeholders,
         so every occupancy percentage derived from them is provisional. The region grouping is a
         placeholder too. Only Primrose Lodge is actually configured in the database.
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <Panel title="At a glance" subtitle="Group totals, all centres">
+          <div className="flex items-center justify-around gap-3 py-1">
+            <RingChart
+              percent={totals.occupancyPercent}
+              value={`${totals.occupancyPercent}%`}
+              label="Occupancy"
+            />
+            <RingChart
+              percent={totals.onTimePercent}
+              value={`${totals.onTimePercent}%`}
+              label="On time"
+              tone="good"
+            />
+          </div>
+        </Panel>
+        <Panel title="Occupancy by region" subtitle={`${REGIONS.length} regions`}>
+          <BarChart data={regionOccupancy} />
+        </Panel>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

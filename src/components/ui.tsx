@@ -171,6 +171,121 @@ export function StatTile({
   );
 }
 
+/** Same mapping again, as a solid fill/stroke for chart segments rather than a soft chip background. */
+const CHART_TONES: Record<Tone, string> = {
+  neutral: 'text-[var(--color-ink-muted)]',
+  good: 'text-emerald-500 dark:text-emerald-400',
+  warn: 'text-amber-500 dark:text-amber-400',
+  alert: 'text-red-500 dark:text-red-400',
+  accent: 'text-[var(--color-accent)]',
+};
+
+/**
+ * A single horizontal track — occupancy-in-a-list, a completion rate next to other rows. Not a
+ * standalone chart in its own right, but the piece every list-row chart in this app is made of.
+ */
+export function ProgressBar({
+  percent,
+  tone = 'accent',
+  trackClassName = 'w-16',
+}: {
+  percent: number;
+  tone?: Tone;
+  /** Width/height utility classes for the track, so callers can fit it to their row. */
+  trackClassName?: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`h-1.5 shrink-0 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12 ${trackClassName}`}>
+        <div className={`h-full rounded-full bg-current ${CHART_TONES[tone]}`} style={{ width: `${clamped}%` }} />
+      </div>
+      <span className="nums w-8 text-[11px] text-[var(--color-ink-muted)]">{percent}%</span>
+    </div>
+  );
+}
+
+/**
+ * Several rates side by side — regions, centres, categories — read as a set rather than one at a
+ * time. Values are treated as percentages (0–100); anything outside that range clamps rather than
+ * overflowing the track.
+ */
+export function BarChart({
+  data,
+  tone = 'accent',
+}: {
+  data: ReadonlyArray<{ label: string; value: number }>;
+  tone?: Tone;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {data.map((d) => (
+        <div key={d.label} className="flex items-center gap-2.5">
+          <div className="w-24 shrink-0 truncate text-[11.5px] text-[var(--color-ink-muted)]">{d.label}</div>
+          <ProgressBar percent={d.value} tone={tone} trackClassName="flex-1" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One rate, given the weight of its own card rather than a row in a list — the "how full is it"
+ * question a stat tile answers in digits, answered again at a glance. `value`/`label` are the same
+ * two lines a `StatTile` shows; the ring is the addition, not a replacement.
+ */
+export function RingChart({
+  percent,
+  value,
+  label,
+  tone = 'accent',
+  size = 84,
+}: {
+  percent: number;
+  value: string;
+  label: string;
+  tone?: Tone;
+  size?: number;
+}) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  const strokeWidth = Math.round(size * 0.11);
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - clamped / 100);
+
+  return (
+    <div className="inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="none"
+          className="stroke-black/[0.08] dark:stroke-white/12"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={`stroke-current transition-[stroke-dashoffset] ${CHART_TONES[tone]}`}
+        />
+      </svg>
+      <div className="col-start-1 row-start-1 grid place-items-center text-center leading-tight">
+        <div className="nums text-[16px] font-semibold text-[var(--color-ink)]">{value}</div>
+        <div className="mt-0.5 max-w-[90%] truncate text-[9px] tracking-wide text-[var(--color-ink-muted)] uppercase">
+          {label}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FilterPill({
   label,
   count,
