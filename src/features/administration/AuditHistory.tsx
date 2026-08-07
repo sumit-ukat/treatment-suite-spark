@@ -1,7 +1,9 @@
+import { Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { auditEvents, centres as centresService, type AuditEventRow, type CentreRow } from '../../services/data-access.js';
 import { Chip, Panel } from '../../components/ui.tsx';
+import { PageHeader } from '../../components/metric-card.tsx';
 import { formatDateWithDay } from '../../lib/format.js';
 
 /**
@@ -98,17 +100,16 @@ export function AuditHistory() {
 
   return (
     <div className="mx-auto max-w-[960px] px-5 py-8">
-      <h2 className="text-[16px] font-semibold">Audit history</h2>
-      <p className="mt-1 max-w-[640px] text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-        Every recorded change, most recent first — the most recent {events.length}. Scoped to what
-        your access already lets you see; this screen adds no permission of its own.
-      </p>
+      <PageHeader
+        title="Audit history"
+        description={`Every recorded change, most recent first — the most recent ${events.length}. Scoped to what your access already lets you see; this screen adds no permission of its own.`}
+      />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
         <select
           value={recordType}
           onChange={(e) => setRecordType(e.target.value)}
-          className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
+          className="h-9 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
         >
           <option value="all">All record types</option>
           {recordTypes.map((t) => (
@@ -120,7 +121,7 @@ export function AuditHistory() {
         <select
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
+          className="h-9 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
         >
           <option value="all">All actions</option>
           {actions.map((a) => (
@@ -129,13 +130,16 @@ export function AuditHistory() {
             </option>
           ))}
         </select>
-        <input
-          type="search"
-          value={actorQuery}
-          onChange={(e) => setActorQuery(e.target.value)}
-          placeholder="Filter by actor email…"
-          className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
-        />
+        <div className="relative min-w-[14rem] flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            type="search"
+            value={actorQuery}
+            onChange={(e) => setActorQuery(e.target.value)}
+            placeholder="Filter by actor email…"
+            className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] pl-9 pr-2.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
+          />
+        </div>
       </div>
 
       <Panel title="Events" subtitle={`${filtered.length} of ${events.length} shown`} className="mt-4">
@@ -212,7 +216,7 @@ function AuditRow({
         aria-expanded={expanded}
         onClick={onToggle}
         onKeyDown={onKeyDown}
-        className="cursor-pointer border-b border-[var(--color-line)] transition last:border-b-0 hover:bg-black/5 dark:hover:bg-white/10"
+        className="cursor-pointer border-b border-[var(--color-line)] transition last:border-b-0 hover:bg-muted/50"
       >
         <td className="py-2 pr-3">
           <Chip label={e.action} tone={ACTION_TONE[e.action] ?? 'neutral'} />
@@ -233,7 +237,7 @@ function AuditRow({
 
       {expanded ? (
         <tr className="border-b border-[var(--color-line)] last:border-b-0">
-          <td colSpan={COLUMN_COUNT} className="bg-black/[0.02] px-3 py-2.5 text-[11.5px] dark:bg-white/[0.03]">
+          <td colSpan={COLUMN_COUNT} className="bg-muted/30 px-3 py-2.5 text-[11.5px]">
             {e.changed_fields && e.changed_fields.length > 0 ? (
               <p className="text-[var(--color-ink-muted)]">
                 Changed: <span className="font-medium text-[var(--color-ink)]">{e.changed_fields.join(', ')}</span>
