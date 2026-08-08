@@ -85,8 +85,17 @@ export function ClientFilePanel({
             hue={hueOf(client.client_id)}
           />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[15px] font-semibold">
-              {client.display_name ?? client.reference}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="truncate text-[15px] font-semibold">
+                {client.display_name ?? client.reference}
+              </span>
+              {rows ? (
+                <StatusBadge
+                  status={rows.some((r) => r.status === 'active') ? 'ontrack' : 'neutral'}
+                  label={rows.some((r) => r.status === 'active') ? 'Currently resident' : 'Former client'}
+                  size="sm"
+                />
+              ) : null}
             </div>
             <div className="nums mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">
               {client.reference} &middot; {centre.name}
