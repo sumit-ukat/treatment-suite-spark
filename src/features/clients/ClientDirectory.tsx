@@ -35,9 +35,20 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
   const { can } = useAuth();
   const { query, setQuery, results, loading, error } = useClientSearch(centre.id);
   const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
+  const [scope, setScope] = useState<'all' | 'current' | 'former'>('all');
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
+
+  // Filters whatever a search already returned — it does not fetch more than the search itself
+  // already asked for. There is no "browse every client" screen here: app.search_clients (migration
+  // 0028) refuses a query under 2 characters, and that is a deliberate least-disclosure limit on this
+  // sensitive a dataset, not a gap to work around by fetching the whole roster up front.
+  const visible = results.filter((r) => {
+    if (scope === 'current') return r.has_open_admission;
+    if (scope === 'former') return !r.has_open_admission;
+    return true;
+  });
 
   if (!canSearch) {
     return (
@@ -61,18 +72,30 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
         }
       />
 
-      <label className="relative mt-5 block">
-        <span className="sr-only">Search clients</span>
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <input
-          type="search"
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={canSeeNames ? 'Search by name or reference…' : 'Search by reference…'}
-          className="w-full rounded-lg border border-[var(--color-line)] bg-card py-2 pr-3 pl-9 text-[13.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
-        />
-      </label>
+      <div className="mt-5 flex items-center gap-2">
+        <label className="relative block flex-1">
+          <span className="sr-only">Search clients</span>
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            type="search"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={canSeeNames ? 'Search by name or reference…' : 'Search by reference…'}
+            className="w-full rounded-lg border border-[var(--color-line)] bg-card py-2 pr-3 pl-9 text-[13.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
+          />
+        </label>
+        <select
+          value={scope}
+          onChange={(e) => setScope(e.target.value as typeof scope)}
+          aria-label="Filter by residency"
+          className="h-[38px] shrink-0 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+        >
+          <option value="all">Everyone</option>
+          <option value="current">Currently resident</option>
+          <option value="former">Former clients</option>
+        </select>
+      </div>
 
       {error ? (
         <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-[12.5px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
@@ -88,9 +111,14 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
         ) : query.trim().length >= 2 && results.length === 0 ? (
           <p className="text-[12px] text-muted-foreground">No clients matched at {centre.name}.</p>
         ) : results.length > 0 ? (
-          <Panel title="Results" subtitle={`${results.length} matched`}>
+          <Panel title="Results" subtitle={`${visible.length} of ${results.length} shown`}>
+            {visible.length === 0 ? (
+              <p className="py-4 text-center text-[12px] text-muted-foreground">
+                No results match this filter.
+              </p>
+            ) : (
             <ul className="flex flex-col gap-1.5">
-              {results.map((r) => {
+              {visible.map((r) => {
                 const label = r.display_name ?? r.reference;
                 return (
                   <li key={r.client_id}>
@@ -122,6 +150,7 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
                 );
               })}
             </ul>
+            )}
           </Panel>
         ) : (
           <p className="text-[12px] text-muted-foreground">
