@@ -14,6 +14,7 @@ import {
 import { Chip } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { useClientSearch } from '../clients/useClientSearch.js';
+import { formatDate } from '../../lib/format.js';
 
 /**
  * The admission form — the first UI that calls `app.admit_client`.
@@ -71,6 +72,14 @@ const EMPTY: FormState = {
   doctorLabel: '',
   reason: '',
 };
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+      {children}
+    </h3>
+  );
+}
 
 function Field({
   label,
@@ -242,6 +251,19 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
     );
   }
 
+  // Shown on the review screen only — a preview of what `app.admit_client` will compute server-side,
+  // not a value sent with the request. If the server's own calculation ever disagreed (a different
+  // calendar convention, for instance), that would be a bug worth finding, not something to paper
+  // over by only ever showing the server's answer.
+  const plannedDischargePreview = (() => {
+    const start = new Date(`${form.admittedDate}T00:00:00`);
+    const days = form.plannedDurationUnit === 'weeks' ? Number(form.plannedDuration) * 7 : Number(form.plannedDuration);
+    if (!Number.isFinite(days)) return null;
+    const end = new Date(start);
+    end.setDate(end.getDate() + days);
+    return end;
+  })();
+
   if (step === 'review' && selectedBed) {
     return (
       <div className="mx-auto max-w-[560px] px-5 py-8">
@@ -279,6 +301,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               {form.plannedDuration} {form.plannedDurationUnit}
             </dd>
           </div>
+          {plannedDischargePreview ? (
+            <div>
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Planned discharge</dt>
+              <dd className="font-medium">{formatDate(plannedDischargePreview)}</dd>
+            </div>
+          ) : null}
           {form.treatmentGroup ? (
             <div>
               <dt className="text-[11px] text-[var(--color-ink-muted)]">Group</dt>
@@ -314,6 +342,11 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             </div>
           ) : null}
         </dl>
+
+        <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+          Required actions are generated automatically from the standard care programme once this is
+          confirmed. This admission is written to audit history against your account.
+        </p>
 
         {submitError ? (
           <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-[12.5px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
@@ -351,10 +384,11 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
       />
 
       <div className="mt-5 rounded-2xl border bg-card p-5 shadow-soft">
+      <SectionHeading>Client details</SectionHeading>
       <div
         role="tablist"
         aria-label="Client"
-        className="inline-flex rounded-lg border border-[var(--color-line)] p-0.5"
+        className="mt-2.5 inline-flex rounded-lg border border-[var(--color-line)] p-0.5"
       >
         <button
           type="button"
@@ -483,6 +517,8 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           </>
         )}
 
+        <SectionHeading>Admission &amp; bed</SectionHeading>
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Admission date">
             <input
@@ -584,6 +620,8 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           PEEP required
           <Chip label="Personal Emergency Evacuation Plan" title="Meaning as inferred; unconfirmed — see OPEN_QUESTIONS Q1" />
         </label>
+
+        <SectionHeading>Care team</SectionHeading>
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="Focal therapist (optional)">
