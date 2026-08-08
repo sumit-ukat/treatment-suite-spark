@@ -30,7 +30,7 @@ export function AuditHistory() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [recordType, setRecordType] = useState('all');
   const [action, setAction] = useState('all');
-  const [actorQuery, setActorQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
 
   useEffect(() => {
@@ -67,14 +67,20 @@ export function AuditHistory() {
   const actions = useMemo(() => [...new Set(events.map((e) => e.action))].sort(), [events]);
 
   const filtered = useMemo(() => {
-    const q = actorQuery.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     return events.filter((e) => {
       if (recordType !== 'all' && e.record_type !== recordType) return false;
       if (action !== 'all' && e.action !== action) return false;
-      if (q && !(e.actor_email ?? '').toLowerCase().includes(q)) return false;
+      if (
+        q &&
+        !`${e.actor_email ?? ''} ${e.record_type} ${e.action} ${e.reason ?? ''}`
+          .toLowerCase()
+          .includes(q)
+      )
+        return false;
       return true;
     });
-  }, [events, recordType, action, actorQuery]);
+  }, [events, recordType, action, searchQuery]);
 
   if (!canView) {
     return (
@@ -134,9 +140,9 @@ export function AuditHistory() {
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <input
             type="search"
-            value={actorQuery}
-            onChange={(e) => setActorQuery(e.target.value)}
-            placeholder="Filter by actor email…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by person, action or record…"
             className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] pl-9 pr-2.5 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
           />
         </div>
@@ -219,7 +225,10 @@ function AuditRow({
         className="cursor-pointer border-b border-[var(--color-line)] transition last:border-b-0 hover:bg-muted/50"
       >
         <td className="py-2 pr-3">
-          <Chip label={e.action} tone={ACTION_TONE[e.action] ?? 'neutral'} />
+          <Chip
+            label={e.action.charAt(0).toUpperCase() + e.action.slice(1)}
+            tone={ACTION_TONE[e.action] ?? 'neutral'}
+          />
         </td>
         <td className="max-w-[220px] truncate py-2 pr-3">
           {e.record_type}
