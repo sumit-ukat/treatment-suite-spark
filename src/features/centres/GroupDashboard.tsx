@@ -113,11 +113,6 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
     }
   });
 
-  const grouped = REGIONS.map((r) => ({
-    region: r,
-    centres: sorted.filter((c) => c.region === r),
-  })).filter((g) => g.centres.length > 0);
-
   const needsAttention = centres.filter((c) => c.overdue > 0 || c.pastPlannedDischarge > 0).length;
 
   // Always all four regions, regardless of the region filter above — a comparison chart that shrank
@@ -179,29 +174,7 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         placeholder too. Only Primrose Lodge is actually configured in the database.
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <Panel title="At a glance" subtitle="Group totals, all centres">
-          <div className="flex items-center justify-around gap-3 py-1">
-            <RingChart percent={totals.occupancyPercent} value={`${totals.occupancyPercent}%`} label="Occupancy" />
-            <RingChart percent={totals.onTimePercent} value={`${totals.onTimePercent}%`} label="On time" tone="good" />
-          </div>
-        </Panel>
-        <Panel title="Occupancy by region" subtitle={`${REGIONS.length} regions`}>
-          <BarChart data={regionOccupancy} />
-        </Panel>
-      </div>
-
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[12rem] flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Find a centre"
-            aria-label="Find a centre"
-            className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none"
-          />
-        </div>
         <FilterPill label="All regions" count={centres.length} active={region === 'all'} onClick={() => setRegion('all')} />
         {REGIONS.map((r) => (
           <FilterPill
@@ -212,57 +185,81 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
             onClick={() => setRegion(r)}
           />
         ))}
-
-        <label className="ml-auto flex items-center gap-2 text-[11.5px] text-muted-foreground">
-          Sort
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="rounded-lg border border-[var(--color-line)] bg-card px-2 py-1 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-          >
-            <option value="name">Name</option>
-            <option value="occupancy">Occupancy, highest</option>
-            <option value="overdue">Overdue, most</option>
-            <option value="onTime">On time, worst</option>
-          </select>
-        </label>
       </div>
 
-      <Panel
-        title="Centres"
-        subtitle={`${sorted.length} shown${region === 'all' ? '' : ` in ${region}`}`}
-        className="mt-4"
-      >
-        {sorted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No centres match &ldquo;{query}&rdquo;.</p>
-        ) : (
-          <>
-            {/* Column headings, echoing the row grid. */}
-            <div className="grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-              <div>Centre</div>
-              <div>Occupancy</div>
-              <div>Available</div>
-              <div>Overdue</div>
-              <div>Completion</div>
-              <div className="text-right">Flags</div>
+      {/* 1:1.6 column ratio matches the source's own two-panel section exactly. */}
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.6fr]">
+        <div className="flex flex-col gap-4">
+          <Panel title="At a glance" subtitle="Group totals, all centres">
+            <div className="flex items-center justify-around gap-3 py-1">
+              <RingChart percent={totals.occupancyPercent} value={`${totals.occupancyPercent}%`} label="Occupancy" />
+              <RingChart percent={totals.onTimePercent} value={`${totals.onTimePercent}%`} label="On time" tone="good" />
             </div>
+          </Panel>
+          <Panel title="Occupancy by region" subtitle="Each bar is labelled with its exact figure.">
+            <BarChart data={regionOccupancy} />
+          </Panel>
+        </div>
 
-            {grouped.map((group) => (
-              <section key={group.region} className="mt-3" aria-label={`${group.region} region`}>
-                <h4 className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-                  {group.region}
-                  <span className="nums ml-1.5 font-normal normal-case">({group.centres.length})</span>
-                </h4>
-                <div className="flex flex-col">
-                  {group.centres.map((c) => (
-                    <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </>
-        )}
-      </Panel>
+        <Panel title="Centres">
+          <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
+            <p className="text-sm text-muted-foreground">Occupancy and status at a glance</p>
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Find a centre"
+                  aria-label="Find a centre"
+                  className="h-9 w-36 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-3 text-[12.5px] transition placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none sm:w-48"
+                />
+              </div>
+              <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
+                {(
+                  [
+                    ['occupancy', 'Occupancy'],
+                    ['overdue', 'Risk'],
+                    ['name', 'Name'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSort(key)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      sort === key ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {sorted.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No centres match &ldquo;{query}&rdquo;.</p>
+          ) : (
+            <>
+              {/* Column headings, echoing the row grid. */}
+              <div className="mt-3 grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                <div>Centre</div>
+                <div>Occupancy</div>
+                <div>Available</div>
+                <div>Overdue</div>
+                <div>Completion</div>
+                <div className="text-right">Flags</div>
+              </div>
+              <div className="flex flex-col divide-y divide-[var(--color-line)]">
+                {sorted.map((c) => (
+                  <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+                ))}
+              </div>
+            </>
+          )}
+        </Panel>
+      </div>
 
       <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
         A regional manager sees only the centres assigned to them. This view shows all ten because the
