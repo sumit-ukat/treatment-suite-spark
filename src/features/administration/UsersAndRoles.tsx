@@ -183,18 +183,30 @@ export function UsersAndRoles() {
           onClick: () => setShowEnded((v) => !v),
         }}
       >
-        <ul className="flex flex-col gap-2">
-          {users.map((u) => (
-            <UserRow
-              key={u.id}
-              user={u}
-              assignments={assignmentsByUser.get(u.id) ?? []}
-              rolesById={rolesById}
-              scopeLabel={scopeLabel}
-              onChanged={reload}
-            />
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] border-collapse text-[12.5px]">
+            <thead>
+              <tr className="border-b border-[var(--color-line)] text-left text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                <th className="py-2 pr-3">Name</th>
+                <th className="py-2 pr-3">Access</th>
+                <th className="py-2 pr-3 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <UserRow
+                  key={u.id}
+                  user={u}
+                  assignments={assignmentsByUser.get(u.id) ?? []}
+                  rolesById={rolesById}
+                  permissionCodesByRoleId={permissionCodesByRoleId}
+                  scopeLabel={scopeLabel}
+                  onChanged={reload}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
     </div>
   );
@@ -204,12 +216,14 @@ function UserRow({
   user,
   assignments,
   rolesById,
+  permissionCodesByRoleId,
   scopeLabel,
   onChanged,
 }: {
   user: UserProfileRow;
   assignments: AccessAssignmentRow[];
   rolesById: Map<string, RoleRow>;
+  permissionCodesByRoleId: Map<string, string[]>;
   scopeLabel: (a: AccessAssignmentRow) => string;
   onChanged: () => void;
 }) {
@@ -230,51 +244,60 @@ function UserRow({
   };
 
   return (
-    <li className="rounded-xl border bg-card p-3 shadow-soft">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-medium">{user.display_name}</span>
-            {!user.is_active ? <Chip label="Deactivated" tone="warn" /> : null}
-          </div>
-          <div className="truncate text-[11px] text-[var(--color-ink-muted)]">
-            {user.email}
-            {user.job_title ? ` · ${user.job_title}` : ''}
-          </div>
+    <tr className="border-b border-[var(--color-line)] align-top last:border-b-0">
+      <td className="py-2.5 pr-3">
+        <div className="truncate font-medium">{user.display_name}</div>
+        <div className="truncate text-[11px] text-[var(--color-ink-muted)]">
+          {user.email}
+          {user.job_title ? ` · ${user.job_title}` : ''}
         </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void toggleActive()}
-          className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
-        >
-          {user.is_active ? 'Deactivate' : 'Reactivate'}
-        </button>
-      </div>
-
-      {error ? <p className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">{error}</p> : null}
-
-      {assignments.length === 0 ? (
-        <p className="mt-2 text-[11.5px] text-[var(--color-ink-muted)]">No access assigned.</p>
-      ) : (
-        <ul className="mt-2 flex flex-col gap-1">
-          {assignments.map((a) => (
-            <AssignmentRow key={a.id} assignment={a} role={rolesById.get(a.role_id)} scopeLabel={scopeLabel} onChanged={onChanged} />
-          ))}
-        </ul>
-      )}
-    </li>
+      </td>
+      <td className="py-2.5 pr-3">
+        {assignments.length === 0 ? (
+          <span className="text-[var(--color-ink-muted)]">No access assigned.</span>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {assignments.map((a) => (
+              <AssignmentRow
+                key={a.id}
+                assignment={a}
+                role={rolesById.get(a.role_id)}
+                permissionCodes={permissionCodesByRoleId.get(a.role_id) ?? []}
+                scopeLabel={scopeLabel}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
+        )}
+      </td>
+      <td className="py-2.5 pr-3 text-right">
+        <div className="flex flex-col items-end gap-1.5">
+          <Chip label={user.is_active ? 'Active' : 'Deactivated'} tone={user.is_active ? 'good' : 'warn'} />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void toggleActive()}
+            className="rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+          >
+            {user.is_active ? 'Deactivate' : 'Reactivate'}
+          </button>
+          {error ? <p className="text-[10.5px] text-red-600 dark:text-red-400">{error}</p> : null}
+        </div>
+      </td>
+    </tr>
   );
 }
 
 function AssignmentRow({
   assignment: a,
   role,
+  permissionCodes,
   scopeLabel,
   onChanged,
 }: {
   assignment: AccessAssignmentRow;
   role: RoleRow | undefined;
+  permissionCodes: string[];
   scopeLabel: (a: AccessAssignmentRow) => string;
   onChanged: () => void;
 }) {
@@ -302,9 +325,7 @@ function AssignmentRow({
   };
 
   return (
-    <li
-      className={`rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[12px] ${isEnded ? 'opacity-60' : ''}`}
-    >
+    <div className={`rounded-md border border-[var(--color-line)] px-2.5 py-1.5 ${isEnded ? 'opacity-60' : ''}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate">
           <span className="font-medium">{role?.name ?? 'Unknown role'}</span>
@@ -322,7 +343,19 @@ function AssignmentRow({
           </button>
         ) : null}
       </div>
-      <div className="nums mt-0.5 text-[10.5px] text-[var(--color-ink-muted)]">
+
+      {/* Real permissions this specific grant carries — the same union GrantAccessForm previews before
+          submitting one of these, shown again here since a role's permission set is what this
+          assignment actually does, not just its name. */}
+      {permissionCodes.length > 0 ? (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {permissionCodes.map((code) => (
+            <Chip key={code} label={code} />
+          ))}
+        </div>
+      ) : null}
+
+      <div className="nums mt-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
         Since {formatDate(new Date(a.starts_at))}
         {a.ends_at ? ` · ended ${formatDate(new Date(a.ends_at))}` : ''}
         {a.reason ? ` · ${a.reason}` : ''}
@@ -364,7 +397,7 @@ function AssignmentRow({
       ) : null}
 
       {error ? <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{error}</p> : null}
-    </li>
+    </div>
   );
 }
 
