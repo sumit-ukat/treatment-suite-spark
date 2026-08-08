@@ -277,6 +277,7 @@ function Dashboard() {
   const [section, setSection] = useState('group');
   const [collapsed, setCollapsed] = useState(false);
   const [filter, setFilter] = useState<FilterId>('all');
+  const [therapistFilter, setTherapistFilter] = useState('all');
   const [view, setView] = useState<'board' | 'list'>('list');
   const [query, setQuery] = useState('');
   const [openBed, setOpenBed] = useState<string | null>(null);
@@ -345,9 +346,16 @@ function Dashboard() {
   const board = realBoard;
   const summary = useMemo(() => (board.length ? summarise(board) : EMPTY_SUMMARY), [board]);
 
+  const therapists = useMemo(
+    () =>
+      [...new Set(board.map((b) => b.occupant?.therapist).filter((t): t is string => Boolean(t)))].sort(),
+    [board],
+  );
+
   const q = query.trim().toLowerCase();
   const visible = board.filter((bed) => {
     if (!matchesFilter(bed, filter)) return false;
+    if (therapistFilter !== 'all' && bed.occupant?.therapist !== therapistFilter) return false;
     if (!q) return true;
     const o = bed.occupant;
     return (
@@ -620,6 +628,22 @@ function Dashboard() {
                   active={filter === 'discharging'}
                   onClick={() => setFilter('discharging')}
                 />
+
+                {therapists.length > 0 ? (
+                  <select
+                    value={therapistFilter}
+                    onChange={(e) => setTherapistFilter(e.target.value)}
+                    aria-label="Filter by therapist"
+                    className="rounded-lg border border-[var(--color-line)] bg-card px-2 py-1.5 text-[11.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                  >
+                    <option value="all">All therapists</option>
+                    {therapists.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
 
                 {/* Cards to glance, list to scan. Different jobs, so both stay. */}
                 <div

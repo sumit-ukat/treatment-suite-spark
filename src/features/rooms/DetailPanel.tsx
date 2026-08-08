@@ -140,6 +140,39 @@ export function DetailPanel({
           <Fact label="Buddy" value={o.buddy} />
         </div>
 
+        <div className="border-b border-[var(--color-line)] p-4">
+          <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+            Programme progress
+          </p>
+          <p className="nums mt-1.5 text-[22px] font-semibold leading-none">
+            Day {o.treatmentDay}
+            <span className="text-[14px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
+          </p>
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="brand-gradient h-full rounded-full"
+              style={{ width: `${Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100))}%` }}
+            />
+          </div>
+          <p className="nums mt-1 text-[10.5px] text-[var(--color-ink-muted)]">
+            {Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100))}% of the planned stay elapsed
+          </p>
+          <div className="nums mt-3 grid grid-cols-2 gap-2 text-center text-[11px]">
+            <div className="rounded-lg border border-[var(--color-line)] p-2">
+              <p className="text-[15px] font-semibold">{o.completedCount}</p>
+              <p className="text-[var(--color-ink-muted)]">Done</p>
+            </div>
+            <div
+              className={`rounded-lg border p-2 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
+            >
+              <p className={`text-[15px] font-semibold ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>
+                {o.overdueCount}
+              </p>
+              <p className="text-[var(--color-ink-muted)]">Overdue</p>
+            </div>
+          </div>
+        </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <DischargeSection occupant={o} onChanged={onChanged} />
 
