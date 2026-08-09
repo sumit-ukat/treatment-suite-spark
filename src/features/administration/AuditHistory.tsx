@@ -1,10 +1,54 @@
-import { Search } from 'lucide-react';
+import { Eye, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { auditEvents, centres as centresService, type AuditEventRow, type CentreRow } from '../../services/data-access.js';
 import { Chip, Panel } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog.tsx';
 import { formatDateWithDay } from '../../lib/format.js';
+
+/** Friendly nouns for every record_type actually seen in production (checked directly against
+ * audit_events, not guessed from table names) — everything else falls back to the raw value rather
+ * than a made-up label for a table nobody has written to yet. */
+const RECORD_NOUN: Record<string, string> = {
+  admissions: 'admission',
+  beds: 'bed',
+  client_photos: 'client photo',
+  client_tasks: 'required action',
+  clients: 'client record',
+  detox_records: 'detox record',
+  discharge_requests: 'discharge request',
+  family_meetings: 'family meeting',
+  medical_review_requests: 'medical review request',
+  risk_records: 'risk record',
+  room_allocations: 'room allocation',
+  safeguarding_records: 'safeguarding record',
+  staff_assignments: 'staff assignment',
+  task_templates: 'task template',
+  user_access_assignments: 'access assignment',
+  user_profiles: 'user profile',
+};
+
+const ACTION_VERB: Record<string, string> = {
+  insert: 'Created',
+  update: 'Updated',
+  delete: 'Deleted',
+};
+
+/** "Created required action", not "insert · client_tasks" — a plain-English phrase built only from
+ * the two real fields every event already has, not a guess at *why* (this table has no join to a
+ * client's or staff member's name, and no record of which specific status change happened). */
+function actionPhrase(e: AuditEventRow): string {
+  const verb = ACTION_VERB[e.action] ?? e.action;
+  const noun = RECORD_NOUN[e.record_type] ?? e.record_type;
+  return `${verb} ${noun}`;
+}
 
 /**
  * Audit history — the first screen to show `audit_events`, which every write in this system has been
@@ -31,7 +75,7 @@ export function AuditHistory() {
   const [recordType, setRecordType] = useState('all');
   const [action, setAction] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [selected, setSelected] = useState<AuditEventRow | null>(null);
 
   useEffect(() => {
     if (!canView) {
@@ -154,33 +198,65 @@ export function AuditHistory() {
             No events match these filters.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-[12.5px]">
-              <thead>
-                <tr className="border-b border-[var(--color-line)] text-left text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                  <th className="py-2 pr-3">Action</th>
-                  <th className="py-2 pr-3">Record</th>
-                  <th className="py-2 pr-3">Actor</th>
-                  <th className="py-2 pr-3">Centre</th>
-                  <th className="py-2 pr-3">Reason</th>
-                  <th className="py-2 pr-3 text-right">When</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((e) => (
-                  <AuditRow
-                    key={e.id}
-                    event={e}
-                    centreName={e.centre_id ? centresById.get(e.centre_id)?.name ?? null : null}
-                    expanded={expanded === e.id}
-                    onToggle={() => setExpanded(expanded === e.id ? null : e.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="divide-y divide-[var(--color-line)]">
+            {filtered.map((e) => (
+              <AuditRow
+                key={e.id}
+                event={e}
+                centreName={e.centre_id ? centresById.get(e.centre_id)?.name ?? null : null}
+                onView={() => setSelected(e)}
+              />
+            ))}
+          </ul>
         )}
       </Panel>
+
+      <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent>
+          {selected ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{actionPhrase(selected)}</DialogTitle>
+                <DialogDescription>
+                  {selected.record_type} #{selected.record_id.slice(0, 8)} &middot;{' '}
+                  {formatDateWithDay(new Date(selected.occurred_at))}
+                </DialogDescription>
+              </DialogHeader>
+              {selected.changed_fields && selected.changed_fields.length > 0 ? (
+                <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                  Changed:{' '}
+                  <span className="font-medium text-[var(--color-ink)]">
+                    {selected.changed_fields.join(', ')}
+                  </span>
+                </p>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                    Before
+                  </div>
+                  <pre className="mt-1 max-h-[280px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[11px] dark:bg-white/[0.06]">
+                    {selected.previous_value ? JSON.stringify(selected.previous_value, null, 2) : '—'}
+                  </pre>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                    After
+                  </div>
+                  <pre className="mt-1 max-h-[280px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[11px] dark:bg-white/[0.06]">
+                    {selected.new_value ? JSON.stringify(selected.new_value, null, 2) : '—'}
+                  </pre>
+                </div>
+              </div>
+              {selected.reason ? (
+                <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                  Reason: <span className="text-[var(--color-ink)]">{selected.reason}</span>
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -191,88 +267,43 @@ const ACTION_TONE: Record<string, 'good' | 'warn' | 'alert' | 'neutral'> = {
   delete: 'alert',
 };
 
-const COLUMN_COUNT = 6;
-
 function AuditRow({
   event: e,
   centreName,
-  expanded,
-  onToggle,
+  onView,
 }: {
   event: AuditEventRow;
   centreName: string | null;
-  expanded: boolean;
-  onToggle: () => void;
+  onView: () => void;
 }) {
-  // A <tr> isn't natively focusable or activatable like a <button>, so both are added explicitly —
-  // the previous list-based version got this for free from being a real <button>; a table row has to
-  // ask for it.
-  const onKeyDown = (ev: React.KeyboardEvent) => {
-    if (ev.key === 'Enter' || ev.key === ' ') {
-      ev.preventDefault();
-      onToggle();
-    }
-  };
-
   return (
-    <>
-      <tr
-        role="button"
-        tabIndex={0}
-        aria-expanded={expanded}
-        onClick={onToggle}
-        onKeyDown={onKeyDown}
-        className="cursor-pointer border-b border-[var(--color-line)] transition last:border-b-0 hover:bg-muted/50"
-      >
-        <td className="py-2 pr-3">
-          <Chip
-            label={e.action.charAt(0).toUpperCase() + e.action.slice(1)}
-            tone={ACTION_TONE[e.action] ?? 'neutral'}
-          />
-        </td>
-        <td className="max-w-[220px] truncate py-2 pr-3">
-          {e.record_type}
-          <span className="ml-1 text-[var(--color-ink-muted)]">#{e.record_id.slice(0, 8)}</span>
-        </td>
-        <td className="max-w-[180px] truncate py-2 pr-3 text-[var(--color-ink-muted)]">
-          {e.actor_email ?? 'System'}
-        </td>
-        <td className="py-2 pr-3 text-[var(--color-ink-muted)]">{centreName ?? '—'}</td>
-        <td className="max-w-[220px] truncate py-2 pr-3 text-[var(--color-ink-muted)]">{e.reason ?? '—'}</td>
-        <td className="nums py-2 pr-3 text-right whitespace-nowrap text-[var(--color-ink-muted)]">
-          {formatDateWithDay(new Date(e.occurred_at))}
-        </td>
-      </tr>
-
-      {expanded ? (
-        <tr className="border-b border-[var(--color-line)] last:border-b-0">
-          <td colSpan={COLUMN_COUNT} className="bg-muted/30 px-3 py-2.5 text-[11.5px]">
-            {e.changed_fields && e.changed_fields.length > 0 ? (
-              <p className="text-[var(--color-ink-muted)]">
-                Changed: <span className="font-medium text-[var(--color-ink)]">{e.changed_fields.join(', ')}</span>
-              </p>
-            ) : null}
-            <div className="mt-1.5 grid grid-cols-2 gap-2">
-              <div>
-                <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                  Before
-                </div>
-                <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
-                  {e.previous_value ? JSON.stringify(e.previous_value, null, 2) : '—'}
-                </pre>
-              </div>
-              <div>
-                <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                  After
-                </div>
-                <pre className="mt-1 max-h-[220px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[10.5px] dark:bg-white/[0.06]">
-                  {e.new_value ? JSON.stringify(e.new_value, null, 2) : '—'}
-                </pre>
-              </div>
-            </div>
-          </td>
-        </tr>
-      ) : null}
-    </>
+    <li className="flex items-center justify-between gap-3 py-2.5">
+      <div className="min-w-0">
+        <p className="text-[13px] font-medium">
+          {actionPhrase(e)}
+          <span className="ml-1.5 font-normal text-[var(--color-ink-muted)]">
+            #{e.record_id.slice(0, 8)}
+          </span>
+        </p>
+        <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink-muted)]">
+          {e.actor_email ?? 'System'} &middot; {formatDateWithDay(new Date(e.occurred_at))}
+          {centreName ? <> &middot; {centreName}</> : null}
+          {e.reason ? <> &middot; {e.reason}</> : null}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Chip
+          label={e.action.charAt(0).toUpperCase() + e.action.slice(1)}
+          tone={ACTION_TONE[e.action] ?? 'neutral'}
+        />
+        <button
+          type="button"
+          onClick={onView}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          <Eye className="size-3.5" /> View change
+        </button>
+      </div>
+    </li>
   );
 }
