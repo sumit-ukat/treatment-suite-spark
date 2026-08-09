@@ -4,7 +4,7 @@ import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import type { ClientSearchResult } from '../../services/data-access.js';
 import { formatDate } from '../../lib/format.js';
-import { Chip, Panel } from '../../components/ui.tsx';
+import { Chip } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
 import { ClientAvatar } from '../../components/brand.tsx';
@@ -103,6 +103,9 @@ export function ClientDirectory({
           <option value="current">Currently resident</option>
           <option value="former">Former clients</option>
         </select>
+        {results.length > 0 ? (
+          <span className="shrink-0 text-xs text-muted-foreground">{visible.length} results</span>
+        ) : null}
       </div>
 
       {error ? (
@@ -111,7 +114,7 @@ export function ClientDirectory({
         </div>
       ) : null}
 
-      <div className="mt-4">
+      <div className="mt-5">
         {query.trim().length > 0 && query.trim().length < 2 ? (
           <p className="text-[12px] text-muted-foreground">Keep typing — at least 2 characters.</p>
         ) : loading ? (
@@ -119,47 +122,42 @@ export function ClientDirectory({
         ) : query.trim().length >= 2 && results.length === 0 ? (
           <p className="text-[12px] text-muted-foreground">No clients matched at {centre.name}.</p>
         ) : results.length > 0 ? (
-          <Panel title="Results" subtitle={`${visible.length} of ${results.length} shown`}>
-            {visible.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-muted-foreground">
-                No results match this filter.
-              </p>
-            ) : (
-            <ul className="flex flex-col gap-1.5">
+          visible.length === 0 ? (
+            <p className="py-8 text-center text-[12px] text-muted-foreground">
+              No results match this filter.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
               {visible.map((r) => {
                 const label = r.display_name ?? r.reference;
                 return (
-                  <li key={r.client_id}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenClient(r)}
-                      className="flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition hover:border-[var(--color-line)] hover:bg-muted/50"
-                    >
-                      <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} size="sm" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-medium">{label}</div>
-                        <div className="nums text-[11px] text-muted-foreground">
-                          {r.reference}
-                          {r.last_admitted_at ? (
-                            <>
-                              {' '}
-                              &middot; last admitted {formatDate(new Date(r.last_admitted_at))}
-                            </>
-                          ) : null}
-                        </div>
+                  <button
+                    key={r.client_id}
+                    type="button"
+                    onClick={() => setOpenClient(r)}
+                    className="flex w-full items-center gap-4 rounded-2xl border bg-card p-5 text-left shadow-soft transition hover:-translate-y-px hover:shadow-lift"
+                  >
+                    <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold">{label}</div>
+                      <div className="nums text-xs text-muted-foreground">{r.reference}</div>
+                    </div>
+                    {r.last_admitted_at ? (
+                      <div className="hidden shrink-0 text-xs sm:block">
+                        <p className="text-muted-foreground">Latest admission</p>
+                        <p className="tabular font-medium">{formatDate(new Date(r.last_admitted_at))}</p>
                       </div>
-                      {r.has_open_admission ? (
-                        <StatusBadge status="ontrack" label="Currently admitted" size="sm" />
-                      ) : r.last_admission_status ? (
-                        <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
-                      ) : null}
-                    </button>
-                  </li>
+                    ) : null}
+                    {r.has_open_admission ? (
+                      <StatusBadge status="ontrack" label="Currently resident" size="sm" />
+                    ) : r.last_admission_status ? (
+                      <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
+                    ) : null}
+                  </button>
                 );
               })}
-            </ul>
-            )}
-          </Panel>
+            </div>
+          )
         ) : (
           <p className="text-[12px] text-muted-foreground">
             Type at least 2 characters to search.
