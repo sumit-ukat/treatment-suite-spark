@@ -376,14 +376,15 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   }
 
   return (
-    <div className="mx-auto max-w-[640px] px-5 py-8">
+    <div className="mx-auto max-w-[980px] px-5 py-8">
       <PageHeader
         eyebrow={centre.name}
         title="Admit a client"
         description={`${beds.length} bed${beds.length === 1 ? '' : 's'} currently available.`}
       />
 
-      <div className="mt-5 rounded-2xl border bg-card p-5 shadow-soft">
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_300px]">
+      <div className="rounded-2xl border bg-card p-5 shadow-soft">
       <SectionHeading>Client details</SectionHeading>
       <div
         role="tablist"
@@ -667,6 +668,45 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         </button>
       </form>
       </div>
+
+      {/* A live preview of the form, not a second source of truth — every value here is read straight
+          out of `form`/`selectedBed`, so it can never disagree with what Review actually shows next. */}
+      <aside className="h-fit rounded-2xl border bg-card p-4 shadow-soft lg:sticky lg:top-4">
+        <h3 className="font-display text-[13px] font-semibold">Admission summary</h3>
+        <dl className="mt-3 flex flex-col gap-2.5 text-[12.5px]">
+          <SummaryRow label="Client" value={clientLabel.trim() || 'Not entered yet'} />
+          <SummaryRow
+            label="Bed"
+            value={selectedBed ? `${selectedBed.bed.label} · Room ${selectedBed.label}` : 'Not selected yet'}
+          />
+          <SummaryRow label="Admitted" value={`${form.admittedDate} ${form.admittedTime}`} />
+          <SummaryRow label="Duration" value={`${form.plannedDuration} ${form.plannedDurationUnit}`} />
+          {plannedDischargePreview ? (
+            <SummaryRow label="Planned discharge" value={formatDate(plannedDischargePreview)} />
+          ) : null}
+          {form.treatmentGroup ? <SummaryRow label="Group" value={form.treatmentGroup} /> : null}
+          {form.substanceId ? (
+            <SummaryRow
+              label="Substance"
+              value={substances.find((s) => s.id === form.substanceId)?.name ?? ''}
+            />
+          ) : null}
+          <SummaryRow label="PEEP required" value={form.peepRequired ? 'Yes' : 'No'} />
+          {form.focalTherapistLabel ? <SummaryRow label="Therapist" value={form.focalTherapistLabel} /> : null}
+          {form.buddyLabel ? <SummaryRow label="Buddy" value={form.buddyLabel} /> : null}
+          {form.doctorLabel ? <SummaryRow label="Doctor" value={form.doctorLabel} /> : null}
+        </dl>
+      </aside>
+      </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10.5px] text-[var(--color-ink-muted)]">{label}</dt>
+      <dd className="truncate font-medium">{value}</dd>
     </div>
   );
 }
