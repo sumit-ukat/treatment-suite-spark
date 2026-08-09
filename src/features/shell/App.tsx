@@ -410,6 +410,8 @@ function Dashboard() {
         onToggle={() => setCollapsed((c) => !c)}
         centreName={centre.name}
         onLeaveCentre={() => setSection('group')}
+        occupied={board.length ? summary.bedsOccupied : undefined}
+        capacity={board.length ? summary.bedsTotal : undefined}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
