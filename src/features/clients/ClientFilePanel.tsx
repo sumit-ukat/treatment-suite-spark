@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { clients as clientsService, type ClientAdmissionHistoryRow } from '../../services/data-access.js';
@@ -33,10 +33,14 @@ export function ClientFilePanel({
   client,
   centre,
   onClose,
+  onOpenBed,
 }: {
   client: { client_id: string; reference: string; display_name: string | null };
   centre: AccessibleCentre;
   onClose: () => void;
+  /** Jumps to the client's live bed on the room board. Only rendered when there's an active
+   * admission with a bed label to jump to — this screen has no other route back onto the board. */
+  onOpenBed?: ((bedLabel: string) => void) | undefined;
 }) {
   const [rows, setRows] = useState<ClientAdmissionHistoryRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +70,8 @@ export function ClientFilePanel({
     };
   }, [client.client_id, centre.id]);
 
+  const activeAdmission = rows?.find((r) => r.status === 'active') ?? null;
+
   return (
     <>
       <div
@@ -91,8 +97,8 @@ export function ClientFilePanel({
               </span>
               {rows ? (
                 <StatusBadge
-                  status={rows.some((r) => r.status === 'active') ? 'ontrack' : 'neutral'}
-                  label={rows.some((r) => r.status === 'active') ? 'Currently resident' : 'Former client'}
+                  status={activeAdmission ? 'ontrack' : 'neutral'}
+                  label={activeAdmission ? 'Currently resident' : 'Former client'}
                   size="sm"
                 />
               ) : null}
@@ -100,6 +106,15 @@ export function ClientFilePanel({
             <div className="nums mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">
               {client.reference} &middot; {centre.name}
             </div>
+            {activeAdmission?.bed_label && onOpenBed ? (
+              <button
+                type="button"
+                onClick={() => onOpenBed(activeAdmission.bed_label!)}
+                className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-accent)] hover:underline"
+              >
+                Open current admission <ArrowRight className="size-3" />
+              </button>
+            ) : null}
           </div>
           <button
             type="button"

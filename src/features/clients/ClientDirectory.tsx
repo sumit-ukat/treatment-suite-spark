@@ -31,7 +31,15 @@ function hueOf(seed: string): number {
  * A result opens `ClientFilePanel` — every admission this client has had at this centre, the first
  * place in the app a discharged client's history can be seen at all.
  */
-export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
+export function ClientDirectory({
+  centre,
+  onOpenBed,
+}: {
+  centre: AccessibleCentre;
+  /** Jumps to the client's live bed on the room board — only meaningful when they're currently
+   * resident, so ClientFilePanel only offers it then. */
+  onOpenBed?: ((bedLabel: string) => void) | undefined;
+}) {
   const { can } = useAuth();
   const { query, setQuery, results, loading, error } = useClientSearch(centre.id);
   const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
@@ -160,7 +168,19 @@ export function ClientDirectory({ centre }: { centre: AccessibleCentre }) {
       </div>
 
       {openClient ? (
-        <ClientFilePanel client={openClient} centre={centre} onClose={() => setOpenClient(null)} />
+        <ClientFilePanel
+          client={openClient}
+          centre={centre}
+          onClose={() => setOpenClient(null)}
+          onOpenBed={
+            onOpenBed
+              ? (bedLabel) => {
+                  setOpenClient(null);
+                  onOpenBed(bedLabel);
+                }
+              : undefined
+          }
+        />
       ) : null}
     </div>
   );

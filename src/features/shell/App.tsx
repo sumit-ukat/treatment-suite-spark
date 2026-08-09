@@ -731,7 +731,13 @@ function Dashboard() {
           ) : section === 'admissions' && authCentre ? (
             <AdmitClientForm centre={authCentre} />
           ) : section === 'clients' && authCentre ? (
-            <ClientDirectory centre={authCentre} />
+            <ClientDirectory
+              centre={authCentre}
+              onOpenBed={(bedLabel) => {
+                setSection('board');
+                setOpenBed(bedLabel);
+              }}
+            />
           ) : section === 'audit' ? (
             <AuditHistory />
           ) : section === 'admin' || section === 'admissions' || section === 'clients' ? (
