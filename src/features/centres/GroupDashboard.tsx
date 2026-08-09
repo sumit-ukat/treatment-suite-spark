@@ -12,7 +12,7 @@ import { buildCentres, groupTotals, REGIONS, type CentreSummary } from './centre
 import { OccupancyBar } from '../../components/occupancy-bar.tsx';
 import { MetricCard } from '../../components/metric-card.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
-import { BarChart, Chip, FilterPill, Panel, RingChart } from '../../components/ui.tsx';
+import { Chip, FilterPill, Panel } from '../../components/ui.tsx';
 
 type SortKey = 'name' | 'occupancy' | 'overdue' | 'onTime';
 
@@ -115,15 +115,6 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
 
   const needsAttention = centres.filter((c) => c.overdue > 0 || c.pastPlannedDischarge > 0).length;
 
-  // Always all four regions, regardless of the region filter above — a comparison chart that shrank
-  // to one bar whenever a region was selected would be a strange way to compare regions.
-  const regionOccupancy = REGIONS.map((r) => {
-    const inRegion = centres.filter((c) => c.region === r);
-    const capacity = inRegion.reduce((n, c) => n + c.capacity, 0);
-    const occupied = inRegion.reduce((n, c) => n + c.occupied, 0);
-    return { label: r, value: capacity ? Math.round((occupied / capacity) * 100) : 0 };
-  });
-
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
       <section aria-label="Group summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
@@ -187,79 +178,64 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         ))}
       </div>
 
-      {/* 1:1.6 column ratio matches the source's own two-panel section exactly. */}
-      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.6fr]">
-        <div className="flex flex-col gap-4">
-          <Panel title="At a glance" subtitle="Group totals, all centres">
-            <div className="flex items-center justify-around gap-3 py-1">
-              <RingChart percent={totals.occupancyPercent} value={`${totals.occupancyPercent}%`} label="Occupancy" />
-              <RingChart percent={totals.onTimePercent} value={`${totals.onTimePercent}%`} label="On time" tone="good" />
+      <Panel title="Centres" className="mt-4">
+        <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
+          <p className="text-sm text-muted-foreground">Occupancy and status at a glance</p>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find a centre"
+                aria-label="Find a centre"
+                className="h-9 w-36 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-3 text-[12.5px] transition placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none sm:w-48"
+              />
             </div>
-          </Panel>
-          <Panel title="Occupancy by region" subtitle="Each bar is labelled with its exact figure.">
-            <BarChart data={regionOccupancy} />
-          </Panel>
-        </div>
-
-        <Panel title="Centres">
-          <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
-            <p className="text-sm text-muted-foreground">Occupancy and status at a glance</p>
-            <div className="flex shrink-0 items-center gap-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Find a centre"
-                  aria-label="Find a centre"
-                  className="h-9 w-36 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-3 text-[12.5px] transition placeholder:text-muted-foreground focus:border-[var(--color-accent)] focus:outline-none sm:w-48"
-                />
-              </div>
-              <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
-                {(
-                  [
-                    ['occupancy', 'Occupancy'],
-                    ['overdue', 'Risk'],
-                    ['name', 'Name'],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSort(key)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      sort === key ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+            <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
+              {(
+                [
+                  ['occupancy', 'Occupancy'],
+                  ['overdue', 'Risk'],
+                  ['name', 'Name'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSort(key)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    sort === key ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
+        </div>
 
-          {sorted.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No centres match &ldquo;{query}&rdquo;.</p>
-          ) : (
-            <>
-              {/* Column headings, echoing the row grid. */}
-              <div className="mt-3 grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-                <div>Centre</div>
-                <div>Occupancy</div>
-                <div>Available</div>
-                <div>Overdue</div>
-                <div>Completion</div>
-                <div className="text-right">Flags</div>
-              </div>
-              <div className="flex flex-col divide-y divide-[var(--color-line)]">
-                {sorted.map((c) => (
-                  <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-                ))}
-              </div>
-            </>
-          )}
-        </Panel>
-      </div>
+        {sorted.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No centres match &ldquo;{query}&rdquo;.</p>
+        ) : (
+          <>
+            {/* Column headings, echoing the row grid. */}
+            <div className="mt-3 grid grid-cols-[minmax(0,1.6fr)_repeat(5,minmax(0,1fr))] gap-2 border-b border-[var(--color-line)] px-3 pb-1.5 text-[10px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+              <div>Centre</div>
+              <div>Occupancy</div>
+              <div>Available</div>
+              <div>Overdue</div>
+              <div>Completion</div>
+              <div className="text-right">Flags</div>
+            </div>
+            <div className="flex flex-col divide-y divide-[var(--color-line)]">
+              {sorted.map((c) => (
+                <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+              ))}
+            </div>
+          </>
+        )}
+      </Panel>
 
       <p className="mt-6 max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
         A regional manager sees only the centres assigned to them. This view shows all ten because the
