@@ -224,34 +224,23 @@ function CentreSwitcher({
   );
 }
 
-/** Header for the hub. Carries identity and sign-out, since there is no rail to hold them. */
+/** Header for the hub — a plain sticky light bar, matching the source exactly, not this app's dark
+ * chrome treatment used everywhere else. The BrandMark still carries its own gradient-filled icon
+ * box, so it reads fine here regardless of the header background around it. */
 function HubHeader() {
-  const { centres } = useAuth();
   return (
-    <header
-      className="flex h-[64px] shrink-0 items-center gap-3 px-4 text-[var(--color-chrome-ink)] sm:px-6"
-      style={{
-        backgroundColor: 'var(--color-chrome)',
-        backgroundImage:
-          'linear-gradient(100deg,' +
-          ' color-mix(in oklab, var(--brand-purple) 45%, transparent) 0%,' +
-          ' color-mix(in oklab, var(--brand-pink) 22%, transparent) 55%,' +
-          ' color-mix(in oklab, var(--brand-blue) 12%, transparent) 100%)',
-      }}
-    >
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)]/85 px-4 backdrop-blur sm:px-6">
       <BrandMark />
       <div className="min-w-0">
         <div className="truncate font-display text-[15px] leading-tight font-semibold">
-          UK Addiction Treatment Centres
+          Treatment Operations
         </div>
-        <div className="nums truncate text-[11px] text-[var(--color-chrome-ink-dim)]">
-          Treatment Operations · {centres.length} centres
-        </div>
+        <div className="truncate text-[11px] text-[var(--color-ink-muted)]">Group hub</div>
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <ThemeToggle className="text-[var(--color-chrome-ink-dim)] hover:bg-white/10 hover:text-[var(--color-chrome-ink)]" />
-        <UserMenu variant="chrome" />
+        <ThemeToggle />
+        <UserMenu variant="panel" />
       </div>
     </header>
   );
