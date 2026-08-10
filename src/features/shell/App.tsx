@@ -53,6 +53,14 @@ import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip } from '../../components/ui.tsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog.tsx';
 
 /**
  * Gate the whole application on the session.
@@ -466,6 +474,10 @@ function BoardPage() {
   // Bumped after a task is completed/reopened or a discharge action lands, to re-read the board rather
   // than patch local state to what we assume the server did.
   const [boardVersion, setBoardVersion] = useState(0);
+  // The available bed a "admit here?" confirmation is open for — a separate confirm step, not a
+  // straight jump to the admission form, since clicking an empty bed is otherwise a single misclick
+  // away from the full admit-a-client flow.
+  const [confirmBed, setConfirmBed] = useState<BoardBed | null>(null);
 
   useEffect(() => {
     if (!authCentre) {
@@ -684,7 +696,7 @@ function BoardPage() {
         </div>
       ) : view === 'list' ? (
         <section aria-label="Bed spaces">
-          <BedList beds={visible} onOpen={openBed} />
+          <BedList beds={visible} onOpen={openBed} onOpenAvailable={(label) => setConfirmBed(board.find((b) => b.label === label) ?? null)} />
         </section>
       ) : (
         <section
@@ -695,11 +707,43 @@ function BoardPage() {
             bed.occupant ? (
               <OccupiedCard key={bed.label} bed={bed} onOpen={() => openBed(bed.label)} />
             ) : (
-              <AvailableCard key={bed.label} bed={bed} />
+              <AvailableCard key={bed.label} bed={bed} onOpen={() => setConfirmBed(bed)} />
             ),
           )}
         </section>
       )}
+
+      <Dialog open={confirmBed !== null} onOpenChange={(open) => !open && setConfirmBed(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bed {confirmBed?.label} is available</DialogTitle>
+            <DialogDescription>
+              Admit a new client into this bed? You'll fill in their details on the next screen — nothing
+              is saved yet.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setConfirmBed(null)}
+              className="rounded-lg border border-[var(--color-line)] px-3.5 py-2 text-[12.5px] font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const label = confirmBed?.label;
+                setConfirmBed(null);
+                if (label) navigate(`../admissions?bed=${encodeURIComponent(label)}`);
+              }}
+              className="rounded-lg bg-[var(--color-accent)] px-3.5 py-2 text-[12.5px] font-medium text-white"
+            >
+              Yes, admit a client
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
         Room cards omit clinical detail by design. Substance, detox, medical and safeguarding content
@@ -708,7 +752,12 @@ function BoardPage() {
       </p>
 
       {selected ? (
-        <DetailPanel bed={selected} onClose={closeBed} onChanged={() => setBoardVersion((v) => v + 1)} />
+        <DetailPanel
+          bed={selected}
+          centreId={authCentre.id}
+          onClose={closeBed}
+          onChanged={() => setBoardVersion((v) => v + 1)}
+        />
       ) : null}
     </div>
   );

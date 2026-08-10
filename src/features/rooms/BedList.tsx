@@ -68,9 +68,11 @@ const GRID =
 export function BedList({
   beds,
   onOpen,
+  onOpenAvailable,
 }: {
   beds: readonly BoardBed[];
   onOpen: (label: string) => void;
+  onOpenAvailable?: (label: string) => void;
 }) {
   const [sort, setSort] = useState<SortKey>('bed');
   const [dir, setDir] = useState<Dir>('asc');
@@ -132,7 +134,12 @@ export function BedList({
             if (!o) {
               return (
                 <li key={bed.label}>
-                  <div className={`${GRID} min-h-[52px] px-3 py-2 opacity-60`}>
+                  <button
+                    type="button"
+                    onClick={onOpenAvailable ? () => onOpenAvailable(bed.label) : undefined}
+                    disabled={!onOpenAvailable}
+                    className={`${GRID} min-h-[52px] w-full px-3 py-2 text-left opacity-60 transition enabled:hover:bg-[var(--color-accent-soft)] enabled:hover:opacity-100 disabled:cursor-default focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+                  >
                     <span className="nums rounded-md bg-[color:color-mix(in_oklab,var(--brand-blue)_24%,transparent)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--brand-blue-ink)]">
                       {bed.label}
                     </span>
@@ -142,7 +149,7 @@ export function BedList({
                         {bed.shared ? 'shared room bed' : 'single room'}
                       </span>
                     </span>
-                  </div>
+                  </button>
                 </li>
               );
             }

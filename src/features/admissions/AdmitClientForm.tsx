@@ -1,5 +1,6 @@
 import { CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
@@ -115,6 +116,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // A bed clicked directly on the room board arrives here as `?bed=<label>` — matched against the
+  // loaded bed list by label (the only identifier the board's own BoardBed type carries) rather than
+  // by id, since the board never fetches the real bed/room ids that would let it link straight there.
+  const [searchParams] = useSearchParams();
+  const preselectBedLabel = searchParams.get('bed');
+
   const [mode, setMode] = useState<ClientMode>(() => (canCreateNew ? 'new' : 'existing'));
   const [selectedClient, setSelectedClient] = useState<ClientSearchResult | null>(null);
   const clientSearch = useClientSearch(centre.id);
@@ -134,6 +141,10 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         setBeds(bedRows);
         setSubstances(subRows);
         setLoadError(null);
+        if (preselectBedLabel) {
+          const match = bedRows.find((r) => r.bed.label === preselectBedLabel);
+          if (match) setForm((f) => ({ ...f, bedKey: `${match.id}:${match.bed.id}` }));
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -380,7 +391,11 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
       <PageHeader
         eyebrow={centre.name}
         title="Admit a client"
-        description={`${beds.length} bed${beds.length === 1 ? '' : 's'} currently available.`}
+        description={
+          preselectBedLabel && selectedBed
+            ? `Bed ${preselectBedLabel} is pre-selected from the room board — change it below if needed.`
+            : `${beds.length} bed${beds.length === 1 ? '' : 's'} currently available.`
+        }
       />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_300px]">

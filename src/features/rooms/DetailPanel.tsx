@@ -1,11 +1,11 @@
 import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardBed, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip, Panel, Timeline } from '../../components/ui.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
-import { discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
+import { clientPhotos, discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -46,10 +46,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export function DetailPanel({
   bed,
+  centreId,
   onClose,
   onChanged,
 }: {
   bed: BoardBed;
+  centreId: string;
   onClose: () => void;
   /**
    * Called after a task completion/reopen or a discharge action lands, so the board re-reads rather
@@ -105,12 +107,20 @@ export function DetailPanel({
             <div className="nums mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">
               {o.reference} &middot; Bed {bed.label} &middot; Group {o.group}
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-1">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {o.hasRestrictedAlert ? (
                 <Chip icon="&#9873;" label="Restricted alert" tone="alert" />
               ) : null}
               {o.photoState === 'missing' ? (
                 <Chip icon="!" label="No photograph" tone="warn" />
+              ) : null}
+              {o.clientId ? (
+                <PhotoUpload
+                  centreId={centreId}
+                  clientId={o.clientId}
+                  hasPhoto={o.photoState === 'present'}
+                  onUploaded={onChanged}
+                />
               ) : null}
             </div>
           </div>
@@ -211,6 +221,71 @@ export function DetailPanel({
 }
 
 /**
+ * Upload (or replace) this client's photograph — the missing piece behind the "no photograph" chip
+ * shown everywhere else in the app. The bucket, its RLS policies and `client_photos` itself already
+ * existed (migrations 0016/0017, tested); this component is the first thing that actually calls them.
+ *
+ * Hidden behind `photos.upload` rather than shown-but-disabled: the permission check happens at the
+ * bucket and the table too, so a caller lacking it could never make this succeed anyway.
+ */
+function PhotoUpload({
+  centreId,
+  clientId,
+  hasPhoto,
+  onUploaded,
+}: {
+  centreId: string;
+  clientId: string;
+  hasPhoto: boolean;
+  onUploaded?: (() => void) | undefined;
+}) {
+  const { can } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!can('photos.upload')) return null;
+
+  const pick = () => inputRef.current?.click();
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await clientPhotos.upload({ centreId, clientId, file });
+      onUploaded?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        onChange={(e) => void onFile(e.target.files?.[0])}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={pick}
+        className="rounded-md border border-[var(--color-line)] px-2 py-0.5 text-[10.5px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+      >
+        {busy ? 'Uploading…' : hasPhoto ? 'Replace photo' : 'Upload photo'}
+      </button>
+      {error ? <span className="text-[10.5px] text-red-600 dark:text-red-400">{error}</span> : null}
+    </span>
+  );
+}
+
+/**
  * One action, with the controls to complete or reopen it.
  *
  * Three things decide whether a control appears, and all three are real constraints rather than
@@ -275,6 +350,10 @@ function TaskRow({ task: t, onChanged }: { task: BoardTask; onChanged?: (() => v
         </span>
         {t.isComplete ? (
           <StatusBadge status="complete" label="Done" size="sm" />
+        ) : t.isNotApplicable ? (
+          <span title={t.notApplicableReason ?? undefined}>
+            <StatusBadge status="neutral" label="Not applicable" size="sm" />
+          </span>
         ) : t.isOverdue ? (
           <StatusBadge status="overdue" size="sm" />
         ) : t.isDueToday ? (

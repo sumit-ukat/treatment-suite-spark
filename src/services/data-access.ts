@@ -440,6 +440,7 @@ export interface ClientTaskRow {
   due_at: string | null;
   completed_at: string | null;
   status: string;
+  not_applicable_reason: string | null;
 }
 
 export interface TaskTemplateRow {
@@ -476,6 +477,80 @@ export const tasks = {
 export interface ClientPhotoRow {
   client_id: string;
 }
+
+// Mirrors the storage bucket's own limits (migration 0016) so a rejected file fails fast in the UI
+// with a plain-English reason, rather than only after a network round trip to the bucket.
+const CLIENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const CLIENT_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+export const clientPhotos = {
+  /**
+   * Uploads a photograph and records it as the client's active one.
+   *
+   * The bucket and table already existed (migrations 0016/0017) with real RLS and a real
+   * `client_photos_one_active` unique index — this was the missing piece, not a new backend.
+   *
+   * Deactivating whatever was active before is a blind UPDATE rather than read-then-write: a caller
+   * can hold `photos.upload` without `photos.view` (they are separate permissions), and a SELECT would
+   * be refused by RLS for such a caller even though the UPDATE itself is not. Affecting zero rows when
+   * nothing was active yet is the expected, harmless case.
+   */
+  async upload({
+    centreId,
+    clientId,
+    file,
+  }: {
+    centreId: string;
+    clientId: string;
+    file: File;
+  }): Promise<void> {
+    if (!CLIENT_PHOTO_MIME_TYPES.includes(file.type)) {
+      throw new DataAccessError('clientPhotos.upload', {
+        message: 'Photos must be JPEG, PNG or WebP.',
+      });
+    }
+    if (file.size > CLIENT_PHOTO_MAX_BYTES) {
+      throw new DataAccessError('clientPhotos.upload', {
+        message: 'Photos must be 5MB or smaller.',
+      });
+    }
+
+    // `{centre_id}/{client_id}/{filename}` — the shape the storage RLS policies parse (migration 0016).
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const path = `${centreId}/${clientId}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await client()
+      .storage.from('client-photos')
+      .upload(path, file, { contentType: file.type });
+    if (uploadError) {
+      throw new DataAccessError('clientPhotos.upload', { message: uploadError.message });
+    }
+
+    await run(
+      'clientPhotos.deactivatePrevious',
+      client()
+        .from('client_photos')
+        .update({ is_active: false })
+        .eq('client_id', clientId)
+        .eq('is_active', true),
+    );
+
+    await run(
+      'clientPhotos.insert',
+      client()
+        .from('client_photos')
+        .insert({
+          client_id: clientId,
+          centre_id: centreId,
+          storage_path: path,
+          safe_filename: path.split('/').pop()!,
+          original_filename: file.name,
+          mime_type: file.type,
+          file_size_bytes: file.size,
+        }),
+    );
+  },
+};
 
 export interface DischargeRequestRow {
   id: string;
@@ -579,7 +654,7 @@ export const roomBoard = {
         'roomBoard.tasks',
         client()
           .from('client_tasks')
-          .select('id,admission_id,template_id,code,category,title,due_at,completed_at,status')
+          .select('id,admission_id,template_id,code,category,title,due_at,completed_at,status,not_applicable_reason')
           .eq('centre_id', centreId),
       ),
       clinicalLookups.substances(),

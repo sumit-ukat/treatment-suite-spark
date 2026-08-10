@@ -99,6 +99,7 @@ function buildRealOccupant(
           : { kind: 'nothing_recorded' },
       isComplete,
       isNotApplicable,
+      notApplicableReason: isNotApplicable ? (t.not_applicable_reason ?? 'Not applicable.') : null,
       // Direct reuse of the tested domain function — a real client_task row already has exactly the
       // shape isOverdue expects.
       isOverdue: !isNotApplicable && isOverdue({ dueAt, completedAt, status: t.status as never }, now),
@@ -126,6 +127,7 @@ function buildRealOccupant(
   return {
     // A real row, so this admission can actually be discharged — see the doc comment on Occupant.
     admissionId: admission.id,
+    clientId: admission.client_id,
     dischargeRequest,
     reference: c.reference,
     displayName,

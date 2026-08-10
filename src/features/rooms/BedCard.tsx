@@ -259,11 +259,16 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
  * that mean "act now". Blue also fails text-contrast thresholds, which is exactly why it appears
  * here as a fill and a border rather than as words.
  */
-export function AvailableCard({ bed }: { bed: BoardBed }) {
+export function AvailableCard({ bed, onOpen }: { bed: BoardBed; onOpen?: () => void }) {
   // `bg-[color:…]` — without the explicit `color:` type hint Tailwind reads a color-mix() value as a
   // background-image, and the fill silently never appears.
   return (
-    <div className="flex min-h-[168px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-3.5 transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)]">
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={!onOpen}
+      className="flex min-h-[168px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-3.5 text-left transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:cursor-default"
+    >
       <BedLabel label={bed.label} shared={bed.shared} variant="available" />
       <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
         <span aria-hidden="true" className="text-[15px] text-[var(--brand-blue-ink)] opacity-70">
@@ -274,6 +279,6 @@ export function AvailableCard({ bed }: { bed: BoardBed }) {
           {bed.shared ? 'Shared room bed' : 'Single room'}
         </span>
       </div>
-    </div>
+    </button>
   );
 }

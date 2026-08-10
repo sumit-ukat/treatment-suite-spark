@@ -278,6 +278,10 @@ export interface BoardTask {
   isOverdue: boolean;
   isDueToday: boolean;
   isNotApplicable: boolean;
+  /** Why this task doesn't apply — shown wherever `isNotApplicable` is true, so that state never has
+   * to be inferred from the absence of a due date or a completion. Null whenever isNotApplicable is
+   * false. */
+  notApplicableReason: string | null;
   /** From the task template. The server enforces this too; the UI uses it to ask for the note up front. */
   requiresCompletionNote: boolean;
 }
@@ -295,6 +299,9 @@ export interface DischargeRequestSummary {
 export interface Occupant {
   /** The `admissions` row id, when real — see BoardTask.id for why this is null on the fictional boards. */
   admissionId: string | null;
+  /** The `clients` row id, when real — null on the fictional boards, same reasoning as admissionId.
+   * Needed to upload a photo, since `client_photos` is keyed by client rather than by admission. */
+  clientId: string | null;
   /** Null unless a non-routine discharge is pending approval or approved and awaiting finalisation. */
   dischargeRequest: DischargeRequestSummary | null;
   reference: string;
@@ -366,6 +373,9 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
       recorded,
       isComplete,
       isNotApplicable,
+      notApplicableReason: isNotApplicable
+        ? 'Not applicable — the planned programme ends before this task falls due.'
+        : null,
       // Irrelevant here: with id null nothing on this board can be completed anyway.
       requiresCompletionNote: false,
       // A not-applicable task is never overdue. The programme does not reach it, so there is no
@@ -385,6 +395,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
   return {
     // No database row behind this board — see admissionId's doc comment.
     admissionId: null,
+    clientId: null,
     dischargeRequest: null,
     reference: CLIENT_REFS[row.bed] ?? `PL-${row.bed}`,
     displayName: CLIENT_NAMES[row.bed] ?? `Client ${row.bed}`,
