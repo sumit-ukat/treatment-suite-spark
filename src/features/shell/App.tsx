@@ -424,7 +424,9 @@ function CentreShell() {
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <Outlet context={context} />
+            <div className="mx-auto w-full max-w-[1500px]">
+              <Outlet context={context} />
+            </div>
           </main>
         </div>
       </div>

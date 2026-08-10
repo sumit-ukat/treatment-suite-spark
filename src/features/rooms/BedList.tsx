@@ -50,7 +50,7 @@ function SortHeader({
     <button
       type="button"
       onClick={() => onSort(col)}
-      className={`flex items-center gap-1 text-left text-[10px] font-semibold tracking-[0.06em] uppercase transition ${
+      className={`flex items-center gap-1 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase transition ${
         active ? 'text-[var(--color-accent)]' : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
       } ${className}`}
     >
@@ -115,10 +115,10 @@ export function BedList({
           <SortHeader label="Client" col="name" sort={sort} dir={dir} onSort={onSort} />
           <SortHeader label="Day" col="day" sort={sort} dir={dir} onSort={onSort} />
           <SortHeader label="Discharge" col="discharge" sort={sort} dir={dir} onSort={onSort} />
-          <span className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+          <span className="text-[10.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
             Therapist
           </span>
-          <span className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+          <span className="text-[10.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
             Buddy
           </span>
           <SortHeader label="Actions" col="progress" sort={sort} dir={dir} onSort={onSort} />
@@ -132,17 +132,16 @@ export function BedList({
             if (!o) {
               return (
                 <li key={bed.label}>
-                  <div className={`${GRID} px-3 py-1.5 opacity-60`}>
+                  <div className={`${GRID} min-h-[52px] px-3 py-2 opacity-60`}>
                     <span className="nums rounded-md bg-[color:color-mix(in_oklab,var(--brand-blue)_24%,transparent)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--brand-blue-ink)]">
                       {bed.label}
                     </span>
-                    <span className="text-[12px] text-[var(--brand-blue-ink)]">
+                    <span className="text-[12.5px] text-[var(--brand-blue-ink)]">
                       Available
-                      <span className="ml-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
+                      <span className="ml-1.5 text-[11px] text-[var(--color-ink-muted)]">
                         {bed.shared ? 'shared room bed' : 'single room'}
                       </span>
                     </span>
-                    <span className="col-span-6" />
                   </div>
                 </li>
               );
@@ -156,7 +155,7 @@ export function BedList({
                 <button
                   type="button"
                   onClick={() => onOpen(bed.label)}
-                  className={`${GRID} w-full px-3 py-2 text-left transition hover:bg-[var(--color-accent-soft)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+                  className={`${GRID} min-h-[52px] w-full px-3 py-2 text-left transition hover:bg-[var(--color-accent-soft)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
                 >
                   <span className="nums rounded-md bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--color-accent)]">
                     {bed.label}
@@ -165,14 +164,14 @@ export function BedList({
                   <span className="flex min-w-0 items-center gap-2">
                     <PhotoBadge occupant={o} size="sm" />
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-medium">{o.displayName}</span>
-                      <span className="nums block truncate text-[10.5px] text-[var(--color-ink-muted)]">
+                      <span className="block truncate text-[13px] font-medium">{o.displayName}</span>
+                      <span className="nums block truncate text-[11px] text-[var(--color-ink-muted)]">
                         {o.reference}
                       </span>
                     </span>
                   </span>
 
-                  <span className="nums text-[12px]">
+                  <span className="nums text-[12.5px]">
                     {overrun ? (
                       <span className="font-semibold text-red-600 dark:text-red-400">
                         {o.treatmentDay}
@@ -187,7 +186,7 @@ export function BedList({
                   </span>
 
                   <span
-                    className={`nums text-[12px] ${
+                    className={`nums text-[12.5px] ${
                       overrun
                         ? 'font-semibold text-red-600 dark:text-red-400'
                         : o.daysUntilDischarge <= 3
@@ -198,13 +197,13 @@ export function BedList({
                     {formatDate(o.plannedDischargeDate)}
                   </span>
 
-                  <span className="truncate text-[12px]">
+                  <span className="truncate text-[12.5px]">
                     {o.therapist ?? (
                       <span className="text-amber-600 dark:text-amber-400">Not assigned</span>
                     )}
                   </span>
 
-                  <span className="truncate text-[12px]">{o.buddy}</span>
+                  <span className="truncate text-[12.5px]">{o.buddy}</span>
 
                   <span className="flex items-center gap-2">
                     <span className="h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
@@ -213,7 +212,7 @@ export function BedList({
                         style={{ width: `${pct}%` }}
                       />
                     </span>
-                    <span className="nums text-[11px] text-[var(--color-ink-muted)]">
+                    <span className="nums text-[11.5px] text-[var(--color-ink-muted)]">
                       {o.completedCount}/{o.totalCount}
                     </span>
                   </span>
