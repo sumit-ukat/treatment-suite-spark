@@ -114,19 +114,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       else setStatus('signed_out');
     });
 
-    const { data: sub } = data.auth.onAuthStateChange(async (_event, next) => {
+    const { data: sub } = data.auth.onAuthStateChange(async (event, next) => {
       setSession(next);
-      if (next) {
-        setStatus('loading');
-        await loadAccess();
-      } else {
+      if (!next) {
         setProfile(null);
         setRoleNames([]);
         setRoleCodes([]);
         setPermissions(new Set());
         setCentres([]);
         setStatus('signed_out');
+        return;
       }
+      // A token refresh — automatic, periodic, and firing again whenever the tab regains focus — is
+      // not a new sign-in. Treating it like one flipped `status` to 'loading' mid-session, which
+      // unmounts the whole dashboard and resets its local state (which section/centre you were on) —
+      // this is what looked like being "thrown back to the dashboard" just from leaving a centre's
+      // page open for a while or switching tabs and back.
+      if (event === 'TOKEN_REFRESHED') return;
+      setStatus('loading');
+      await loadAccess();
     });
 
     return () => {
