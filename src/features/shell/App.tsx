@@ -1,26 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BedDouble,
-  CalendarClock,
   ChevronDown,
   ClipboardList,
-  Clock,
-  Flag,
-  ImageOff,
+  Filter,
   LayoutGrid,
   List as ListIcon,
   LogOut,
-  Minus,
   Plus,
   Search,
-  TriangleAlert,
 } from 'lucide-react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { buildRealBoard } from '../rooms/real-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { formatDateWithDay } from '../../lib/format.js';
 import { BrandMark } from '../../components/brand.tsx';
-import { MetricCard } from '../../components/metric-card.tsx';
+import { PageHeader } from '../../components/metric-card.tsx';
 import { ThemeToggle } from '../../components/theme-toggle.tsx';
 import {
   DropdownMenu,
@@ -46,7 +40,7 @@ import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
-import { Chip, FilterPill, Panel, RingChart } from '../../components/ui.tsx';
+import { Chip } from '../../components/ui.tsx';
 
 /**
  * Gate the whole application on the session.
@@ -505,127 +499,86 @@ function Dashboard() {
               </button>
             </div>
           ) : isBoard ? (
-            <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
-              <section
-                aria-label="Centre summary"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7"
-              >
-                <MetricCard
-                  icon={<BedDouble className="size-4" />}
-                  label="Occupancy"
-                  value={`${summary.bedsOccupied}/${summary.bedsTotal}`}
-                  hint={`${summary.occupancyPercent}% · ${summary.bedsAvailable} free`}
-                  accent="primary"
-                />
-                <MetricCard
-                  icon={<TriangleAlert className="size-4" />}
-                  label="Overdue"
-                  value={summary.overdue}
-                  accent={summary.overdue > 0 ? 'pink' : 'default'}
-                  active={filter === 'overdue'}
-                  actionLabel={filter === 'overdue' ? 'Clear filter' : 'View overdue'}
-                  onClick={() => setFilter(filter === 'overdue' ? 'all' : 'overdue')}
-                />
-                <MetricCard
-                  icon={<Clock className="size-4" />}
-                  label="Due today"
-                  value={summary.dueToday}
-                  active={filter === 'due_today'}
-                  actionLabel={filter === 'due_today' ? 'Clear filter' : 'View due today'}
-                  onClick={() => setFilter(filter === 'due_today' ? 'all' : 'due_today')}
-                />
-                <MetricCard
-                  icon={<CalendarClock className="size-4" />}
-                  label="Discharging"
-                  value={summary.dischargingWithin7Days}
-                  hint="within 7 days"
-                  active={filter === 'discharging'}
-                  actionLabel={filter === 'discharging' ? 'Clear filter' : 'View discharging'}
-                  onClick={() => setFilter(filter === 'discharging' ? 'all' : 'discharging')}
-                />
-                <MetricCard
-                  icon={<Minus className="size-4" />}
-                  label="Not applicable"
-                  value={summary.notApplicable}
-                  hint="beyond programme end"
-                />
-                <MetricCard
-                  icon={<ImageOff className="size-4" />}
-                  label="No photo"
-                  value={summary.photoAttention}
-                  active={filter === 'photo'}
-                  actionLabel={filter === 'photo' ? 'Clear filter' : 'Review photos'}
-                  onClick={() => setFilter(filter === 'photo' ? 'all' : 'photo')}
-                />
-                <MetricCard
-                  icon={<Flag className="size-4" />}
-                  label="Restricted"
-                  value={summary.restrictedAlerts}
-                  active={filter === 'alerts'}
-                  actionLabel={filter === 'alerts' ? 'Clear filter' : 'View alerts'}
-                  onClick={() => setFilter(filter === 'alerts' ? 'all' : 'alerts')}
-                />
-              </section>
+            <div className="space-y-6 px-4 py-5 sm:px-5">
+              <PageHeader
+                eyebrow={centre.county}
+                title={`${centre.name} room board`}
+                description={`${summary.bedsOccupied} of ${summary.bedsTotal} beds occupied · ${counts.overdue} beds with overdue actions`}
+                actions={
+                  <>
+                    <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)]">
+                      {(['board', 'list'] as const).map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setView(v)}
+                          aria-pressed={view === v}
+                          className={`inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-semibold transition ${
+                            view === v
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
+                          {v === 'board' ? (
+                            <>
+                              <LayoutGrid className="size-3.5" /> Cards
+                            </>
+                          ) : (
+                            <>
+                              <ListIcon className="size-3.5" /> List
+                            </>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSection('admissions')}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
+                    >
+                      <Plus className="size-4" /> Admit client
+                    </button>
+                  </>
+                }
+              />
 
-              <Panel title="Occupancy" subtitle={centre.name} className="mt-4 sm:w-fit">
-                <div className="flex items-center gap-4 py-1">
-                  <RingChart
-                    percent={summary.occupancyPercent}
-                    value={`${summary.bedsOccupied}/${summary.bedsTotal}`}
-                    label="Beds filled"
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
+                <span className="flex items-center gap-1.5 pl-1 text-xs font-semibold text-muted-foreground">
+                  <Filter className="size-3.5" /> Filters
+                </span>
+                <div className="relative min-w-[12rem] flex-1">
+                  <Search
+                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
                   />
-                  <div className="text-[11.5px] leading-relaxed text-[var(--color-ink-muted)]">
-                    <span className="font-medium text-[var(--color-ink)]">{summary.bedsAvailable}</span>{' '}
-                    available now
-                  </div>
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search bed, client or therapist"
+                    aria-label="Search the board"
+                    className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
+                  />
                 </div>
-              </Panel>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
-                <FilterPill
-                  label="All beds"
-                  count={board.length}
-                  active={filter === 'all'}
-                  onClick={() => setFilter('all')}
-                />
-                <FilterPill
-                  label="Occupied"
-                  count={counts.occupied}
-                  active={filter === 'occupied'}
-                  onClick={() => setFilter('occupied')}
-                />
-                <FilterPill
-                  label="Available"
-                  count={counts.available}
-                  active={filter === 'available'}
-                  onClick={() => setFilter('available')}
-                />
-                <span className="mx-1 h-5 w-px bg-[var(--color-line)]" aria-hidden="true" />
-                <FilterPill
-                  label="Overdue"
-                  count={counts.overdue}
-                  active={filter === 'overdue'}
-                  onClick={() => setFilter('overdue')}
-                />
-                <FilterPill
-                  label="Due today"
-                  count={counts.dueToday}
-                  active={filter === 'due_today'}
-                  onClick={() => setFilter('due_today')}
-                />
-                <FilterPill
-                  label="Discharging"
-                  count={counts.discharging}
-                  active={filter === 'discharging'}
-                  onClick={() => setFilter('discharging')}
-                />
-
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as FilterId)}
+                  aria-label="Filter by status"
+                  className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="available">Available beds</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_today">Due today</option>
+                  <option value="discharging">Discharging within 7 days</option>
+                  <option value="photo">No photograph</option>
+                  <option value="alerts">Restricted alert</option>
+                </select>
                 {therapists.length > 0 ? (
                   <select
                     value={therapistFilter}
                     onChange={(e) => setTherapistFilter(e.target.value)}
                     aria-label="Filter by therapist"
-                    className="rounded-lg border border-[var(--color-line)] bg-card px-2 py-1.5 text-[11.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                    className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
                   >
                     <option value="all">All therapists</option>
                     {therapists.map((t) => (
@@ -635,87 +588,51 @@ function Dashboard() {
                     ))}
                   </select>
                 ) : null}
-
-                {/* Cards to glance, list to scan. Different jobs, so both stay. */}
-                <div
-                  role="group"
-                  aria-label="View"
-                  className="ml-auto flex overflow-hidden rounded-lg border border-[var(--color-line)]"
-                >
-                  {(['board', 'list'] as const).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setView(v)}
-                      aria-pressed={view === v}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] font-medium transition ${
-                        view === v
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-card text-muted-foreground hover:text-[var(--color-ink)]'
-                      }`}
-                    >
-                      {v === 'board' ? (
-                        <>
-                          <LayoutGrid className="size-3.5" /> Cards
-                        </>
-                      ) : (
-                        <>
-                          <ListIcon className="size-3.5" /> List
-                        </>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSection('admissions')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
-                >
-                  <Plus className="size-3.5" /> Admit client
-                </button>
+                <span className="tabular ml-auto pr-1 text-xs text-muted-foreground">
+                  {visible.length} beds shown
+                </span>
               </div>
 
-              <Panel title="Bed spaces" subtitle={`${visible.length} of ${board.length} shown`} className="mt-4">
-                {visible.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--color-line)] py-14 text-center">
-                    <div className="text-[13px] font-medium">No bed spaces match</div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilter('all');
-                        setQuery('');
-                      }}
-                      className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                ) : view === 'list' ? (
-                  <section aria-label="Bed spaces">
-                    <BedList beds={visible} onOpen={setOpenBed} />
-                  </section>
-                ) : (
-                  <section
-                    aria-label="Bed spaces"
-                    className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+              {visible.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--color-line)] py-14 text-center">
+                  <div className="text-[13px] font-medium">No bed spaces match</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter('all');
+                      setTherapistFilter('all');
+                      setQuery('');
+                    }}
+                    className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
                   >
-                    {visible.map((bed) =>
-                      bed.occupant ? (
-                        <OccupiedCard key={bed.label} bed={bed} onOpen={() => setOpenBed(bed.label)} />
-                      ) : (
-                        <AvailableCard key={bed.label} bed={bed} />
-                      ),
-                    )}
-                  </section>
-                )}
+                    Clear filters
+                  </button>
+                </div>
+              ) : view === 'list' ? (
+                <section aria-label="Bed spaces">
+                  <BedList beds={visible} onOpen={setOpenBed} />
+                </section>
+              ) : (
+                <section
+                  aria-label="Bed spaces"
+                  className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+                >
+                  {visible.map((bed) =>
+                    bed.occupant ? (
+                      <OccupiedCard key={bed.label} bed={bed} onOpen={() => setOpenBed(bed.label)} />
+                    ) : (
+                      <AvailableCard key={bed.label} bed={bed} />
+                    ),
+                  )}
+                </section>
+              )}
 
-                <p className="mt-4 max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-                  Room cards omit clinical detail by design. Substance, detox, medical and safeguarding
-                  content appear nowhere on this board at any permission level — a restricted alert
-                  shows as a flag only, with detail reachable through the client file by authorised
-                  roles.
-                </p>
-              </Panel>
+              <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+                Room cards omit clinical detail by design. Substance, detox, medical and safeguarding
+                content appear nowhere on this board at any permission level — a restricted alert
+                shows as a flag only, with detail reachable through the client file by authorised
+                roles.
+              </p>
             </div>
           ) : section === 'admin' && authCentre ? (
             <Administration centre={authCentre} />
