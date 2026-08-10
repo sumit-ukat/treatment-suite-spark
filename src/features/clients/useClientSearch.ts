@@ -5,10 +5,10 @@ import { clients as clientsService, type ClientSearchResult } from '../../servic
  * Shared by the standalone Clients directory and the admission form's "use an existing client"
  * picker — one search behaviour, not two copies that drift.
  *
- * The 2-character minimum and the debounce both exist for the same reason: `app.search_clients`
- * refuses anything under 2 characters itself (see migration 0028), so a query below that is not sent
- * at all rather than sent and discarded — one fewer round trip for the case that happens on every
- * first keystroke.
+ * An empty query lists everyone at the centre; `app.search_clients` (see migration 0032) refuses only
+ * a single character, since that's still too broad an ILIKE to be useful — so a one-character query is
+ * not sent at all rather than sent and discarded, the same reasoning migration 0028 originally applied
+ * to the old two-character minimum.
  */
 export function useClientSearch(centreId: string) {
   const [query, setQuery] = useState('');
@@ -18,7 +18,7 @@ export function useClientSearch(centreId: string) {
 
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 2) {
+    if (q.length === 1) {
       setResults([]);
       setError(null);
       setLoading(false);
