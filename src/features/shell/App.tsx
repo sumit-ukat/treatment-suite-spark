@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import {
   ChevronDown,
   ClipboardList,
   Filter,
@@ -24,7 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu.tsx';
-import { useAuth } from '../auth/AuthProvider.tsx';
+import { useAuth, type AccessibleCentre } from '../auth/AuthProvider.tsx';
 import {
   AccessErrorScreen,
   LoadingScreen,
@@ -62,8 +74,45 @@ export default function App() {
     case 'error':
       return <AccessErrorScreen />;
     case 'signed_in':
-      return <Dashboard />;
+      return (
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      );
   }
+}
+
+/**
+ * URL structure.
+ *
+ * `/hub` is the group overview; everything else is scoped under `/centre/:centreSlug/...`, matching
+ * the Lovable-sourced redesign's own routing exactly (see the URL-structure sheet this was written
+ * alongside). Only `primrose-lodge` has a real accessible centre behind it today — every other slug
+ * still resolves and renders (so a bookmark or a shared link never 404s), it just falls through to
+ * the same "no matching centre in the database" state the old section-based nav already showed for
+ * an unconfigured centre. Nothing about the other nine centres changed; they were never wired to real
+ * data before this, and still aren't.
+ */
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/hub" replace />} />
+      <Route path="/hub" element={<HubPage />} />
+      <Route path="/centre/:centreSlug" element={<CentreShell />}>
+        <Route index element={<Navigate to="board" replace />} />
+        <Route path="board" element={<BoardPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="admissions" element={<AdmissionsPage />} />
+        <Route path="audit" element={<AuditPage />} />
+        <Route path="admin" element={<AdminPage />} />
+        <Route path="my-work" element={<NotBuiltPage />} />
+        <Route path="tasks" element={<NotBuiltPage />} />
+        <Route path="family" element={<NotBuiltPage />} />
+        <Route path="medical" element={<NotBuiltPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/hub" replace />} />
+    </Routes>
+  );
 }
 
 type FilterId =
@@ -240,6 +289,149 @@ function HubHeader() {
   );
 }
 
+/** `/hub` — no rail, because no rail item can act on ten centres at once. Entering a centre (`/centre/
+ * :centreSlug/board`) swaps to a workspace whose every control is scoped to that one centre. */
+function HubPage() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <ProvenanceBanner />
+      <HubHeader />
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <GroupDashboard onOpenCentre={(slug) => navigate(`/centre/${slug}/board`)} />
+      </main>
+    </div>
+  );
+}
+
+interface CentreContext {
+  centre: CentreSummary;
+  centres: readonly CentreSummary[];
+  authCentre: AccessibleCentre | null;
+  query: string;
+  setQuery: (q: string) => void;
+}
+
+/** Every page under `/centre/:centreSlug` reads its centre via this instead of its own lookup, so a
+ * bookmarked or shared link resolves the same centre the sidebar and top bar already agree on. */
+function useCentreContext(): CentreContext {
+  return useOutletContext<CentreContext>();
+}
+
+/**
+ * The sidebar + top bar shell shared by every centre-scoped page, rendered once per `:centreSlug` and
+ * left in place across nested route changes — `<Outlet/>` swaps only the page content, matching how
+ * the old section switch never remounted the shell either.
+ */
+function CentreShell() {
+  const { centreSlug = '' } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K focuses the search bar from anywhere in the centre workspace, matching the shortcut
+  // hint shown next to it.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Fictional summary stats (occupancy, overdue counts) for the GROUP hub still come from
+  // centres-data.ts — that screen is a separate, larger piece of work. Centre-level pages below read
+  // real data through `authCentre` instead.
+  const centres = useMemo(() => buildCentres(), []);
+  const centre = centres.find((c) => c.slug === centreSlug) ?? centres[0]!;
+
+  const { centres: authCentres } = useAuth();
+  const authCentre = authCentres.find((c) => c.slug === centreSlug) ?? null;
+
+  const activeId = location.pathname.split('/').filter(Boolean).pop() ?? 'board';
+
+  const context: CentreContext = { centre, centres, authCentre, query, setQuery };
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <ProvenanceBanner />
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <Sidebar
+          active={activeId}
+          onSelect={(id) => navigate(id)}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+          centreName={centre.name}
+          onLeaveCentre={() => navigate('/hub')}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[10.5px] tracking-wide text-[var(--color-ink-muted)] uppercase">
+                UK Addiction Treatment Group
+                <span aria-hidden="true">›</span>
+                {centre.region}
+              </div>
+              <div className="flex items-center gap-2">
+                <h1 className="truncate font-display text-[15px] leading-tight font-semibold">
+                  {centre.name}
+                </h1>
+                <Chip label="Development" tone="warn" />
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2.5">
+              <CentreSwitcher
+                centres={centres}
+                value={centreSlug}
+                onChange={(slug) => navigate(`/centre/${slug}/board`)}
+              />
+              <label className="relative hidden sm:block">
+                <span className="sr-only">Search beds, clients, staff</span>
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search bed, client, staff…"
+                  className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+                />
+                <kbd
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
+                >
+                  ⌘K
+                </kbd>
+              </label>
+              <div className="nums hidden text-right text-[11px] leading-tight text-[var(--color-ink-muted)] lg:block">
+                <div className="font-medium text-[var(--color-ink)]">{formatDateWithDay(new Date())}</div>
+                <div>Europe/London</div>
+              </div>
+              <ThemeToggle />
+              <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
+            </div>
+          </header>
+
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <Outlet context={context} />
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const EMPTY_SUMMARY: BoardSummary = {
   bedsTotal: 0,
   bedsOccupied: 0,
@@ -256,56 +448,28 @@ const EMPTY_SUMMARY: BoardSummary = {
   dischargeMismatches: 0,
 };
 
-function Dashboard() {
-  const [section, setSection] = useState('group');
-  const [collapsed, setCollapsed] = useState(false);
+/** `/centre/:centreSlug/board` — the one page with meaningful state of its own (filters, view mode,
+ * which bed's detail panel is open), so it keeps that state locally rather than in the shell. */
+function BoardPage() {
+  const { centre, authCentre, query, setQuery } = useCentreContext();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<FilterId>('all');
   const [therapistFilter, setTherapistFilter] = useState('all');
   const [view, setView] = useState<'board' | 'list'>('list');
-  const [query, setQuery] = useState('');
-  const [openBed, setOpenBed] = useState<string | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ⌘K / Ctrl+K focuses the search bar from anywhere in the centre workspace, matching the shortcut
-  // hint shown next to it. No-op on the hub, which has no search bar to focus.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
-
-  // Which centre the Centre-level views are scoped to. Fictional summary stats (occupancy, overdue
-  // counts) for the GROUP hub still come from centres-data.ts — that screen is a separate, larger
-  // piece of work. The centre-level room board below reads real data.
-  const centres = useMemo(() => buildCentres(), []);
-  const [centreSlug, setCentreSlug] = useState('primrose-lodge');
-  const centre = centres.find((c) => c.slug === centreSlug) ?? centres[0]!;
-
-  // The REAL centre from Supabase, matched by slug.
-  const { centres: authCentres } = useAuth();
-  const authCentre = authCentres.find((c) => c.slug === centreSlug) ?? null;
-
-  // The real room board. Replaces the fictional/frozen board that used to render unconditionally —
-  // admitting a client through the real admission form now shows up here, because this is the same
-  // database that form writes to.
   const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);
   const [boardError, setBoardError] = useState<string | null>(null);
   // Bumped after a task is completed/reopened or a discharge action lands, to re-read the board rather
-  // than patch local state to what we assume the server did. The server owns this state; this asks it
-  // what happened — a discharge in particular can move an occupant off the board entirely.
+  // than patch local state to what we assume the server did.
   const [boardVersion, setBoardVersion] = useState(0);
 
   useEffect(() => {
-    // Re-fetches on returning to this section, not only when the centre changes. Without `section`
-    // in the dependency list, admitting a client and navigating back to the board showed the stale
-    // pre-admission state — found by actually doing that in the browser, not by inspection.
-    if (!authCentre || section !== 'board') return;
+    if (!authCentre) {
+      setBoardLoading(false);
+      return;
+    }
     let cancelled = false;
     setBoardLoading(true);
     buildRealBoard(authCentre.id)
@@ -324,7 +488,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [authCentre, section, boardVersion]);
+  }, [authCentre, boardVersion]);
 
   const board = realBoard;
   const summary = useMemo(() => (board.length ? summarise(board) : EMPTY_SUMMARY), [board]);
@@ -350,9 +514,12 @@ function Dashboard() {
     );
   });
 
-  const selected = board.find((b) => b.label === openBed) ?? null;
-  const activeNav = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === section);
-  const isBoard = section === 'board';
+  // Which bed's detail panel is open lives in the URL (?bed=), not local state — so opening one from
+  // the client directory, or sharing/reloading the link, lands on the same panel.
+  const openBedLabel = searchParams.get('bed');
+  const selected = board.find((b) => b.label === openBedLabel) ?? null;
+  const openBed = (label: string) => setSearchParams({ bed: label });
+  const closeBed = () => setSearchParams({});
 
   const counts = useMemo(
     () => ({
@@ -367,334 +534,258 @@ function Dashboard() {
     [board],
   );
 
-  /*
-   * Two shapes, not one.
-   *
-   * The hub lists centres and nothing else — no rail, because no rail item can act on ten centres at
-   * once. Entering a centre swaps to a workspace whose every control is scoped to that centre.
-   *
-   * This mirrors how the centres actually run: independently, with no data crossing between them.
-   */
-  if (section === 'group') {
+  if (boardLoading) {
+    return <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading the room board…</div>;
+  }
+  if (boardError) {
     return (
-      <div className="flex h-dvh flex-col overflow-hidden">
-        <ProvenanceBanner />
-        <HubHeader />
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <GroupDashboard
-            onOpenCentre={(slug) => {
-              setCentreSlug(slug);
-              setSection('board');
-            }}
-          />
-        </main>
+      <div className="m-4 rounded-lg border border-red-300 bg-red-50 p-3 text-[13px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+        Could not load the room board: {boardError}
+      </div>
+    );
+  }
+  if (!authCentre) {
+    return <NoMatchingCentre centreName={centre.name} />;
+  }
+  if (board.length === 0) {
+    return (
+      <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
+        <div
+          aria-hidden="true"
+          className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[18px] text-[var(--color-accent)]"
+        >
+          ▦
+        </div>
+        <h2 className="mt-3.5 text-[16px] font-semibold">{centre.name} is not configured yet</h2>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+          It has no rooms or bed spaces in the database yet. Rather than show invented rooms, this page
+          stays empty until they are entered under Administration.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('../admin')}
+          className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
+        >
+          Go to Administration
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <ProvenanceBanner />
-
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-      <Sidebar
-        active={section}
-        onSelect={setSection}
-        collapsed={collapsed}
-        onToggle={() => setCollapsed((c) => !c)}
-        centreName={centre.name}
-        onLeaveCentre={() => setSection('group')}
-        occupied={board.length ? summary.bedsOccupied : undefined}
-        capacity={board.length ? summary.bedsTotal : undefined}
+    <div className="space-y-6 px-4 py-5 sm:px-5">
+      <PageHeader
+        eyebrow={centre.county}
+        title={`${centre.name} room board`}
+        description={`${summary.bedsOccupied} of ${summary.bedsTotal} beds occupied · ${counts.overdue} beds with overdue actions`}
+        actions={
+          <>
+            <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)]">
+              {(['board', 'list'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  aria-pressed={view === v}
+                  className={`inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-semibold transition ${
+                    view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                  }`}
+                >
+                  {v === 'board' ? (
+                    <>
+                      <LayoutGrid className="size-3.5" /> Cards
+                    </>
+                  ) : (
+                    <>
+                      <ListIcon className="size-3.5" /> List
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('../admissions')}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
+            >
+              <Plus className="size-4" /> Admit client
+            </button>
+          </>
+        }
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar */}
-        <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[10.5px] tracking-wide text-[var(--color-ink-muted)] uppercase">
-              UK Addiction Treatment Group
-              {section !== 'group' ? (
-                <>
-                  <span aria-hidden="true">›</span>
-                  {centre.region}
-                </>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              <h1 className="truncate font-display text-[15px] leading-tight font-semibold">
-                {section === 'group' ? 'All centres' : centre.name}
-              </h1>
-              <Chip label="Development" tone="warn" />
-            </div>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2.5">
-            {/* Centre selector. Hidden on the group view, which spans every centre by definition. */}
-            {section !== 'group' ? (
-              <CentreSwitcher centres={centres} value={centreSlug} onChange={setCentreSlug} />
-            ) : null}
-            <label className="relative hidden sm:block">
-              <span className="sr-only">Search beds, clients, staff</span>
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
-              />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search bed, client, staff…"
-                className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
-              />
-              {/* A hint, not a control — the shortcut works everywhere in this workspace regardless
-                  of whether this badge is visible, via the window-level listener above. */}
-              <kbd
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
-              >
-                ⌘K
-              </kbd>
-            </label>
-            <div className="nums hidden text-right text-[11px] leading-tight text-[var(--color-ink-muted)] lg:block">
-              <div className="font-medium text-[var(--color-ink)]">
-                {formatDateWithDay(new Date())}
-              </div>
-              <div>Europe/London</div>
-            </div>
-            <ThemeToggle />
-            <UserMenu variant="panel" onOpenAdmin={authCentre ? () => setSection('admin') : undefined} />
-          </div>
-        </header>
-
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          {isBoard && boardLoading ? (
-            <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading the room board…</div>
-          ) : isBoard && boardError ? (
-            <div className="m-4 rounded-lg border border-red-300 bg-red-50 p-3 text-[13px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-              Could not load the room board: {boardError}
-            </div>
-          ) : isBoard && board.length === 0 ? (
-            <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
-              <div
-                aria-hidden="true"
-                className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[18px] text-[var(--color-accent)]"
-              >
-                ▦
-              </div>
-              <h2 className="mt-3.5 text-[16px] font-semibold">
-                {centre.name} is not configured yet
-              </h2>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-                It has no rooms or bed spaces in the database yet. Rather than show invented rooms,
-                this page stays empty until they are entered under Administration.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSection('admin')}
-                className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
-              >
-                Go to Administration
-              </button>
-            </div>
-          ) : isBoard ? (
-            <div className="space-y-6 px-4 py-5 sm:px-5">
-              <PageHeader
-                eyebrow={centre.county}
-                title={`${centre.name} room board`}
-                description={`${summary.bedsOccupied} of ${summary.bedsTotal} beds occupied · ${counts.overdue} beds with overdue actions`}
-                actions={
-                  <>
-                    <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)]">
-                      {(['board', 'list'] as const).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          onClick={() => setView(v)}
-                          aria-pressed={view === v}
-                          className={`inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-semibold transition ${
-                            view === v
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          {v === 'board' ? (
-                            <>
-                              <LayoutGrid className="size-3.5" /> Cards
-                            </>
-                          ) : (
-                            <>
-                              <ListIcon className="size-3.5" /> List
-                            </>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSection('admissions')}
-                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
-                    >
-                      <Plus className="size-4" /> Admit client
-                    </button>
-                  </>
-                }
-              />
-
-              <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
-                <span className="flex items-center gap-1.5 pl-1 text-xs font-semibold text-muted-foreground">
-                  <Filter className="size-3.5" /> Filters
-                </span>
-                <div className="relative min-w-[12rem] flex-1">
-                  <Search
-                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search bed, client or therapist"
-                    aria-label="Search the board"
-                    className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
-                  />
-                </div>
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as FilterId)}
-                  aria-label="Filter by status"
-                  className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-                >
-                  <option value="all">All statuses</option>
-                  <option value="available">Available beds</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="due_today">Due today</option>
-                  <option value="discharging">Discharging within 7 days</option>
-                  <option value="photo">No photograph</option>
-                  <option value="alerts">Restricted alert</option>
-                </select>
-                {therapists.length > 0 ? (
-                  <select
-                    value={therapistFilter}
-                    onChange={(e) => setTherapistFilter(e.target.value)}
-                    aria-label="Filter by therapist"
-                    className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-                  >
-                    <option value="all">All therapists</option>
-                    {therapists.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <span className="tabular ml-auto pr-1 text-xs text-muted-foreground">
-                  {visible.length} beds shown
-                </span>
-              </div>
-
-              {visible.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[var(--color-line)] py-14 text-center">
-                  <div className="text-[13px] font-medium">No bed spaces match</div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFilter('all');
-                      setTherapistFilter('all');
-                      setQuery('');
-                    }}
-                    className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              ) : view === 'list' ? (
-                <section aria-label="Bed spaces">
-                  <BedList beds={visible} onOpen={setOpenBed} />
-                </section>
-              ) : (
-                <section
-                  aria-label="Bed spaces"
-                  className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-                >
-                  {visible.map((bed) =>
-                    bed.occupant ? (
-                      <OccupiedCard key={bed.label} bed={bed} onOpen={() => setOpenBed(bed.label)} />
-                    ) : (
-                      <AvailableCard key={bed.label} bed={bed} />
-                    ),
-                  )}
-                </section>
-              )}
-
-              <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-                Room cards omit clinical detail by design. Substance, detox, medical and safeguarding
-                content appear nowhere on this board at any permission level — a restricted alert
-                shows as a flag only, with detail reachable through the client file by authorised
-                roles.
-              </p>
-            </div>
-          ) : section === 'admin' && authCentre ? (
-            <Administration centre={authCentre} />
-          ) : section === 'admissions' && authCentre ? (
-            <AdmitClientForm centre={authCentre} />
-          ) : section === 'clients' && authCentre ? (
-            <ClientDirectory
-              centre={authCentre}
-              onOpenBed={(bedLabel) => {
-                setSection('board');
-                setOpenBed(bedLabel);
-              }}
-            />
-          ) : section === 'audit' ? (
-            <AuditHistory />
-          ) : section === 'admin' || section === 'admissions' || section === 'clients' ? (
-            <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
-              <div
-                aria-hidden="true"
-                className="grid size-12 place-items-center rounded-xl bg-amber-500/12 text-[18px] text-amber-600 dark:text-amber-400"
-              >
-                &#9888;
-              </div>
-              <h2 className="mt-3.5 text-[16px] font-semibold">No matching centre in the database</h2>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-                &ldquo;{centre.name}&rdquo; exists in the group overview but not in your accessible
-                centres in Supabase, so there is nothing real to configure yet.
-              </p>
-            </div>
-          ) : (
-            <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
-              <div
-                aria-hidden="true"
-                className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-              >
-                {activeNav ? <activeNav.icon className="size-5" /> : null}
-              </div>
-              <h2 className="mt-3.5 text-[16px] font-semibold">{activeNav?.label}</h2>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-                Not built yet. It appears in the navigation so the shape of the product is reviewable
-                — but nothing here is faked, so there is no screen to show.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSection('board')}
-                className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
-              >
-                Back to room board
-              </button>
-            </div>
-          )}
-        </main>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
+        <span className="flex items-center gap-1.5 pl-1 text-xs font-semibold text-muted-foreground">
+          <Filter className="size-3.5" /> Filters
+        </span>
+        <div className="relative min-w-[12rem] flex-1">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search bed, client or therapist"
+            aria-label="Search the board"
+            className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
+          />
         </div>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as FilterId)}
+          aria-label="Filter by status"
+          className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+        >
+          <option value="all">All statuses</option>
+          <option value="available">Available beds</option>
+          <option value="overdue">Overdue</option>
+          <option value="due_today">Due today</option>
+          <option value="discharging">Discharging within 7 days</option>
+          <option value="photo">No photograph</option>
+          <option value="alerts">Restricted alert</option>
+        </select>
+        {therapists.length > 0 ? (
+          <select
+            value={therapistFilter}
+            onChange={(e) => setTherapistFilter(e.target.value)}
+            aria-label="Filter by therapist"
+            className="h-9 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+          >
+            <option value="all">All therapists</option>
+            {therapists.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <span className="tabular ml-auto pr-1 text-xs text-muted-foreground">
+          {visible.length} beds shown
+        </span>
       </div>
 
+      {visible.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[var(--color-line)] py-14 text-center">
+          <div className="text-[13px] font-medium">No bed spaces match</div>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter('all');
+              setTherapistFilter('all');
+              setQuery('');
+            }}
+            className="mt-1.5 text-[12px] text-[var(--color-accent)] underline underline-offset-2"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : view === 'list' ? (
+        <section aria-label="Bed spaces">
+          <BedList beds={visible} onOpen={openBed} />
+        </section>
+      ) : (
+        <section
+          aria-label="Bed spaces"
+          className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+        >
+          {visible.map((bed) =>
+            bed.occupant ? (
+              <OccupiedCard key={bed.label} bed={bed} onOpen={() => openBed(bed.label)} />
+            ) : (
+              <AvailableCard key={bed.label} bed={bed} />
+            ),
+          )}
+        </section>
+      )}
+
+      <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+        Room cards omit clinical detail by design. Substance, detox, medical and safeguarding content
+        appear nowhere on this board at any permission level — a restricted alert shows as a flag
+        only, with detail reachable through the client file by authorised roles.
+      </p>
+
       {selected ? (
-        <DetailPanel
-          bed={selected}
-          onClose={() => setOpenBed(null)}
-          onChanged={() => setBoardVersion((v) => v + 1)}
-        />
+        <DetailPanel bed={selected} onClose={closeBed} onChanged={() => setBoardVersion((v) => v + 1)} />
       ) : null}
+    </div>
+  );
+}
+
+function NoMatchingCentre({ centreName }: { centreName: string }) {
+  return (
+    <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
+      <div
+        aria-hidden="true"
+        className="grid size-12 place-items-center rounded-xl bg-amber-500/12 text-[18px] text-amber-600 dark:text-amber-400"
+      >
+        &#9888;
+      </div>
+      <h2 className="mt-3.5 text-[16px] font-semibold">No matching centre in the database</h2>
+      <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+        &ldquo;{centreName}&rdquo; exists in the group overview but not in your accessible centres in
+        Supabase, so there is nothing real to configure yet.
+      </p>
+    </div>
+  );
+}
+
+function ClientsPage() {
+  const { centre, authCentre } = useCentreContext();
+  const navigate = useNavigate();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return (
+    <ClientDirectory
+      centre={authCentre}
+      onOpenBed={(bedLabel) => navigate(`../board?bed=${encodeURIComponent(bedLabel)}`)}
+    />
+  );
+}
+
+function AdmissionsPage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return <AdmitClientForm centre={authCentre} />;
+}
+
+function AdminPage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return <Administration centre={authCentre} />;
+}
+
+function AuditPage() {
+  return <AuditHistory />;
+}
+
+/** The four "soon" nav items (My work, All tasks, Family contact, Medical reviews) all land here —
+ * real destinations in the nav rather than hidden, each explicitly marked "soon" there, and each
+ * rendering nothing rather than a faked screen once actually opened. */
+function NotBuiltPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeId = location.pathname.split('/').filter(Boolean).pop();
+  const activeNav = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === activeId);
+  return (
+    <div className="mx-auto flex max-w-[560px] flex-col items-center px-5 py-24 text-center">
+      <div
+        aria-hidden="true"
+        className="grid size-12 place-items-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+      >
+        {activeNav ? <activeNav.icon className="size-5" /> : null}
+      </div>
+      <h2 className="mt-3.5 text-[16px] font-semibold">{activeNav?.label}</h2>
+      <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+        Not built yet. It appears in the navigation so the shape of the product is reviewable — but
+        nothing here is faked, so there is no screen to show.
+      </p>
+      <button
+        type="button"
+        onClick={() => navigate('../board')}
+        className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
+      >
+        Back to room board
+      </button>
     </div>
   );
 }
