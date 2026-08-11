@@ -31,7 +31,7 @@ export interface CentreSummary {
   occupancyPercent: number;
   overdue: number;
   dueToday: number;
-  dischargingWithin7Days: number;
+  dischargingThisWeek: number;
   pastPlannedDischarge: number;
   photoAttention: number;
   restrictedAlerts: number;
@@ -106,7 +106,7 @@ function fictionalCentre(spec: CentreSpec): CentreSummary {
     occupancyPercent: Math.round((occupied / spec.capacity) * 100),
     overdue: Math.round(r1 * 14),
     dueToday: Math.round(r2 * 9),
-    dischargingWithin7Days: Math.round(r3 * 5),
+    dischargingThisWeek: Math.round(r3 * 5),
     pastPlannedDischarge: r4 > 0.78 ? 1 : 0,
     photoAttention: Math.round(r5 * 4),
     restrictedAlerts: Math.round(r6 * 3),
@@ -133,7 +133,7 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     occupancyPercent: Math.round((s.bedsOccupied / spec.capacity) * 100),
     overdue: s.overdue,
     dueToday: s.dueToday,
-    dischargingWithin7Days: s.dischargingWithin7Days,
+    dischargingThisWeek: s.dischargingThisWeek,
     pastPlannedDischarge: s.pastPlannedDischarge,
     photoAttention: s.photoAttention,
     restrictedAlerts: s.restrictedAlerts,
@@ -156,7 +156,7 @@ export interface GroupTotals {
   occupancyPercent: number;
   overdue: number;
   dueToday: number;
-  dischargingWithin7Days: number;
+  dischargingThisWeek: number;
   pastPlannedDischarge: number;
   photoAttention: number;
   restrictedAlerts: number;
@@ -176,7 +176,7 @@ export function groupTotals(centres: readonly CentreSummary[]): GroupTotals {
     occupancyPercent: capacity ? Math.round((occupied / capacity) * 100) : 0,
     overdue: sum((c) => c.overdue),
     dueToday: sum((c) => c.dueToday),
-    dischargingWithin7Days: sum((c) => c.dischargingWithin7Days),
+    dischargingThisWeek: sum((c) => c.dischargingThisWeek),
     pastPlannedDischarge: sum((c) => c.pastPlannedDischarge),
     photoAttention: sum((c) => c.photoAttention),
     restrictedAlerts: sum((c) => c.restrictedAlerts),

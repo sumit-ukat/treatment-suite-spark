@@ -4,11 +4,13 @@ import {
   addHours,
   addOffset,
   calendarDaysBetween,
+  daysLeftInWeek,
   fromZonedDateString,
   isSameZonedDate,
   toWallClock,
   toZonedDateString,
   zoneOffsetMinutes,
+  zonedWeekday,
 } from './zoned-time.js';
 
 const LONDON = 'Europe/London';
@@ -163,6 +165,27 @@ describe('calendarDaysBetween', () => {
     const b = fromZonedDateString('2026-06-01', LONDON, { hour: 20, minute: 0 });
     expect(calendarDaysBetween(a, b, LONDON)).toBe(0);
     expect(isSameZonedDate(a, b, LONDON)).toBe(true);
+  });
+});
+
+describe('zonedWeekday and daysLeftInWeek', () => {
+  // 2026-08-10 is a Monday.
+  it('counts Monday as 0 and Sunday as 6', () => {
+    expect(zonedWeekday(fromZonedDateString('2026-08-10', LONDON, { hour: 12, minute: 0 }), LONDON)).toBe(0);
+    expect(zonedWeekday(fromZonedDateString('2026-08-16', LONDON, { hour: 12, minute: 0 }), LONDON)).toBe(6);
+  });
+
+  it('gives a full week ahead on Monday and none on Sunday', () => {
+    expect(daysLeftInWeek(fromZonedDateString('2026-08-10', LONDON, { hour: 9, minute: 0 }), LONDON)).toBe(6);
+    expect(daysLeftInWeek(fromZonedDateString('2026-08-14', LONDON, { hour: 9, minute: 0 }), LONDON)).toBe(2);
+    expect(daysLeftInWeek(fromZonedDateString('2026-08-16', LONDON, { hour: 9, minute: 0 }), LONDON)).toBe(0);
+  });
+
+  it('reads the weekday in the centre zone, not UTC', () => {
+    // 23:30 Sunday in London is already Monday in Athens (+2). The zone must decide the weekday.
+    const lateSunday = fromZonedDateString('2026-08-16', LONDON, { hour: 23, minute: 30 });
+    expect(zonedWeekday(lateSunday, LONDON)).toBe(6);
+    expect(zonedWeekday(lateSunday, 'Europe/Athens')).toBe(0);
   });
 });
 

@@ -26,7 +26,7 @@ import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calculatePlannedDischargeDate } from '../../domain/discharge.js';
 import { assessEligibility } from '../../domain/eligibility.js';
 import { computeDueAt, isOverdue, type TaskTemplate } from '../../domain/tasks.js';
-import { calendarDaysBetween, fromZonedDateString } from '../../domain/zoned-time.js';
+import { calendarDaysBetween, daysLeftInWeek, fromZonedDateString } from '../../domain/zoned-time.js';
 
 const settings = PRIMROSE_LODGE_SETTINGS;
 const TZ = settings.timezone;
@@ -494,14 +494,17 @@ export interface BoardSummary {
   notApplicable: number;
   photoAttention: number;
   restrictedAlerts: number;
-  dischargingWithin7Days: number;
+  /** Discharges planned between today and Sunday of this calendar week — not a rolling seven days.
+   * See `daysLeftInWeek`. */
+  dischargingThisWeek: number;
   pastPlannedDischarge: number;
   missingTherapist: number;
   dischargeMismatches: number;
 }
 
-export function summarise(board: readonly BoardBed[]): BoardSummary {
+export function summarise(board: readonly BoardBed[], now: Date = new Date()): BoardSummary {
   const occupants = board.flatMap((b) => (b.occupant ? [b.occupant] : []));
+  const toEndOfWeek = daysLeftInWeek(now, TZ);
   return {
     bedsTotal: board.length,
     bedsOccupied: occupants.length,
@@ -512,8 +515,8 @@ export function summarise(board: readonly BoardBed[]): BoardSummary {
     notApplicable: occupants.reduce((n, o) => n + o.notApplicableCount, 0),
     photoAttention: occupants.filter((o) => o.photoState === 'missing').length,
     restrictedAlerts: occupants.filter((o) => o.hasRestrictedAlert).length,
-    dischargingWithin7Days: occupants.filter(
-      (o) => o.daysUntilDischarge >= 0 && o.daysUntilDischarge <= 7,
+    dischargingThisWeek: occupants.filter(
+      (o) => o.daysUntilDischarge >= 0 && o.daysUntilDischarge <= toEndOfWeek,
     ).length,
     pastPlannedDischarge: occupants.filter((o) => o.daysUntilDischarge < 0).length,
     missingTherapist: occupants.filter((o) => o.therapist === null).length,

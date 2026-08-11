@@ -203,6 +203,29 @@ export function isSameZonedDate(a: Date, b: Date, timeZone: string): boolean {
   return toZonedDateString(a, timeZone) === toZonedDateString(b, timeZone);
 }
 
+/** Day of the week in the centre's zone, Monday = 0 through Sunday = 6 — the UK working week, not
+ * JavaScript's Sunday-first `getDay()`. */
+export function zonedWeekday(instant: Date, timeZone: string): number {
+  const wc = toWallClock(instant, timeZone);
+  // getUTCDay on a UTC-constructed date reads the weekday of that calendar date with no offset
+  // involved, which is exactly what a wall-clock date needs.
+  const sundayFirst = new Date(Date.UTC(wc.year, wc.month - 1, wc.day)).getUTCDay();
+  return (sundayFirst + 6) % 7;
+}
+
+/**
+ * Whole days from `instant` to the end of its own calendar week (Sunday), in the centre's zone.
+ * Monday gives 6, Sunday gives 0.
+ *
+ * This is what "this week" has to mean on an operations board. A rolling seven-day window answers a
+ * question nobody asks — on Friday it reaches into the middle of next week, so the number shifts
+ * every day and two people reading the same board on different days disagree about what is coming
+ * up. A calendar week matches how a handover, a rota and a Monday meeting are already organised.
+ */
+export function daysLeftInWeek(instant: Date, timeZone: string): number {
+  return 6 - zonedWeekday(instant, timeZone);
+}
+
 /** Minutes of UTC offset in force at an instant — exposed for diagnostics and tests. */
 export function zoneOffsetMinutes(instant: Date, timeZone: string): number {
   return offsetAt(instant, timeZone) / MS_PER_MINUTE;

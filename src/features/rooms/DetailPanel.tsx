@@ -102,87 +102,91 @@ export function DetailPanel({
       <DialogContent className="flex max-h-[88vh] w-full max-w-[1080px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
 
-        {/* Identity + facts + programme progress */}
-        <div className="border-b border-[var(--color-line)] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            <div className="flex items-start gap-3.5">
-              <div className="flex flex-col items-center gap-1.5">
-                {o.photoUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => setLightboxOpen(true)}
-                    className="rounded-full transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                    aria-label={`View ${o.displayName}'s photograph full size`}
-                  >
-                    <PhotoBadge occupant={o} size="xl" />
-                  </button>
-                ) : (
+        {/* Identity + facts on the left, programme progress pinned right — the facts stay in one
+            three-column block rather than stretching the full width, which is what keeps them
+            readable as a group instead of drifting apart on a wide dialog. */}
+        <div className="grid grid-cols-1 gap-6 border-b border-[var(--color-line)] p-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="min-w-0">
+            <div className="flex items-start gap-4">
+              {o.photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="shrink-0 rounded-full transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                  aria-label={`View ${o.displayName}'s photograph full size`}
+                >
                   <PhotoBadge occupant={o} size="xl" />
-                )}
-                {o.clientId ? (
-                  <PhotoUpload
-                    centreId={centreId}
-                    clientId={o.clientId}
-                    hasPhoto={o.photoState === 'present'}
-                    onUploaded={onChanged}
-                  />
-                ) : null}
-              </div>
-              <div className="min-w-0 pt-0.5">
+                </button>
+              ) : (
+                <PhotoBadge occupant={o} size="xl" />
+              )}
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate font-display text-[19px] font-semibold">{o.displayName}</h2>
+                  <h2 className="truncate font-display text-[20px] font-semibold">{o.displayName}</h2>
                   <StatusBadge status={overallStatus} />
                   {o.hasRestrictedAlert ? <Chip icon="&#9873;" label="Restricted alert" tone="alert" /> : null}
                 </div>
-                <div className="nums mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
-                  {o.reference} &middot; Bed {bed.label} &middot; Group {o.group || '—'}
+                <div className="nums mt-1 text-[12px] text-[var(--color-ink-muted)]">
+                  Ref {o.reference} &middot; Bed {bed.label} &middot; Group {o.group || '—'}
                 </div>
+                {o.clientId ? (
+                  <div className="mt-2">
+                    <PhotoUpload
+                      centreId={centreId}
+                      clientId={o.clientId}
+                      hasPhoto={o.photoState === 'present'}
+                      onUploaded={onChanged}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            <div className="w-full max-w-[220px] rounded-xl border border-[var(--color-line)] p-3.5 sm:w-auto">
-              <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                Programme progress
-              </p>
-              <p className="nums mt-1.5 text-[22px] font-semibold leading-none">
-                Day {o.treatmentDay}
-                <span className="text-[14px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
-              </p>
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="brand-gradient h-full rounded-full" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="nums mt-1 text-[10.5px] text-[var(--color-ink-muted)]">
-                {pct}% of the planned stay elapsed
-              </p>
-              <div className="nums mt-3 grid grid-cols-2 gap-2 text-center text-[11px]">
-                <div className="rounded-lg border border-[var(--color-line)] p-2">
-                  <p className="text-[15px] font-semibold">{o.completedCount}</p>
-                  <p className="text-[var(--color-ink-muted)]">Done</p>
-                </div>
-                <div
-                  className={`rounded-lg border p-2 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
-                >
-                  <p className={`text-[15px] font-semibold ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>
-                    {o.overdueCount}
-                  </p>
-                  <p className="text-[var(--color-ink-muted)]">Overdue</p>
-                </div>
-              </div>
-            </div>
+            <dl className="nums mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[12.5px] sm:grid-cols-3">
+              <Fact label="Admitted" value={formatDate(o.admittedAt)} />
+              <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
+              <Fact label="Programme" value={`${o.durationDays} days`} />
+              <Fact label="Primary concern" value={o.substance || '—'} />
+              <Fact
+                label="Family meeting"
+                value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
+              />
+              <Fact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
+              <Fact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
+              <Fact label="Buddy" value={o.buddy} />
+            </dl>
           </div>
 
-          <div className="nums mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-[12px] sm:grid-cols-3">
-            <Fact label="Admitted" value={formatDate(o.admittedAt)} />
-            <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
-            <Fact label="Primary concern" value={o.substance || '—'} />
-            <Fact label="Programme" value={`${o.durationDays} days`} />
-            <Fact
-              label="Family meeting"
-              value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
-            />
-            <Fact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
-            <Fact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
-            <Fact label="Buddy" value={o.buddy} />
+          <div className="h-fit rounded-xl border border-[var(--color-line)] p-4">
+            <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+              Programme progress
+            </p>
+            <p className="nums mt-2 text-[26px] font-semibold leading-none">
+              Day {o.treatmentDay}
+              <span className="text-[15px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
+            </p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="brand-gradient h-full rounded-full" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="nums mt-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
+              {pct}% of the planned stay elapsed
+            </p>
+            <div className="nums mt-3.5 grid grid-cols-2 gap-2 text-center text-[11px]">
+              <div className="rounded-lg border border-[var(--color-line)] p-2.5">
+                <p className="text-[17px] font-semibold leading-none">{o.completedCount}</p>
+                <p className="mt-1 text-[var(--color-ink-muted)]">Done</p>
+              </div>
+              <div
+                className={`rounded-lg border p-2.5 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
+              >
+                <p
+                  className={`text-[17px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}
+                >
+                  {o.overdueCount}
+                </p>
+                <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
+              </div>
+            </div>
           </div>
         </div>
 

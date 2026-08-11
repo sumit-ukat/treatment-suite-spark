@@ -94,7 +94,15 @@ export function Sidebar({
         collapsed ? 'w-[68px]' : 'w-[240px]'
       }`}
     >
-      <div className="flex h-16 items-center gap-2.5 px-3.5">
+      {/* The brand mark is the conventional way back to the top of a product, and the group hub is
+          what "the top" means here — the same destination as the "Back to group hub" item below,
+          which stays because a logo is a convention, not a label. */}
+      <button
+        type="button"
+        onClick={onLeaveCentre}
+        title="Back to group hub"
+        className="flex h-16 w-full items-center gap-2.5 px-3.5 text-left transition hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] dark:hover:bg-white/[0.06]"
+      >
         <BrandMark className={collapsed ? 'mx-auto' : ''} />
         {!collapsed ? (
           <span className="min-w-0 leading-tight">
@@ -102,7 +110,7 @@ export function Sidebar({
             <span className="block truncate text-[11px] text-[var(--color-ink-muted)]">UKAT group</span>
           </span>
         ) : null}
-      </div>
+      </button>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
         <div className="mb-4">

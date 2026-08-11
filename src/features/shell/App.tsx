@@ -22,12 +22,14 @@ import {
   Search,
 } from 'lucide-react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
+import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
+import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { buildRealBoard } from '../rooms/real-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
-import { formatDateWithDay } from '../../lib/format.js';
 import { BrandMark } from '../../components/brand.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { ThemeToggle } from '../../components/theme-toggle.tsx';
+import { LiveClock } from '../../components/live-clock.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +125,9 @@ function AppRoutes() {
   );
 }
 
+// TODO: same scoped simplification as elsewhere — every configured centre today is Europe/London.
+const TZ = PRIMROSE_LODGE_SETTINGS.timezone;
+
 type FilterId =
   | 'all'
   | 'occupied'
@@ -147,7 +152,9 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
     case 'due_today':
       return (o?.dueTodayCount ?? 0) > 0;
     case 'discharging':
-      return o !== null && o.daysUntilDischarge <= 7;
+      // The rest of this calendar week, matching the hub's "Discharges this week" — a rolling seven
+      // days would give the two screens different answers to the same question.
+      return o !== null && o.daysUntilDischarge <= daysLeftInWeek(new Date(), TZ);
     case 'photo':
       return o !== null && o.photoState === 'missing';
     case 'alerts':
@@ -289,7 +296,8 @@ function HubHeader() {
         <div className="truncate text-[11px] text-[var(--color-ink-muted)]">Group hub</div>
       </div>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-2">
+        <LiveClock className="hidden sm:flex" />
         <ThemeToggle />
         <UserMenu variant="panel" />
       </div>
@@ -422,10 +430,7 @@ function CentreShell() {
                   ⌘K
                 </kbd>
               </label>
-              <div className="nums hidden text-right text-[11px] leading-tight text-[var(--color-ink-muted)] lg:block">
-                <div className="font-medium text-[var(--color-ink)]">{formatDateWithDay(new Date())}</div>
-                <div>Europe/London</div>
-              </div>
+              <LiveClock className="hidden lg:flex" />
               <ThemeToggle />
               <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
             </div>
@@ -452,7 +457,7 @@ const EMPTY_SUMMARY: BoardSummary = {
   notApplicable: 0,
   photoAttention: 0,
   restrictedAlerts: 0,
-  dischargingWithin7Days: 0,
+  dischargingThisWeek: 0,
   pastPlannedDischarge: 0,
   missingTherapist: 0,
   dischargeMismatches: 0,
@@ -541,7 +546,9 @@ function BoardPage() {
       available: board.filter((b) => !b.occupant).length,
       overdue: board.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
       dueToday: board.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
-      discharging: board.filter((b) => b.occupant && b.occupant.daysUntilDischarge <= 7).length,
+      discharging: board.filter(
+        (b) => b.occupant && b.occupant.daysUntilDischarge <= daysLeftInWeek(new Date(), TZ),
+      ).length,
       photo: board.filter((b) => b.occupant?.photoState === 'missing').length,
       alerts: board.filter((b) => b.occupant?.hasRestrictedAlert).length,
     }),
@@ -655,7 +662,7 @@ function BoardPage() {
           <option value="available">Available beds</option>
           <option value="overdue">Overdue</option>
           <option value="due_today">Due today</option>
-          <option value="discharging">Discharging within 7 days</option>
+          <option value="discharging">Discharging this week</option>
           <option value="photo">No photograph</option>
           <option value="alerts">Restricted alert</option>
         </select>
