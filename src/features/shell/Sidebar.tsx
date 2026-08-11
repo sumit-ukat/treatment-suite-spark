@@ -9,6 +9,7 @@ import {
   Phone,
   Shield,
   Stethoscope,
+  Table2,
   UserPlus,
   Users,
   type LucideIcon,
@@ -30,6 +31,8 @@ export interface NavItem {
   icon: LucideIcon;
   ready: boolean;
   badge?: number;
+  /** If set, the item only appears when the sidebar's centreSlug matches one of these values. */
+  onlyCentres?: readonly string[];
 }
 
 /**
@@ -44,6 +47,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
     heading: 'Centre',
     items: [
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
+      { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true, onlyCentres: ['primrose-lodge'] },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
       { id: 'admissions', label: 'Admissions', icon: UserPlus, ready: true },
     ],
@@ -72,6 +76,7 @@ export function Sidebar({
   collapsed,
   onToggle,
   centreName,
+  centreSlug,
   onLeaveCentre,
   occupied,
   capacity,
@@ -81,6 +86,7 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
   centreName: string;
+  centreSlug?: string;
   onLeaveCentre: () => void;
   /** Today's real occupancy for the footer card — omitted (no footer) when the centre has no board
    * yet, rather than showing a fabricated 0/0. */
@@ -124,7 +130,7 @@ export function Sidebar({
           {NAV_GROUPS.map((group) => (
             <div key={group.heading} className="mb-2">
               <ul className="flex flex-col gap-0.5">
-                {group.items.map((item) => {
+                {group.items.filter((item) => !item.onlyCentres || item.onlyCentres.includes(centreSlug ?? '')).map((item) => {
                   const isActive = item.id === active;
                   return (
                     <li key={item.id}>

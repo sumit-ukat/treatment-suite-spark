@@ -53,6 +53,7 @@ import { Administration } from '../administration/Administration.tsx';
 import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
+import { TreatmentBoard } from '../rooms/TreatmentBoard.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip } from '../../components/ui.tsx';
 import {
@@ -119,6 +120,7 @@ function AppRoutes() {
         <Route path="tasks" element={<NotBuiltPage />} />
         <Route path="family" element={<NotBuiltPage />} />
         <Route path="medical" element={<NotBuiltPage />} />
+        <Route path="treatment-board" element={<TreatmentBoardPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/hub" replace />} />
     </Routes>
@@ -384,6 +386,7 @@ function CentreShell() {
           collapsed={collapsed}
           onToggle={() => setCollapsed((c) => !c)}
           centreName={centre.name}
+          centreSlug={centreSlug}
           onLeaveCentre={() => navigate('/hub')}
         />
 
@@ -814,6 +817,12 @@ function AdminPage() {
 
 function AuditPage() {
   return <AuditHistory />;
+}
+
+function TreatmentBoardPage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return <TreatmentBoard centreId={authCentre.id} centreName={centre.name} />;
 }
 
 /** The four "soon" nav items (My work, All tasks, Family contact, Medical reviews) all land here —
