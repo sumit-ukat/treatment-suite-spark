@@ -53,6 +53,7 @@ interface FormState {
   focalTherapistLabel: string;
   buddyLabel: string;
   doctorLabel: string;
+  safeguardingConcerns: string;
   reason: string;
 }
 
@@ -71,6 +72,7 @@ const EMPTY: FormState = {
   focalTherapistLabel: '',
   buddyLabel: '',
   doctorLabel: '',
+  safeguardingConcerns: '',
   reason: '',
 };
 
@@ -177,6 +179,14 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
     try {
       const admittedAt = new Date(`${form.admittedDate}T${form.admittedTime}:00`).toISOString();
       const substanceName = substances.find((s) => s.id === form.substanceId)?.name;
+      // Safeguarding concerns are prepended to the admission reason so they survive in the audit
+      // trail even before a dedicated column and sensitivity-gated view exist for them.
+      const safeguarding = form.safeguardingConcerns.trim();
+      const notes = form.reason.trim();
+      const combinedReason = safeguarding
+        ? `Safeguarding/Risks: ${safeguarding}${notes ? `\n\nNotes: ${notes}` : ''}`
+        : notes || undefined;
+
       const admissionId = await admissions.admitClient({
         centreId: centre.id,
         bedId: selectedBed.bed.id,
@@ -193,7 +203,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         focalTherapistLabel: form.focalTherapistLabel.trim() || undefined,
         buddyLabel: form.buddyLabel.trim() || undefined,
         doctorLabel: form.doctorLabel.trim() || undefined,
-        reason: form.reason.trim() || undefined,
+        reason: combinedReason,
       });
       setResult({ admissionId });
       setStep('done');
@@ -350,6 +360,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             <div>
               <dt className="text-[11px] text-[var(--color-ink-muted)]">Doctor</dt>
               <dd className="font-medium">{form.doctorLabel}</dd>
+            </div>
+          ) : null}
+          {form.safeguardingConcerns.trim() ? (
+            <div className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/40">
+              <dt className="text-[11px] font-semibold text-amber-800 dark:text-amber-400">Safeguarding / Risks / Concerns</dt>
+              <dd className="mt-0.5 whitespace-pre-wrap text-[12.5px] text-amber-900 dark:text-amber-200">{form.safeguardingConcerns.trim()}</dd>
             </div>
           ) : null}
         </dl>
@@ -666,6 +682,22 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           </Field>
         </div>
 
+        <SectionHeading>Safeguarding / Risks / Concerns</SectionHeading>
+
+        <Field
+          label="Safeguarding, risks or concerns (optional)"
+          hint="Recorded in the admission audit trail. Full notes will sit behind sensitivity level 3 once that access model is in place."
+        >
+          <textarea
+            className={`${inputCls} min-h-[72px] resize-y border-amber-400 bg-amber-50 focus:border-amber-600 dark:border-amber-700 dark:bg-amber-950/30`}
+            value={form.safeguardingConcerns}
+            onChange={(e) => set('safeguardingConcerns', e.target.value)}
+            placeholder="e.g. history of self-harm, domestic abuse disclosure, risk of absconding…"
+          />
+        </Field>
+
+        <SectionHeading>Admission notes</SectionHeading>
+
         <Field label="Notes (optional)">
           <textarea
             className={`${inputCls} min-h-[64px] resize-y`}
@@ -710,6 +742,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           {form.focalTherapistLabel ? <SummaryRow label="Therapist" value={form.focalTherapistLabel} /> : null}
           {form.buddyLabel ? <SummaryRow label="Buddy" value={form.buddyLabel} /> : null}
           {form.doctorLabel ? <SummaryRow label="Doctor" value={form.doctorLabel} /> : null}
+          {form.safeguardingConcerns.trim() ? (
+            <div className="min-w-0">
+              <dt className="text-[10.5px] font-semibold text-amber-700 dark:text-amber-400">Safeguarding / Risks</dt>
+              <dd className="mt-0.5 truncate text-[12.5px] font-medium">{form.safeguardingConcerns.trim()}</dd>
+            </div>
+          ) : null}
         </dl>
       </aside>
       </div>

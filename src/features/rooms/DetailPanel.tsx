@@ -142,6 +142,44 @@ export function DetailPanel({
               </div>
             </div>
 
+            {/* Safeguarding / Risks / Concerns — pinned here so it is the first substantive section
+                read after the identity block; a restricted alert must not be below the fold. */}
+            <div
+              className={`mt-4 rounded-lg border-l-4 px-3 py-2.5 ${
+                o.hasRestrictedAlert
+                  ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
+                  : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10.5px] font-semibold tracking-[0.05em] uppercase ${
+                    o.hasRestrictedAlert
+                      ? 'text-red-700 dark:text-red-400'
+                      : 'text-[var(--color-ink-muted)]'
+                  }`}
+                >
+                  Safeguarding / Risks / Concerns
+                </span>
+                {o.hasRestrictedAlert ? (
+                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wide">
+                    Alert
+                  </span>
+                ) : null}
+              </div>
+              <p
+                className={`mt-1 text-[12px] ${
+                  o.hasRestrictedAlert
+                    ? 'font-medium text-red-700 dark:text-red-300'
+                    : 'text-[var(--color-ink-muted)]'
+                }`}
+              >
+                {o.hasRestrictedAlert
+                  ? 'Restricted alert on record — full details require sensitivity level 3 access.'
+                  : 'No safeguarding concerns recorded for this admission.'}
+              </p>
+            </div>
+
             <dl className="nums mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[12.5px] sm:grid-cols-3">
               <Fact label="Admitted" value={formatDate(o.admittedAt)} />
               <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
