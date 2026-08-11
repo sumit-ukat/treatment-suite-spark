@@ -321,6 +321,9 @@ export interface Occupant {
   group: string;
   peeps: boolean;
   photoState: 'present' | 'missing';
+  /** A signed, time-limited URL for the actual photograph, when one exists — null whenever photoState
+   * is 'missing', and always null on the fictional boards (see clientId's doc comment). */
+  photoUrl: string | null;
   hasRestrictedAlert: boolean;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
@@ -421,6 +424,10 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     // though the images themselves are not imported, since attaching the wrong photo to the wrong
     // client is the one import error that matters most.
     photoState: 'present',
+    // No real image was ever imported for these — see the comment above. photoState 'present' with
+    // photoUrl null renders the same checkmark-only badge it always has; PhotoBadge falls back to that
+    // whenever there is nothing to actually show.
+    photoUrl: null,
     hasRestrictedAlert: row.hasSafeguardingNote,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,

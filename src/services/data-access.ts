@@ -476,6 +476,11 @@ export const tasks = {
 
 export interface ClientPhotoRow {
   client_id: string;
+  storage_path: string;
+  /** A signed URL for the private bucket, valid for one hour — filled in by `roomBoard.forCentre`
+   * after the row is read, not stored anywhere. `client-photos` has no public access (migration
+   * 0016), so a bare `storage_path` is never enough on its own to display the image. */
+  signed_url: string | null;
 }
 
 // Mirrors the storage bucket's own limits (migration 0016) so a rejected file fails fast in the UI
@@ -688,12 +693,40 @@ export const roomBoard = {
           client().rpc('client_summary', { p_client_ids: clientIds }),
         )
       : [];
-    const photos = clientIds.length
-      ? await run<ClientPhotoRow[]>(
+    const photoRows = clientIds.length
+      ? await run<Array<Pick<ClientPhotoRow, 'client_id' | 'storage_path'>>>(
           'roomBoard.photos',
-          client().from('client_photos').select('client_id').eq('is_active', true).in('client_id', clientIds),
+          client()
+            .from('client_photos')
+            .select('client_id,storage_path')
+            .eq('is_active', true)
+            .in('client_id', clientIds),
         )
       : [];
+    // Signed, not public: `client-photos` has no public access (migration 0016), so displaying an
+    // uploaded photo anywhere needs a fresh signed URL rather than a bare storage_path. One hour is
+    // longer than a single board session ever runs, so a reload rather than a live-refreshing URL is
+    // the right tradeoff.
+    const signedByPath = new Map<string, string>();
+    if (photoRows.length) {
+      // Not run()/thrown: a signing failure should degrade to "no photo shown", not take the whole
+      // room board down over a display enhancement. console.error keeps the failure visible to anyone
+      // debugging rather than disappearing into a silently-empty map.
+      const { data: signed, error: signError } = await client()
+        .storage.from('client-photos')
+        .createSignedUrls(photoRows.map((p) => p.storage_path), 3600);
+      if (signError) {
+        console.error('roomBoard.photos.sign', signError);
+      }
+      for (const s of signed ?? []) {
+        if (s.error) console.error('roomBoard.photos.sign', s.path, s.error);
+        if (s.signedUrl) signedByPath.set(s.path ?? '', s.signedUrl);
+      }
+    }
+    const photos: ClientPhotoRow[] = photoRows.map((p) => ({
+      ...p,
+      signed_url: signedByPath.get(p.storage_path) ?? null,
+    }));
 
     return {
       admissions,

@@ -56,7 +56,7 @@ function buildRealOccupant(
   staffByAdmission: Map<string, StaffAssignmentRow[]>,
   tasksByAdmission: Map<string, ClientTaskRow[]>,
   substancesById: Map<string, SubstanceRow>,
-  photographedClientIds: Set<string>,
+  photoUrlByClientId: Map<string, string>,
   noteRequiredByTemplateId: Map<string, boolean>,
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
   now: Date,
@@ -149,7 +149,8 @@ function buildRealOccupant(
     buddy: buddyLabel,
     group: admission.treatment_group ?? '',
     peeps: admission.peep_required,
-    photoState: photographedClientIds.has(admission.client_id) ? 'present' : 'missing',
+    photoState: photoUrlByClientId.has(admission.client_id) ? 'present' : 'missing',
+    photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
     // See file header: no safeguarding/risk data or reachable indicator RPC exists yet.
     hasRestrictedAlert: false,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
@@ -184,8 +185,10 @@ export async function buildRealBoard(
   const dischargeRequestByAdmission = new Map(
     (data.dischargeRequests as DischargeRequestRow[]).map((r) => [r.admission_id, r]),
   );
-  const photographedClientIds = new Set<string>(
-    (data.photos as ClientPhotoRow[]).map((p) => p.client_id),
+  const photoUrlByClientId = new Map<string, string>(
+    (data.photos as ClientPhotoRow[])
+      .filter((p) => p.signed_url !== null)
+      .map((p) => [p.client_id, p.signed_url as string]),
   );
 
   const admissionByBed = new Map<string, AdmissionRow>();
@@ -220,7 +223,7 @@ export async function buildRealBoard(
             staffByAdmission,
             tasksByAdmission,
             substancesById,
-            photographedClientIds,
+            photoUrlByClientId,
             noteRequiredByTemplateId,
             dischargeRequestByAdmission,
             now,

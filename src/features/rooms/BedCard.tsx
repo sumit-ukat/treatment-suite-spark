@@ -4,10 +4,13 @@ import { Chip } from '../../components/ui.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
 
 /**
- * Photograph placeholder.
+ * Photograph, when a real one has been uploaded — initials otherwise.
  *
- * Renders initials, never an image. Real client photographs are not used in any preview, fixture or
- * screenshot.
+ * `photoUrl` is a signed URL into the private `client-photos` bucket (migration 0016), refreshed on
+ * every board load rather than stored — the bucket has no public access, so a bare storage path is
+ * never displayable on its own. The fictional and frozen-snapshot boards in board-data.ts never set
+ * this even when `photoState` is 'present' (no real image was ever imported for them), which falls
+ * back to the same initials-only rendering this always used.
  *
  * Two states, not three. Verification was removed (Q43, answered): photographs are taken at
  * admission and that is the whole process, so "awaiting verification" would be a status nobody ever
@@ -35,12 +38,20 @@ export function PhotoBadge({
 
   return (
     <div className="relative shrink-0" title={title}>
-      <div
-        className={`grid ${box} place-items-center rounded-full bg-black/[0.07] font-semibold text-[var(--color-ink)] ring-2 dark:bg-white/12 ${ring}`}
-        aria-hidden="true"
-      >
-        {occupant.initials}
-      </div>
+      {occupant.photoUrl ? (
+        <img
+          src={occupant.photoUrl}
+          alt=""
+          className={`${box} rounded-full object-cover ring-2 ${ring}`}
+        />
+      ) : (
+        <div
+          className={`grid ${box} place-items-center rounded-full bg-black/[0.07] font-semibold text-[var(--color-ink)] ring-2 dark:bg-white/12 ${ring}`}
+          aria-hidden="true"
+        >
+          {occupant.initials}
+        </div>
+      )}
       <span
         className={`absolute -right-0.5 -bottom-0.5 grid ${dot} place-items-center rounded-full font-bold text-white ring-2 ring-[var(--color-panel)] ${markTone}`}
         aria-hidden="true"
