@@ -99,53 +99,53 @@ export function DetailPanel({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[88vh] w-full max-w-[1080px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="flex max-h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
 
-        {/* Identity + facts on the left, programme progress pinned right — the facts stay in one
-            three-column block rather than stretching the full width, which is what keeps them
-            readable as a group instead of drifting apart on a wide dialog. */}
-        <div className="grid grid-cols-1 gap-6 border-b border-[var(--color-line)] p-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <div className="min-w-0">
-            <div className="flex items-start gap-4">
-              {o.photoUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setLightboxOpen(true)}
-                  className="shrink-0 rounded-full transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                  aria-label={`View ${o.displayName}'s photograph full size`}
-                >
-                  <PhotoBadge occupant={o} size="xl" />
-                </button>
-              ) : (
+        {/* 3-column header at large screens:
+            [photo + upload] | [name + safeguarding + facts] | [progress card]
+            The photo gets its own column so the upload button sits naturally below the avatar
+            rather than floating beside the name. The facts use the full middle column width. */}
+        <div className="grid grid-cols-1 gap-5 border-b border-[var(--color-line)] p-5 lg:grid-cols-[148px_minmax(0,1fr)_260px]">
+
+          {/* Col 1 — Photo + upload */}
+          <div className="flex flex-col items-center gap-2 lg:pt-1">
+            {o.photoUrl ? (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="rounded-full transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                aria-label={`View ${o.displayName}'s photograph full size`}
+              >
                 <PhotoBadge occupant={o} size="xl" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate font-display text-[20px] font-semibold">{o.displayName}</h2>
-                  <StatusBadge status={overallStatus} />
-                  {o.hasRestrictedAlert ? <Chip icon="&#9873;" label="Restricted alert" tone="alert" /> : null}
-                </div>
-                <div className="nums mt-1 text-[12px] text-[var(--color-ink-muted)]">
-                  Ref {o.reference} &middot; Bed {bed.label} &middot; Group {o.group || '—'}
-                </div>
-                {o.clientId ? (
-                  <div className="mt-2">
-                    <PhotoUpload
-                      centreId={centreId}
-                      clientId={o.clientId}
-                      hasPhoto={o.photoState === 'present'}
-                      onUploaded={onChanged}
-                    />
-                  </div>
-                ) : null}
-              </div>
+              </button>
+            ) : (
+              <PhotoBadge occupant={o} size="xl" />
+            )}
+            {o.clientId ? (
+              <PhotoUpload
+                centreId={centreId}
+                clientId={o.clientId}
+                hasPhoto={o.photoState === 'present'}
+                onUploaded={onChanged}
+              />
+            ) : null}
+          </div>
+
+          {/* Col 2 — Identity + safeguarding + key facts */}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate font-display text-[20px] font-semibold">{o.displayName}</h2>
+              <StatusBadge status={overallStatus} />
+              {o.hasRestrictedAlert ? <Chip icon="&#9873;" label="Restricted alert" tone="alert" /> : null}
+            </div>
+            <div className="nums mt-1 text-[12px] text-[var(--color-ink-muted)]">
+              Ref {o.reference} &middot; Bed {bed.label} &middot; Group {o.group || '—'}
             </div>
 
-            {/* Safeguarding / Risks / Concerns — pinned here so it is the first substantive section
-                read after the identity block; a restricted alert must not be below the fold. */}
+            {/* Safeguarding / Risks / Concerns */}
             <div
-              className={`mt-4 rounded-lg border-l-4 px-3 py-2.5 ${
+              className={`mt-3 rounded-lg border-l-4 px-3 py-2 ${
                 o.hasRestrictedAlert
                   ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
                   : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
@@ -154,24 +154,20 @@ export function DetailPanel({
               <div className="flex items-center gap-2">
                 <span
                   className={`text-[10.5px] font-semibold tracking-[0.05em] uppercase ${
-                    o.hasRestrictedAlert
-                      ? 'text-red-700 dark:text-red-400'
-                      : 'text-[var(--color-ink-muted)]'
+                    o.hasRestrictedAlert ? 'text-red-700 dark:text-red-400' : 'text-[var(--color-ink-muted)]'
                   }`}
                 >
                   Safeguarding / Risks / Concerns
                 </span>
                 {o.hasRestrictedAlert ? (
-                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wide">
+                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
                     Alert
                   </span>
                 ) : null}
               </div>
               <p
-                className={`mt-1 text-[12px] ${
-                  o.hasRestrictedAlert
-                    ? 'font-medium text-red-700 dark:text-red-300'
-                    : 'text-[var(--color-ink-muted)]'
+                className={`mt-0.5 text-[12px] ${
+                  o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-[var(--color-ink-muted)]'
                 }`}
               >
                 {o.hasRestrictedAlert
@@ -180,7 +176,7 @@ export function DetailPanel({
               </p>
             </div>
 
-            <dl className="nums mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[12.5px] sm:grid-cols-3">
+            <dl className="nums mt-4 grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">
               <Fact label="Admitted" value={formatDate(o.admittedAt)} />
               <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
               <Fact label="Programme" value={`${o.durationDays} days`} />
