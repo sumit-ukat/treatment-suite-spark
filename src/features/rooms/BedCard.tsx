@@ -25,7 +25,7 @@ export function PhotoBadge({
   size = 'md',
 }: {
   occupant: Occupant;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const missing = occupant.photoState === 'missing';
   const ring = missing ? 'ring-red-500/60' : 'ring-emerald-500/55';
@@ -33,8 +33,15 @@ export function PhotoBadge({
   const markTone = missing ? 'bg-red-600' : 'bg-emerald-600';
   const title = missing ? 'No photograph on file' : 'Photograph on file';
   const box =
-    size === 'lg' ? 'size-12 text-[15px]' : size === 'sm' ? 'size-7 text-[10px]' : 'size-10 text-[13px]';
-  const dot = size === 'sm' ? 'size-[11px] text-[7px]' : 'size-[15px] text-[9px]';
+    size === 'xl'
+      ? 'size-32 text-[34px]'
+      : size === 'lg'
+        ? 'size-12 text-[15px]'
+        : size === 'sm'
+          ? 'size-7 text-[10px]'
+          : 'size-10 text-[13px]';
+  const dot =
+    size === 'sm' ? 'size-[11px] text-[7px]' : size === 'xl' ? 'size-[26px] text-[13px]' : 'size-[15px] text-[9px]';
 
   return (
     <div className="relative shrink-0" title={title}>

@@ -262,6 +262,15 @@ function interpret(cell: Cell, now: Date): RecordedState {
   return at.getTime() <= now.getTime() ? { kind: 'completed', on: at } : { kind: 'scheduled', on: at };
 }
 
+/** One recorded reopen, reconstructed from audit history — see migration 0034. */
+export interface TaskReopen {
+  at: Date;
+  /** Display name, falling back to the email captured on the audit event. Null only if neither exists. */
+  by: string | null;
+  /** Required by `app.reopen_client_task`, so in practice always present. */
+  reason: string | null;
+}
+
 export interface BoardTask {
   /**
    * The `client_tasks` row id, when this task is a real database row. Null for the fictional and
@@ -273,6 +282,23 @@ export interface BoardTask {
   title: string;
   category: TaskTemplate['category'];
   dueAt: Date | null;
+  /**
+   * When it was completed — but only when that is a real recorded moment. Null for an imported task
+   * whose whiteboard cell said merely "TRUE": the database stores the import snapshot timestamp there
+   * so the row is well-formed, and showing that as a completion time would invent a fact the
+   * whiteboard never held. `isComplete` is still true in that case; the date simply is not known.
+   */
+  completedAt: Date | null;
+  /** Who completed it, when known. Null for every imported task — the whiteboard recorded that work
+   * was done, never by whom — and null when the caller cannot resolve the name. */
+  completedBy: string | null;
+  /**
+   * Every time this task was reopened, newest first. Reopening clears the completion columns off the
+   * row (migration 0026), so without this a previously-completed task is indistinguishable from one
+   * never touched — the reason someone gave for undoing it would be invisible exactly where it
+   * matters. Always empty on the fictional boards, which have no audit history behind them.
+   */
+  reopens: readonly TaskReopen[];
   recorded: RecordedState;
   isComplete: boolean;
   isOverdue: boolean;
@@ -317,6 +343,10 @@ export interface Occupant {
   daysUntilDischarge: number;
   substance: string;
   therapist: string | null;
+  /** `key_worker` is a valid staff_assignments role_code (same table as therapist/buddy) that no UI
+   * component surfaced until now. Null on the fictional boards — board-data.ts's THERAPISTS/BUDDIES
+   * lists have no keyworker concept to draw from. */
+  keyworker: string | null;
   buddy: string;
   group: string;
   peeps: boolean;
@@ -373,6 +403,11 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
       title: tpl.name,
       category: tpl.category,
       dueAt,
+      // 'completed' carries a real date off the whiteboard; 'done_no_date' is a bare TRUE with none.
+      completedAt: recorded.kind === 'completed' ? recorded.on : null,
+      // The whiteboard has no column for who did the work, and no audit history behind it.
+      completedBy: null,
+      reopens: [],
       recorded,
       isComplete,
       isNotApplicable,
@@ -414,6 +449,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     ),
     substance: row.substance,
     therapist: row.therapistIdx === null ? null : (THERAPISTS[row.therapistIdx] ?? null),
+    keyworker: null,
     buddy: BUDDIES[row.buddyIdx] ?? '—',
     group: row.group,
     peeps: row.peeps,

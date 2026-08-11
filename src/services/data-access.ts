@@ -1,5 +1,6 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase, supabaseConfigError } from '../lib/supabase.js';
+import { preparePhotoForUpload } from '../lib/image.js';
 
 /**
  * The single place the application talks to Supabase.
@@ -439,8 +440,29 @@ export interface ClientTaskRow {
   title: string;
   due_at: string | null;
   completed_at: string | null;
+  /** Null for every historically imported task: the whiteboard recorded that something was done, never
+   * who did it. Only tasks completed through the app since migration 0026 carry an actor. */
+  completed_by: string | null;
   status: string;
   not_applicable_reason: string | null;
+  /** How the original whiteboard cell was read, for imported rows — see migration 0020. Critically,
+   * 'done_no_date' means the cell said only "TRUE": `completed_at` for those rows is the import
+   * snapshot timestamp, not a real completion time, and must never be displayed as one. */
+  source_interpretation: string | null;
+}
+
+export interface TaskCompleterRow {
+  user_id: string;
+  display_name: string;
+}
+
+/** One reopen of one task — see migration 0034. Reopening clears the completion columns off the task
+ * row, so this audit-derived history is the only record that it ever happened. */
+export interface TaskReopenRow {
+  task_id: string;
+  occurred_at: string;
+  actor_label: string | null;
+  reason: string | null;
 }
 
 export interface TaskTemplateRow {
@@ -503,20 +525,26 @@ export const clientPhotos = {
   async upload({
     centreId,
     clientId,
-    file,
+    file: original,
   }: {
     centreId: string;
     clientId: string;
     file: File;
-  }): Promise<void> {
-    if (!CLIENT_PHOTO_MIME_TYPES.includes(file.type)) {
+  }): Promise<{ uploadedBytes: number; originalBytes: number }> {
+    if (!CLIENT_PHOTO_MIME_TYPES.includes(original.type)) {
       throw new DataAccessError('clientPhotos.upload', {
         message: 'Photos must be JPEG, PNG or WebP.',
       });
     }
+
+    // Downscale before the size check, not after: a phone photo is routinely over the bucket's 5MB
+    // limit as taken, and rejecting it would be an obstacle where resizing is the obvious answer.
+    // The check below still stands as the backstop for anything that survives it oversized.
+    const { file, originalBytes } = await preparePhotoForUpload(original);
+
     if (file.size > CLIENT_PHOTO_MAX_BYTES) {
       throw new DataAccessError('clientPhotos.upload', {
-        message: 'Photos must be 5MB or smaller.',
+        message: 'That image is still over 5MB after resizing. Please use a smaller one.',
       });
     }
 
@@ -549,11 +577,15 @@ export const clientPhotos = {
           centre_id: centreId,
           storage_path: path,
           safe_filename: path.split('/').pop()!,
-          original_filename: file.name,
+          // The name the user actually chose, not the resized file's — `original_filename` exists to
+          // trace a stored object back to what was handed over (migration 0017).
+          original_filename: original.name,
           mime_type: file.type,
           file_size_bytes: file.size,
         }),
     );
+
+    return { uploadedBytes: file.size, originalBytes };
   },
 };
 
@@ -627,8 +659,17 @@ export const roomBoard = {
   async forCentre(centreId: string) {
     // `clientTasks` rather than `tasks` — the module already exports a `tasks` service, and shadowing
     // it inside this function would be a trap for the next person adding a call here.
-    const [admissions, allocations, staffAssignments, clientTasks, substances, taskTemplates, dischargeRequests] =
-      await Promise.all([
+    const [
+      admissions,
+      allocations,
+      staffAssignments,
+      clientTasks,
+      substances,
+      taskTemplates,
+      dischargeRequests,
+      taskCompleters,
+      taskReopens,
+    ] = await Promise.all([
       run<AdmissionRow[]>(
         'roomBoard.admissions',
         client()
@@ -659,7 +700,9 @@ export const roomBoard = {
         'roomBoard.tasks',
         client()
           .from('client_tasks')
-          .select('id,admission_id,template_id,code,category,title,due_at,completed_at,status,not_applicable_reason')
+          .select(
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation',
+          )
           .eq('centre_id', centreId),
       ),
       clinicalLookups.substances(),
@@ -678,6 +721,18 @@ export const roomBoard = {
           .select('id,admission_id,discharge_type,status,reason,requested_by,approval_notes')
           .eq('centre_id', centreId)
           .in('status', ['pending', 'approved']),
+      ),
+      // Resolves client_tasks.completed_by to a name. Needs an RPC because user_profiles RLS
+      // (migration 0008) lets a caller read only their own profile — see migration 0033.
+      run<TaskCompleterRow[]>(
+        'roomBoard.taskCompleters',
+        client().rpc('task_completer_names', { p_centre_id: centreId }),
+      ),
+      // Reopening clears the completion columns, so the task row itself cannot say it ever happened —
+      // this audit-derived history is the only record. See migration 0034.
+      run<TaskReopenRow[]>(
+        'roomBoard.taskReopens',
+        client().rpc('task_reopen_history', { p_centre_id: centreId }),
       ),
     ]);
 
@@ -737,6 +792,8 @@ export const roomBoard = {
       substances,
       taskTemplates,
       dischargeRequests,
+      taskCompleters,
+      taskReopens,
       photos,
     };
   },

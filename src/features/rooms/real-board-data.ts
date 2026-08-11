@@ -33,13 +33,22 @@ import type {
   RoomAllocationRow,
   StaffAssignmentRow,
   SubstanceRow,
+  TaskCompleterRow,
+  TaskReopenRow,
 } from '../../services/data-access.js';
 import { roomBoard, roomsAndBeds } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { assessEligibility } from '../../domain/eligibility.js';
 import { isOverdue } from '../../domain/tasks.js';
 import { calendarDaysBetween, fromZonedDateString } from '../../domain/zoned-time.js';
-import type { BoardBed, BoardSummary, BoardTask, DischargeRequestSummary, Occupant } from './board-data.js';
+import type {
+  BoardBed,
+  BoardSummary,
+  BoardTask,
+  DischargeRequestSummary,
+  Occupant,
+  TaskReopen,
+} from './board-data.js';
 import { summarise } from './board-data.js';
 
 // TODO: read from `centres.timezone` once the room-board query fetches it. Every configured centre
@@ -57,6 +66,8 @@ function buildRealOccupant(
   tasksByAdmission: Map<string, ClientTaskRow[]>,
   substancesById: Map<string, SubstanceRow>,
   photoUrlByClientId: Map<string, string>,
+  completerNameById: Map<string, string>,
+  reopensByTaskId: Map<string, TaskReopen[]>,
   noteRequiredByTemplateId: Map<string, boolean>,
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
   now: Date,
@@ -73,6 +84,7 @@ function buildRealOccupant(
 
   const staff = staffByAdmission.get(admission.id) ?? [];
   const therapistLabel = staff.find((s) => s.role_code === 'focal_therapist')?.display_label ?? null;
+  const keyworkerLabel = staff.find((s) => s.role_code === 'key_worker')?.display_label ?? null;
   const buddyLabel = staff.find((s) => s.role_code === 'buddy')?.display_label ?? '—';
 
   const rawTasks = tasksByAdmission.get(admission.id) ?? [];
@@ -88,6 +100,11 @@ function buildRealOccupant(
       title: t.title,
       category: t.category as BoardTask['category'],
       dueAt,
+      // A 'done_no_date' import holds the snapshot timestamp in completed_at, not a real completion
+      // moment — see BoardTask.completedAt. Withheld rather than shown as fact.
+      completedAt: t.source_interpretation === 'done_no_date' ? null : completedAt,
+      completedBy: t.completed_by ? (completerNameById.get(t.completed_by) ?? null) : null,
+      reopens: reopensByTaskId.get(t.id) ?? [],
       requiresCompletionNote: t.template_id
         ? (noteRequiredByTemplateId.get(t.template_id) ?? false)
         : false,
@@ -146,6 +163,7 @@ function buildRealOccupant(
     ),
     substance: admission.primary_substance_id ? substancesById.get(admission.primary_substance_id)?.name ?? '' : '',
     therapist: therapistLabel,
+    keyworker: keyworkerLabel,
     buddy: buddyLabel,
     group: admission.treatment_group ?? '',
     peeps: admission.peep_required,
@@ -190,6 +208,16 @@ export async function buildRealBoard(
       .filter((p) => p.signed_url !== null)
       .map((p) => [p.client_id, p.signed_url as string]),
   );
+  const completerNameById = new Map<string, string>(
+    (data.taskCompleters as TaskCompleterRow[]).map((u) => [u.user_id, u.display_name]),
+  );
+  // Already newest-first out of the RPC; grouping preserves that order per task.
+  const reopensByTaskId = new Map<string, TaskReopen[]>();
+  for (const r of data.taskReopens as TaskReopenRow[]) {
+    const list = reopensByTaskId.get(r.task_id) ?? [];
+    list.push({ at: new Date(r.occurred_at), by: r.actor_label, reason: r.reason });
+    reopensByTaskId.set(r.task_id, list);
+  }
 
   const admissionByBed = new Map<string, AdmissionRow>();
   for (const alloc of data.allocations as RoomAllocationRow[]) {
@@ -224,6 +252,8 @@ export async function buildRealBoard(
             tasksByAdmission,
             substancesById,
             photoUrlByClientId,
+            completerNameById,
+            reopensByTaskId,
             noteRequiredByTemplateId,
             dischargeRequestByAdmission,
             now,
