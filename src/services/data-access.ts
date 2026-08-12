@@ -658,6 +658,21 @@ export interface DischargeRequestRow {
   reason: string;
   requested_by: string | null;
   approval_notes: string | null;
+  transfer_destination: string | null;
+  transfer_treatment_type: string | null;
+  transfer_duration_days: number | null;
+}
+
+export interface ExtensionRequestRow {
+  id: string;
+  admission_id: string;
+  original_discharge_date: string;
+  additional_days: number;
+  new_discharge_date: string;
+  reason: string;
+  status: 'pending' | 'approved';
+  requested_by: string | null;
+  decision_notes: string | null;
 }
 
 export const discharge = {
@@ -668,13 +683,32 @@ export const discharge = {
    * person to approve it first: `discharge.initiate` proposes, `discharge.approve` — enforced
    * server-side to be someone other than the requester — signs off, then `discharge.finalise` executes.
    */
-  async request(admissionId: string, dischargeType: 'early' | 'transfer' | 'other', reason: string): Promise<string> {
+  async request(admissionId: string, dischargeType: 'early' | 'other', reason: string): Promise<string> {
     const { data, error } = await client().rpc('request_early_discharge', {
       p_admission_id: admissionId,
       p_discharge_type: dischargeType,
       p_reason: reason,
     });
     if (error) throw new DataAccessError('discharge.request', error);
+    return data as string;
+  },
+
+  /** Transfer-specific request — records destination, treatment type, and expected duration in addition to the reason. */
+  async requestTransfer(
+    admissionId: string,
+    reason: string,
+    destination: string,
+    treatmentType: string,
+    durationDays: number | null,
+  ): Promise<string> {
+    const { data, error } = await client().rpc('request_transfer_discharge', {
+      p_admission_id: admissionId,
+      p_reason: reason,
+      p_destination: destination,
+      p_treatment_type: treatmentType,
+      p_duration_days: durationDays,
+    });
+    if (error) throw new DataAccessError('discharge.requestTransfer', error);
     return data as string;
   },
 
@@ -709,6 +743,29 @@ export const discharge = {
   },
 };
 
+export const extension = {
+  /** Proposes a stay extension. Requires extension.initiate. A different person must approve. */
+  async request(admissionId: string, additionalDays: number, reason: string): Promise<string> {
+    const { data, error } = await client().rpc('request_stay_extension', {
+      p_admission_id: admissionId,
+      p_additional_days: additionalDays,
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('extension.request', error);
+    return data as string;
+  },
+
+  /** `approve: false` requires a reason. On approval the DB immediately updates `current_planned_discharge_date`. */
+  async decide(extensionId: string, approve: boolean, notes: string | null): Promise<void> {
+    const { error } = await client().rpc('decide_stay_extension', {
+      p_extension_id: extensionId,
+      p_approve: approve,
+      p_notes: notes,
+    });
+    if (error) throw new DataAccessError('extension.decide', error);
+  },
+};
+
 /**
  * Everything needed to render the room board from real data, for one centre. Five independent
  * queries rather than one nested `select`, for the same reason the rest of this file avoids deep
@@ -728,6 +785,7 @@ export const roomBoard = {
       substances,
       taskTemplates,
       dischargeRequests,
+      extensionRequests,
       taskCompleters,
       taskReopens,
     ] = await Promise.all([
@@ -779,9 +837,17 @@ export const roomBoard = {
         'roomBoard.dischargeRequests',
         client()
           .from('discharge_requests')
-          .select('id,admission_id,discharge_type,status,reason,requested_by,approval_notes')
+          .select('id,admission_id,discharge_type,status,reason,requested_by,approval_notes,transfer_destination,transfer_treatment_type,transfer_duration_days')
           .eq('centre_id', centreId)
           .in('status', ['pending', 'approved']),
+      ),
+      run<ExtensionRequestRow[]>(
+        'roomBoard.extensionRequests',
+        client()
+          .from('admission_extensions')
+          .select('id,admission_id,original_discharge_date,additional_days,new_discharge_date,reason,status,requested_by,decision_notes')
+          .eq('centre_id', centreId)
+          .eq('status', 'pending'),
       ),
       // Resolves client_tasks.completed_by to a name. Needs an RPC because user_profiles RLS
       // (migration 0008) lets a caller read only their own profile — see migration 0033.
@@ -853,6 +919,7 @@ export const roomBoard = {
       substances,
       taskTemplates,
       dischargeRequests,
+      extensionRequests,
       taskCompleters,
       taskReopens,
       photos,

@@ -30,6 +30,7 @@ import type {
   ClientRow,
   ClientTaskRow,
   DischargeRequestRow,
+  ExtensionRequestRow,
   RoomAllocationRow,
   StaffAssignmentRow,
   SubstanceRow,
@@ -46,6 +47,7 @@ import type {
   BoardSummary,
   BoardTask,
   DischargeRequestSummary,
+  ExtensionRequestSummary,
   Occupant,
   TaskReopen,
 } from './board-data.js';
@@ -70,6 +72,7 @@ function buildRealOccupant(
   reopensByTaskId: Map<string, TaskReopen[]>,
   noteRequiredByTemplateId: Map<string, boolean>,
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
+  extensionRequestByAdmission: Map<string, ExtensionRequestRow>,
   openConcernClientIds: Set<string>,
   now: Date,
 ): Occupant | null {
@@ -139,6 +142,21 @@ function buildRealOccupant(
         reason: req.reason,
         requestedBy: req.requested_by,
         approvalNotes: req.approval_notes,
+        transferDestination: req.transfer_destination,
+        transferTreatmentType: req.transfer_treatment_type,
+        transferDurationDays: req.transfer_duration_days,
+      }
+    : null;
+
+  const ext = extensionRequestByAdmission.get(admission.id);
+  const extensionRequest: ExtensionRequestSummary | null = ext
+    ? {
+        id: ext.id,
+        originalDischargeDate: ext.original_discharge_date,
+        additionalDays: ext.additional_days,
+        newDischargeDate: ext.new_discharge_date,
+        reason: ext.reason,
+        requestedBy: ext.requested_by,
       }
     : null;
 
@@ -147,6 +165,7 @@ function buildRealOccupant(
     admissionId: admission.id,
     clientId: admission.client_id,
     dischargeRequest,
+    extensionRequest,
     reference: c.reference,
     displayName,
     initials: initialsOf(c.display_name ?? c.reference),
@@ -206,6 +225,10 @@ export async function buildRealBoard(
   const dischargeRequestByAdmission = new Map(
     (data.dischargeRequests as DischargeRequestRow[]).map((r) => [r.admission_id, r]),
   );
+  // At most one pending extension per admission (migration 0036 unique index).
+  const extensionRequestByAdmission = new Map(
+    (data.extensionRequests as ExtensionRequestRow[]).map((r) => [r.admission_id, r]),
+  );
   const photoUrlByClientId = new Map<string, string>(
     (data.photos as ClientPhotoRow[])
       .filter((p) => p.signed_url !== null)
@@ -259,6 +282,7 @@ export async function buildRealBoard(
             reopensByTaskId,
             noteRequiredByTemplateId,
             dischargeRequestByAdmission,
+            extensionRequestByAdmission,
             openConcernIds,
             now,
           )

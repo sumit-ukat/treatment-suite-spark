@@ -320,6 +320,19 @@ export interface DischargeRequestSummary {
   reason: string;
   requestedBy: string | null;
   approvalNotes: string | null;
+  transferDestination: string | null;
+  transferTreatmentType: string | null;
+  transferDurationDays: number | null;
+}
+
+/** Pending stay extension — only one can exist at a time (migration 0036). On approval the DB immediately updates the planned discharge date. */
+export interface ExtensionRequestSummary {
+  id: string;
+  originalDischargeDate: string;
+  additionalDays: number;
+  newDischargeDate: string;
+  reason: string;
+  requestedBy: string | null;
 }
 
 export interface Occupant {
@@ -330,6 +343,8 @@ export interface Occupant {
   clientId: string | null;
   /** Null unless a non-routine discharge is pending approval or approved and awaiting finalisation. */
   dischargeRequest: DischargeRequestSummary | null;
+  /** Null unless a stay extension is pending approval. Approved extensions update the discharge date immediately and no longer appear here. */
+  extensionRequest: ExtensionRequestSummary | null;
   reference: string;
   displayName: string;
   initials: string;
@@ -436,6 +451,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     admissionId: null,
     clientId: null,
     dischargeRequest: null,
+    extensionRequest: null,
     reference: CLIENT_REFS[row.bed] ?? `PL-${row.bed}`,
     displayName: CLIENT_NAMES[row.bed] ?? `Client ${row.bed}`,
     initials: initialsOf(CLIENT_NAMES[row.bed] ?? `C ${row.bed}`),
