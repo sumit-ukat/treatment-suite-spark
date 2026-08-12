@@ -125,13 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStatus('signed_out');
         return;
       }
-      // A token refresh — automatic, periodic, and firing again whenever the tab regains focus — is
-      // not a new sign-in. Treating it like one flipped `status` to 'loading' mid-session, which
-      // unmounts the whole dashboard and resets its local state (which section/centre you were on) —
-      // this is what looked like being "thrown back to the dashboard" just from leaving a centre's
-      // page open for a while or switching tabs and back.
+      // Do NOT call setStatus('loading') here. Any auth event — SIGNED_IN, TOKEN_REFRESHED,
+      // INITIAL_SESSION — can fire when the tab regains focus. Putting the app into 'loading'
+      // unmounts BrowserRouter and every route inside it, which destroys all in-progress form
+      // state (e.g. a half-filled admit-client form). The initial loading gate is handled by
+      // useState's initial value ('loading') so it only applies on first page load, not on
+      // every subsequent auth ping. Permissions are refreshed silently in the background.
       if (event === 'TOKEN_REFRESHED') return;
-      setStatus('loading');
       await loadAccess();
     });
 

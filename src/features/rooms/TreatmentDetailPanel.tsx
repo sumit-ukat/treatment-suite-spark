@@ -481,20 +481,21 @@ export function TreatmentDetailPanel({
 
         {/* ── Pinned header ── */}
         <div className="shrink-0 border-b border-[var(--color-line)] px-4 pb-0 pt-4">
-          <div className="flex items-center gap-3 pr-10">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-col items-center pb-3 text-center">
+            {/* Nav arrows flank the photo so the whole group is centred */}
+            <div className="flex items-center gap-3">
               <button type="button" disabled={!onPrev} onClick={onPrev} className={navBtn} aria-label="Previous client">
                 <ChevronLeft className="size-4" />
               </button>
+              <PhotoBadge occupant={o} size="md" />
               <button type="button" disabled={!onNext} onClick={onNext} className={navBtn} aria-label="Next client">
                 <ChevronRight className="size-4" />
               </button>
             </div>
 
-            <PhotoBadge occupant={o} size="md" />
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+            {/* Name → badges → ref — all centred below the photo */}
+            <div className="mt-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="font-display text-[17px] font-semibold leading-tight">{o.displayName}</span>
                 <StatusBadge status={overallStatus} />
                 {o.hasRestrictedAlert ? (
@@ -503,7 +504,7 @@ export function TreatmentDetailPanel({
                   </span>
                 ) : null}
               </div>
-              <div className="nums text-[11px] text-[var(--color-ink-muted)]">
+              <div className="nums mt-0.5 text-[11px] text-[var(--color-ink-muted)]">
                 Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}{' '}
                 &middot; {o.substance || '—'}
               </div>

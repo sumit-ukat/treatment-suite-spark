@@ -4,12 +4,11 @@ import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
-import { Chip, Panel, Timeline } from '../../components/ui.tsx';
+import { Panel, Timeline } from '../../components/ui.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { clientPhotos, tasks as taskService } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
-import { ConcernSection } from './ConcernSection.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -86,14 +85,21 @@ export function DetailPanel({
       <DialogContent className="flex max-h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
 
-        {/* 3-column header at large screens:
-            [photo + upload] | [name + safeguarding + facts] | [progress card]
-            The photo gets its own column so the upload button sits naturally below the avatar
-            rather than floating beside the name. The facts use the full middle column width. */}
-        <div className="grid grid-cols-1 gap-5 border-b border-[var(--color-line)] p-5 lg:grid-cols-[148px_minmax(0,1fr)_260px]">
+        {/* 3-column header:
+            [profile card] | [key facts + safeguarding status] | [progress card] */}
+        <div className="grid grid-cols-1 gap-5 border-b border-[var(--color-line)] p-5 lg:grid-cols-[200px_minmax(0,1fr)_260px]">
 
-          {/* Col 1 — Photo + upload */}
-          <div className="flex flex-col items-center gap-2 lg:pt-1">
+          {/* Col 1 — Profile card: photo, name, status, high-risk, ref */}
+          <div
+            className={`relative flex flex-col items-center gap-2.5 overflow-hidden rounded-xl p-3 text-center ${
+              o.hasRestrictedAlert
+                ? 'border-t-[3px] border-t-red-400 dark:border-t-red-500'
+                : ''
+            }`}
+          >
+            {o.hasRestrictedAlert ? (
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-xl bg-gradient-to-b from-red-50/80 to-transparent dark:from-red-950/30" />
+            ) : null}
             {o.photoUrl ? (
               <button
                 type="button"
@@ -106,6 +112,22 @@ export function DetailPanel({
             ) : (
               <PhotoBadge occupant={o} size="xl" />
             )}
+
+            <div className="flex flex-col items-center gap-1.5">
+              <h2 className="font-display text-[17px] font-semibold leading-snug">{o.displayName}</h2>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <StatusBadge status={overallStatus} />
+                {o.hasRestrictedAlert ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+                    &#9888; High risk
+                  </span>
+                ) : null}
+              </div>
+              <div className="nums text-[11px] text-[var(--color-ink-muted)]">
+                Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
+              </div>
+            </div>
+
             {o.clientId ? (
               <PhotoUpload
                 centreId={centreId}
@@ -116,66 +138,9 @@ export function DetailPanel({
             ) : null}
           </div>
 
-          {/* Col 2 — Identity + safeguarding + key facts */}
+          {/* Col 2 — Key facts grid + safeguarding status banner */}
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate font-display text-[20px] font-semibold">{o.displayName}</h2>
-              <StatusBadge status={overallStatus} />
-              {o.hasRestrictedAlert ? <Chip icon="&#9873;" label="Restricted alert" tone="alert" /> : null}
-            </div>
-            <div className="nums mt-1 text-[12px] text-[var(--color-ink-muted)]">
-              Ref {o.reference} &middot; Bed {bed.label} &middot; Group {o.group || '—'}
-            </div>
-
-            {/* Safeguarding / Risks / Concerns */}
-            <div
-              className={`mt-3 rounded-lg border-l-4 px-3 py-2 ${
-                o.hasRestrictedAlert
-                  ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
-                  : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[10.5px] font-semibold tracking-[0.05em] uppercase ${
-                    o.hasRestrictedAlert ? 'text-red-700 dark:text-red-400' : 'text-[var(--color-ink-muted)]'
-                  }`}
-                >
-                  Safeguarding / Risks / Concerns
-                </span>
-                {o.hasRestrictedAlert ? (
-                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
-                    Alert
-                  </span>
-                ) : null}
-              </div>
-              <p
-                className={`mt-0.5 text-[12px] ${
-                  o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-[var(--color-ink-muted)]'
-                }`}
-              >
-                {o.hasRestrictedAlert
-                  ? 'Restricted alert on record — full details require sensitivity level 3 access.'
-                  : null}
-              </p>
-              {o.admissionId && o.clientId ? (
-                <div className={o.hasRestrictedAlert ? 'mt-3 border-t border-[var(--color-line)] pt-3' : 'mt-1'}>
-                  <ConcernSection
-                    clientId={o.clientId}
-                    admissionId={o.admissionId}
-                    centreId={centreId}
-                  />
-                </div>
-              ) : (
-                !o.hasRestrictedAlert ? (
-                  <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
-                    No concerns logged.
-                  </p>
-                ) : null
-              )}
-            </div>
-
-            <dl className="nums mt-4 grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">
+            <dl className="nums grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">
               <Fact label="Admitted" value={formatDate(o.admittedAt)} />
               <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
               <Fact label="Programme" value={`${o.durationDays} days`} />
@@ -188,8 +153,58 @@ export function DetailPanel({
               <Fact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
               <Fact label="Buddy" value={o.buddy} />
             </dl>
+
+            {/* Safeguarding / Risks / Concerns — status only, no concern cards */}
+            <div
+              className={`mt-4 rounded-lg border-l-4 px-3 py-2.5 ${
+                o.hasRestrictedAlert
+                  ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
+                  : o.hasOpenConcern
+                  ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
+                  : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10.5px] font-semibold tracking-[0.05em] uppercase ${
+                    o.hasRestrictedAlert
+                      ? 'text-red-700 dark:text-red-400'
+                      : o.hasOpenConcern
+                      ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-[var(--color-ink-muted)]'
+                  }`}
+                >
+                  Safeguarding / Risks / Concerns
+                </span>
+                {o.hasRestrictedAlert ? (
+                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                    Alert
+                  </span>
+                ) : o.hasOpenConcern ? (
+                  <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                    Open
+                  </span>
+                ) : null}
+              </div>
+              <p
+                className={`mt-0.5 text-[12px] ${
+                  o.hasRestrictedAlert
+                    ? 'font-medium text-red-700 dark:text-red-300'
+                    : o.hasOpenConcern
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : 'text-[var(--color-ink-muted)]'
+                }`}
+              >
+                {o.hasRestrictedAlert
+                  ? 'Restricted alert on record — full details require sensitivity level 3 access.'
+                  : o.hasOpenConcern
+                  ? 'Concerns on record — review the client file for details.'
+                  : 'No concerns logged.'}
+              </p>
+            </div>
           </div>
 
+          {/* Col 3 — Programme progress */}
           <div className="h-fit rounded-xl border border-[var(--color-line)] p-4">
             <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
               Programme progress
@@ -212,9 +227,7 @@ export function DetailPanel({
               <div
                 className={`rounded-lg border p-2.5 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
               >
-                <p
-                  className={`text-[17px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}
-                >
+                <p className={`text-[17px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>
                   {o.overdueCount}
                 </p>
                 <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
