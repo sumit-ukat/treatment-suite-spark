@@ -371,6 +371,10 @@ export interface Occupant {
   photoUrl: string | null;
   hasRestrictedAlert: boolean;
   hasOpenConcern: boolean;
+  /** Safeguarding text extracted from old-format allocation_reason — shown in the concerns banner
+   * when no client_concerns rows exist yet (clients admitted before migration 0038). Null for all
+   * fictional boards and for any client that has real concern rows. */
+  legacySafeguardingNote: string | null;
   admissionNotes: string | null;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
@@ -484,6 +488,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     photoUrl: null,
     hasRestrictedAlert: row.hasSafeguardingNote,
     hasOpenConcern: false,
+    legacySafeguardingNote: null,
     admissionNotes: null,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,

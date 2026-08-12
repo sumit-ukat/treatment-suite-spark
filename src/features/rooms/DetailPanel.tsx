@@ -217,6 +217,10 @@ export function DetailPanel({
                     </li>
                   ))}
                 </ul>
+              ) : o.legacySafeguardingNote ? (
+                <p className={`mt-0.5 text-[12px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>
+                  {o.legacySafeguardingNote}
+                </p>
               ) : (
                 <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
                   No notes on file.

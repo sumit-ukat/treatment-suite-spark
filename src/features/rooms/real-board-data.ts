@@ -61,6 +61,21 @@ const settings = PRIMROSE_LODGE_SETTINGS;
 const initialsOf = (name: string): string =>
   name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
 
+// Clients admitted before migration 0038 had safeguarding text concatenated into allocation_reason
+// as "Safeguarding/Risks: {text}\n\nNotes: {notes}". Split that back apart so the UI can route
+// each piece to the right section without showing the raw prefixed string anywhere.
+function parseLegacyReason(raw: string | null): { legacySafeguardingNote: string | null; admissionNotes: string | null } {
+  if (!raw?.trim()) return { legacySafeguardingNote: null, admissionNotes: null };
+  const match = raw.match(/^Safeguarding\/Risks:\s*([\s\S]+?)(?:\n\nNotes:\s*([\s\S]+))?$/);
+  if (match) {
+    return {
+      legacySafeguardingNote: match[1]?.trim() || null,
+      admissionNotes: match[2]?.trim() || null,
+    };
+  }
+  return { legacySafeguardingNote: null, admissionNotes: raw.trim() || null };
+}
+
 function buildRealOccupant(
   admission: AdmissionRow,
   clientsById: Map<string, ClientRow>,
@@ -192,7 +207,7 @@ function buildRealOccupant(
     photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
     hasRestrictedAlert: admission.high_risk,
     hasOpenConcern: openConcernClientIds.has(admission.client_id),
-    admissionNotes: admissionNotes?.trim() || null,
+    ...parseLegacyReason(admissionNotes),
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,
