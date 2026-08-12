@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Printer, Search } from 'lucide-react';
 import { buildRealBoard } from './real-board-data.js';
@@ -123,6 +123,10 @@ export function TreatmentBoard({
   centreName: string;
 }) {
   const navigate = useNavigate();
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const [tableScrollWidth, setTableScrollWidth] = useState(0);
+
   const [beds, setBeds] = useState<readonly BoardBed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +151,17 @@ export function TreatmentBoard({
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [centreId, boardVersion]);
+
+  // Keep top scrollbar phantom width in sync with real table scroll width.
+  useEffect(() => {
+    const el = tableWrapRef.current;
+    if (!el) return;
+    const update = () => setTableScrollWidth(el.scrollWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [beds]);
 
   const counts = useMemo(() => ({
     clients:       beds.filter((b) => b.occupant).length,
@@ -286,7 +301,25 @@ export function TreatmentBoard({
       </div>
 
       {/* ── Table ── */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-card">
+      {/* Top scrollbar — mirrors the bottom one so users can scroll without reaching the foot */}
+      <div
+        ref={topScrollRef}
+        className="overflow-x-auto rounded-t-xl"
+        style={{ height: 12 }}
+        onScroll={(e) => {
+          if (tableWrapRef.current) tableWrapRef.current.scrollLeft = e.currentTarget.scrollLeft;
+        }}
+      >
+        <div style={{ width: tableScrollWidth, height: 1 }} />
+      </div>
+
+      <div
+        ref={tableWrapRef}
+        className="overflow-x-auto rounded-b-xl border border-[var(--color-line)] bg-card"
+        onScroll={(e) => {
+          if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+        }}
+      >
         <table className="min-w-max border-separate border-spacing-0 text-[12.5px]">
 
           <thead className="sticky top-0 z-20">
