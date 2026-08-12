@@ -189,8 +189,7 @@ function buildRealOccupant(
     peeps: admission.peep_required,
     photoState: photoUrlByClientId.has(admission.client_id) ? 'present' : 'missing',
     photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
-    // See file header: no safeguarding/risk data or reachable indicator RPC exists yet.
-    hasRestrictedAlert: false,
+    hasRestrictedAlert: admission.high_risk,
     hasOpenConcern: openConcernClientIds.has(admission.client_id),
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,

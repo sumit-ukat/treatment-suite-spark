@@ -306,6 +306,7 @@ export interface AdmitClientInput {
   treatmentGroup?: string | undefined;
   substanceName?: string | undefined;
   peepRequired: boolean;
+  highRisk: boolean;
   focalTherapistLabel?: string | undefined;
   buddyLabel?: string | undefined;
   doctorLabel?: string | undefined;
@@ -332,6 +333,7 @@ export const admissions = {
       p_treatment_group: input.treatmentGroup ?? null,
       p_substance_name: input.substanceName ?? null,
       p_peep_required: input.peepRequired,
+      p_high_risk: input.highRisk,
       p_focal_therapist_label: input.focalTherapistLabel ?? null,
       p_buddy_label: input.buddyLabel ?? null,
       p_doctor_label: input.doctorLabel ?? null,
@@ -411,6 +413,7 @@ export interface AdmissionRow {
   treatment_group: string | null;
   primary_substance_id: string | null;
   peep_required: boolean;
+  high_risk: boolean;
 }
 
 export interface ClientRow {
@@ -794,7 +797,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk',
           )
           .eq('centre_id', centreId)
           .eq('status', 'active'),

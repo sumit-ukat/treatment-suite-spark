@@ -5,12 +5,10 @@ import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   admissions,
-  clinicalLookups,
   roomsAndBeds,
   type BedRow,
   type ClientSearchResult,
   type RoomRow,
-  type SubstanceRow,
 } from '../../services/data-access.js';
 import { Chip } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
@@ -48,8 +46,9 @@ interface FormState {
   plannedDurationUnit: 'days' | 'weeks';
   bedKey: string; // `${roomId}:${bedId}`, so the select has one unambiguous value
   treatmentGroup: string;
-  substanceId: string;
+  substanceName: string;
   peepRequired: boolean;
+  highRisk: boolean;
   focalTherapistLabel: string;
   buddyLabel: string;
   doctorLabel: string;
@@ -67,8 +66,9 @@ const EMPTY: FormState = {
   plannedDurationUnit: 'days',
   bedKey: '',
   treatmentGroup: '',
-  substanceId: '',
+  substanceName: '',
   peepRequired: false,
+  highRisk: false,
   focalTherapistLabel: '',
   buddyLabel: '',
   doctorLabel: '',
@@ -114,7 +114,6 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   const canCreateNew = can('clients.edit_identity');
 
   const [beds, setBeds] = useState<Array<RoomRow & { bed: BedRow }>>([]);
-  const [substances, setSubstances] = useState<SubstanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -137,11 +136,10 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([roomsAndBeds.availableBeds(centre.id), clinicalLookups.substances()])
-      .then(([bedRows, subRows]) => {
+    roomsAndBeds.availableBeds(centre.id)
+      .then((bedRows) => {
         if (cancelled) return;
         setBeds(bedRows);
-        setSubstances(subRows);
         setLoadError(null);
         if (preselectBedLabel) {
           const match = bedRows.find((r) => r.bed.label === preselectBedLabel);
@@ -178,7 +176,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
     setSubmitError(null);
     try {
       const admittedAt = new Date(`${form.admittedDate}T${form.admittedTime}:00`).toISOString();
-      const substanceName = substances.find((s) => s.id === form.substanceId)?.name;
+      const substanceName = form.substanceName.trim() || undefined;
       // Safeguarding concerns are prepended to the admission reason so they survive in the audit
       // trail even before a dedicated column and sensitivity-gated view exist for them.
       const safeguarding = form.safeguardingConcerns.trim();
@@ -200,6 +198,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         treatmentGroup: form.treatmentGroup.trim() || undefined,
         substanceName,
         peepRequired: form.peepRequired,
+        highRisk: form.highRisk,
         focalTherapistLabel: form.focalTherapistLabel.trim() || undefined,
         buddyLabel: form.buddyLabel.trim() || undefined,
         doctorLabel: form.doctorLabel.trim() || undefined,
@@ -334,15 +333,21 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               <dd className="font-medium">{form.treatmentGroup}</dd>
             </div>
           ) : null}
-          {form.substanceId ? (
+          {form.substanceName.trim() ? (
             <div>
               <dt className="text-[11px] text-[var(--color-ink-muted)]">Substance</dt>
-              <dd className="font-medium">{substances.find((s) => s.id === form.substanceId)?.name}</dd>
+              <dd className="font-medium">{form.substanceName.trim()}</dd>
             </div>
           ) : null}
           <div>
             <dt className="text-[11px] text-[var(--color-ink-muted)]">PEEP required</dt>
             <dd className="font-medium">{form.peepRequired ? 'Yes' : 'No'}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-[var(--color-ink-muted)]">High risk</dt>
+            <dd className={`font-medium ${form.highRisk ? 'text-red-600 dark:text-red-400' : ''}`}>
+              {form.highRisk ? 'Yes — profile highlighted' : 'No'}
+            </dd>
           </div>
           {form.focalTherapistLabel ? (
             <div>
@@ -628,18 +633,13 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             />
           </Field>
           <Field label="Primary substance (optional)">
-            <select
+            <input
+              type="text"
               className={inputCls}
-              value={form.substanceId}
-              onChange={(e) => set('substanceId', e.target.value)}
-            >
-              <option value="">Not recorded</option>
-              {substances.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              value={form.substanceName}
+              onChange={(e) => set('substanceName', e.target.value)}
+              placeholder="e.g. Alcohol, Cannabis"
+            />
           </Field>
         </div>
 
@@ -651,6 +651,22 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           />
           PEEP required
           <Chip label="Personal Emergency Evacuation Plan" title="Meaning as inferred; unconfirmed — see OPEN_QUESTIONS Q1" />
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={form.highRisk}
+            onChange={(e) => set('highRisk', e.target.checked)}
+          />
+          <span className={form.highRisk ? 'font-semibold text-red-600 dark:text-red-400' : ''}>
+            High risk client
+          </span>
+          {form.highRisk ? (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+              Profile will be highlighted
+            </span>
+          ) : null}
         </label>
 
         <SectionHeading>Care team</SectionHeading>
@@ -732,13 +748,16 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             <SummaryRow label="Planned discharge" value={formatDate(plannedDischargePreview)} />
           ) : null}
           {form.treatmentGroup ? <SummaryRow label="Group" value={form.treatmentGroup} /> : null}
-          {form.substanceId ? (
-            <SummaryRow
-              label="Substance"
-              value={substances.find((s) => s.id === form.substanceId)?.name ?? ''}
-            />
+          {form.substanceName.trim() ? (
+            <SummaryRow label="Substance" value={form.substanceName.trim()} />
           ) : null}
           <SummaryRow label="PEEP required" value={form.peepRequired ? 'Yes' : 'No'} />
+          {form.highRisk ? (
+            <div className="min-w-0">
+              <dt className="text-[10.5px] font-semibold text-red-600 dark:text-red-400">High risk</dt>
+              <dd className="mt-0.5 text-[12.5px] font-medium text-red-600 dark:text-red-400">Profile highlighted</dd>
+            </div>
+          ) : null}
           {form.focalTherapistLabel ? <SummaryRow label="Therapist" value={form.focalTherapistLabel} /> : null}
           {form.buddyLabel ? <SummaryRow label="Buddy" value={form.buddyLabel} /> : null}
           {form.doctorLabel ? <SummaryRow label="Doctor" value={form.doctorLabel} /> : null}
