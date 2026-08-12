@@ -4,6 +4,7 @@ import { buildRealBoard } from './real-board-data.js';
 import type { BoardBed } from './board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
+import { DetailPanel } from './DetailPanel.tsx';
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
@@ -126,6 +127,10 @@ export function TreatmentBoard({
   const [loadedAt, setLoadedAt] = useState<Date | null>(null);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
+  const [boardVersion, setBoardVersion] = useState(0);
+  const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
+
+  const selected = beds.find((b) => b.label === openBedLabel) ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +144,7 @@ export function TreatmentBoard({
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [centreId]);
+  }, [centreId, boardVersion]);
 
   const counts = useMemo(() => ({
     clients:  beds.filter((b) => b.occupant).length,
@@ -338,7 +343,8 @@ export function TreatmentBoard({
               return (
                 <tr
                   key={bed.label}
-                  className="transition-colors hover:bg-[var(--color-accent-soft)]"
+                  className="cursor-pointer transition-colors hover:bg-[var(--color-accent-soft)]"
+                  onClick={() => setOpenBedLabel(bed.label)}
                 >
                   {/* Frozen: Bed */}
                   <td className={`${stickyCell} left-0 w-16 px-3 py-3`}>
@@ -433,6 +439,16 @@ export function TreatmentBoard({
           </tbody>
         </table>
       </div>
+
+      {/* ── Client detail panel (same as Room Board) ── */}
+      {selected ? (
+        <DetailPanel
+          bed={selected}
+          centreId={centreId}
+          onClose={() => setOpenBedLabel(null)}
+          onChanged={() => setBoardVersion((v) => v + 1)}
+        />
+      ) : null}
 
       {/* ── Legend ── */}
       <div className="rounded-2xl border bg-card p-5 shadow-soft">
