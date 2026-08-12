@@ -7,6 +7,7 @@ import { Chip, Panel, Timeline } from '../../components/ui.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { clientPhotos, discharge as dischargeService, tasks as taskService } from '../../services/data-access.js';
+import { ConcernSection } from './ConcernSection.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween, fromZonedDateString } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -172,8 +173,23 @@ export function DetailPanel({
               >
                 {o.hasRestrictedAlert
                   ? 'Restricted alert on record — full details require sensitivity level 3 access.'
-                  : 'No safeguarding concerns recorded for this admission.'}
+                  : null}
               </p>
+              {o.admissionId && o.clientId ? (
+                <div className={o.hasRestrictedAlert ? 'mt-3 border-t border-[var(--color-line)] pt-3' : 'mt-1'}>
+                  <ConcernSection
+                    clientId={o.clientId}
+                    admissionId={o.admissionId}
+                    centreId={centreId}
+                  />
+                </div>
+              ) : (
+                !o.hasRestrictedAlert ? (
+                  <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                    No concerns logged.
+                  </p>
+                ) : null
+              )}
             </div>
 
             <dl className="nums mt-4 grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">

@@ -6,6 +6,7 @@ import { formatDate } from '../../lib/format.js';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { tasks as taskService } from '../../services/data-access.js';
+import { ConcernSection } from './ConcernSection.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -406,7 +407,7 @@ function Section({
 
 export function TreatmentDetailPanel({
   bed,
-  centreId: _centreId,
+  centreId,
   onClose,
   onChanged,
   onPrev,
@@ -678,6 +679,17 @@ export function TreatmentDetailPanel({
               <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
                 No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
               </p>
+            ) : null}
+
+            {o.admissionId && o.clientId ? (
+              <div className="py-3">
+                <ConcernSection
+                  clientId={o.clientId}
+                  admissionId={o.admissionId}
+                  centreId={centreId}
+                  compact
+                />
+              </div>
             ) : null}
           </div>
         </div>
