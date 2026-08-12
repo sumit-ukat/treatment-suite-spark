@@ -430,13 +430,20 @@ export function TreatmentBoard({
                   {/* Frozen: Client — shadow marks freeze boundary */}
                   <td
                     className={`${stickyCell} relative left-16 min-w-[168px] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] ${
-                      o.hasOpenConcern
+                      o.hasRestrictedAlert
+                        ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
+                        : o.hasOpenConcern
                         ? 'border-r-[3px] border-r-amber-400 dark:border-r-amber-500'
                         : 'border-r border-[var(--color-line)]'
                     }`}
-                    title={o.hasOpenConcern ? 'Open concern logged — see client profile' : undefined}
+                    title={o.hasRestrictedAlert ? 'High risk — see client profile' : o.hasOpenConcern ? 'Open concern logged — see client profile' : undefined}
                   >
-                    {o.hasOpenConcern ? (
+                    {o.hasRestrictedAlert ? (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-red-50/70 to-transparent dark:from-red-950/25"
+                      />
+                    ) : o.hasOpenConcern ? (
                       <span
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-50/70 to-transparent dark:from-amber-950/25"

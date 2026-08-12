@@ -218,20 +218,8 @@ export function DetailPanel({
                   ))}
                 </ul>
               ) : (
-                <p
-                  className={`mt-0.5 text-[12px] ${
-                    o.hasRestrictedAlert
-                      ? 'font-medium text-red-700 dark:text-red-300'
-                      : o.hasOpenConcern
-                      ? 'text-amber-700 dark:text-amber-300'
-                      : 'text-[var(--color-ink-muted)]'
-                  }`}
-                >
-                  {o.hasRestrictedAlert
-                    ? 'Restricted alert on record.'
-                    : o.hasOpenConcern
-                    ? 'Concerns on record.'
-                    : 'No concerns logged.'}
+                <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                  No notes on file.
                 </p>
               )}
             </div>
