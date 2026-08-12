@@ -339,7 +339,7 @@ export function TreatmentBoard({
             <tr>
               <th
                 colSpan={8}
-                className="sticky left-0 z-30 border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
+                className="border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
               >
                 Client &amp; Placement
               </th>
