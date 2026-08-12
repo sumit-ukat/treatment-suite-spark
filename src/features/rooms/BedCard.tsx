@@ -164,6 +164,15 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
               className={`size-2 shrink-0 rounded-full ${STATUS_DOT_TONE[statusTone]}`}
             />
             <span className="sr-only">{statusLabel}</span>
+            {o.hasOpenConcern ? (
+              <span
+                className="shrink-0 text-[13px] text-amber-600 dark:text-amber-400"
+                title="Open concern logged — see client profile"
+              >
+                <span aria-hidden="true">&#9873;</span>
+                <span className="sr-only">Open concern logged</span>
+              </span>
+            ) : null}
             {o.hasRestrictedAlert ? (
               <span
                 className="ml-auto shrink-0 text-[13px] text-red-600 dark:text-red-400"

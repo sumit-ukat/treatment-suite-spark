@@ -496,6 +496,67 @@ export const tasks = {
   },
 };
 
+// ─── Concerns ────────────────────────────────────────────────────────────────
+
+export type ConcernCategory = 'behaviour' | 'risk' | 'medical' | 'welfare' | 'general';
+
+export interface ConcernRow {
+  id: string;
+  note: string;
+  category: ConcernCategory;
+  logged_by_name: string;
+  logged_at: string;
+  is_resolved: boolean;
+  resolved_note: string | null;
+  resolved_at: string | null;
+}
+
+export const concerns = {
+  async log(
+    clientId: string,
+    admissionId: string,
+    centreId: string,
+    note: string,
+    category: ConcernCategory = 'general',
+  ): Promise<string> {
+    const { data, error } = await client().rpc('log_concern', {
+      p_client_id: clientId,
+      p_admission_id: admissionId,
+      p_centre_id: centreId,
+      p_note: note,
+      p_category: category,
+    });
+    if (error) throw new DataAccessError('concerns.log', error);
+    return data as string;
+  },
+
+  async list(centreId: string, clientId: string): Promise<ConcernRow[]> {
+    const { data, error } = await client().rpc('list_concerns', {
+      p_centre_id: centreId,
+      p_client_id: clientId,
+    });
+    if (error) throw new DataAccessError('concerns.list', error);
+    return (data ?? []) as ConcernRow[];
+  },
+
+  /** Returns the set of client_ids that have at least one open concern — used to flag the boards. */
+  async openClientIds(centreId: string): Promise<Set<string>> {
+    const { data, error } = await client().rpc('open_concern_client_ids', {
+      p_centre_id: centreId,
+    });
+    if (error) throw new DataAccessError('concerns.openClientIds', error);
+    return new Set((data ?? []).map((r: { client_id: string }) => r.client_id));
+  },
+
+  async resolve(concernId: string, note?: string): Promise<void> {
+    const { error } = await client().rpc('resolve_concern', {
+      p_concern_id: concernId,
+      p_note: note?.trim() || null,
+    });
+    if (error) throw new DataAccessError('concerns.resolve', error);
+  },
+};
+
 export interface ClientPhotoRow {
   client_id: string;
   storage_path: string;

@@ -242,6 +242,9 @@ export function BedList({
                     {o.therapist === null ? (
                       <Chip icon="!" label="No therapist" tone="warn" />
                     ) : null}
+                    {o.hasOpenConcern ? (
+                      <Chip icon="&#9873;" label="Concern" tone="warn" title="Open concern logged" />
+                    ) : null}
                     {o.hasRestrictedAlert ? (
                       <Chip icon="&#9873;" label="" tone="alert" title="Restricted alert" />
                     ) : null}

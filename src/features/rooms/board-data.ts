@@ -355,6 +355,7 @@ export interface Occupant {
    * is 'missing', and always null on the fictional boards (see clientId's doc comment). */
   photoUrl: string | null;
   hasRestrictedAlert: boolean;
+  hasOpenConcern: boolean;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
   tasks: readonly BoardTask[];
@@ -465,6 +466,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     // whenever there is nothing to actually show.
     photoUrl: null,
     hasRestrictedAlert: row.hasSafeguardingNote,
+    hasOpenConcern: false,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

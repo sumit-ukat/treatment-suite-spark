@@ -36,7 +36,7 @@ import type {
   TaskCompleterRow,
   TaskReopenRow,
 } from '../../services/data-access.js';
-import { roomBoard, roomsAndBeds } from '../../services/data-access.js';
+import { concerns, roomBoard, roomsAndBeds } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { assessEligibility } from '../../domain/eligibility.js';
 import { isOverdue } from '../../domain/tasks.js';
@@ -70,6 +70,7 @@ function buildRealOccupant(
   reopensByTaskId: Map<string, TaskReopen[]>,
   noteRequiredByTemplateId: Map<string, boolean>,
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
+  openConcernClientIds: Set<string>,
   now: Date,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
@@ -171,6 +172,7 @@ function buildRealOccupant(
     photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
     // See file header: no safeguarding/risk data or reachable indicator RPC exists yet.
     hasRestrictedAlert: false,
+    hasOpenConcern: openConcernClientIds.has(admission.client_id),
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,
@@ -186,10 +188,11 @@ export async function buildRealBoard(
   centreId: string,
   now: Date = new Date(),
 ): Promise<{ board: readonly BoardBed[]; summary: BoardSummary }> {
-  const [rooms, beds, data] = await Promise.all([
+  const [rooms, beds, data, openConcernIds] = await Promise.all([
     roomsAndBeds.rooms(centreId),
     roomsAndBeds.beds(centreId),
     roomBoard.forCentre(centreId),
+    concerns.openClientIds(centreId).catch(() => new Set<string>()),
   ]);
 
   const roomsById = new Map(rooms.map((r) => [r.id, r]));
@@ -256,6 +259,7 @@ export async function buildRealBoard(
             reopensByTaskId,
             noteRequiredByTemplateId,
             dischargeRequestByAdmission,
+            openConcernIds,
             now,
           )
         : null;

@@ -113,7 +113,7 @@ function TaskCell({ bed, code }: { bed: BoardBed; code: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist';
+type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns';
 
 export function TreatmentBoard({
   centreId,
@@ -170,6 +170,7 @@ export function TreatmentBoard({
     dueToday:      beds.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
     dischargeSoon: beds.filter((b) => b.occupant !== null && b.occupant.daysUntilDischarge <= 7).length,
     noTherapist:   beds.filter((b) => b.occupant !== null && !b.occupant.therapist).length,
+    openConcerns:  beds.filter((b) => b.occupant?.hasOpenConcern === true).length,
   }), [beds]);
 
   const visible = useMemo(() => {
@@ -180,6 +181,7 @@ export function TreatmentBoard({
       if (activeFilter === 'available'      && bed.occupant !== null) return false;
       if (activeFilter === 'discharge_soon' && (bed.occupant === null || bed.occupant.daysUntilDischarge > 7)) return false;
       if (activeFilter === 'no_therapist'   && (bed.occupant === null || !!bed.occupant.therapist)) return false;
+      if (activeFilter === 'open_concerns'  && !bed.occupant?.hasOpenConcern) return false;
       if (!q) return true;
       const o = bed.occupant;
       return (
@@ -296,6 +298,15 @@ export function TreatmentBoard({
           value={counts.noTherapist}
           active={activeFilter === 'no_therapist'}
           onClick={() => toggle('no_therapist')}
+          hint="Click to filter"
+        />
+        <StatTile
+          label="Open concerns"
+          value={counts.openConcerns}
+          icon="⚑"
+          tone="warn"
+          active={activeFilter === 'open_concerns'}
+          onClick={() => toggle('open_concerns')}
           hint="Click to filter"
         />
       </div>
@@ -418,6 +429,9 @@ export function TreatmentBoard({
                   {/* Frozen: Client — shadow marks freeze boundary */}
                   <td className={`${stickyCell} left-16 min-w-[168px] border-r border-[var(--color-line)] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)]`}>
                     <div className="flex items-center gap-1.5">
+                      {o.hasOpenConcern && (
+                        <span className="text-[13px] text-amber-500" title="Open concern logged — see client profile">&#9873;</span>
+                      )}
                       {o.hasRestrictedAlert && (
                         <span className="size-2 shrink-0 rounded-full bg-red-500" title="Safeguarding alert" />
                       )}
