@@ -474,7 +474,7 @@ function BoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<FilterId>('all');
   const [therapistFilter, setTherapistFilter] = useState('all');
-  const [view, setView] = useState<'board' | 'list'>('list');
+  const [view, setView] = useState<'board' | 'list'>('board');
 
   const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);

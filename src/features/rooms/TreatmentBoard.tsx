@@ -112,7 +112,7 @@ function TaskCell({ bed, code }: { bed: BoardBed; code: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type FilterId = 'all' | 'overdue' | 'due_today' | 'available';
+type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist';
 
 export function TreatmentBoard({
   centreId,
@@ -147,18 +147,22 @@ export function TreatmentBoard({
   }, [centreId, boardVersion]);
 
   const counts = useMemo(() => ({
-    clients:  beds.filter((b) => b.occupant).length,
-    available: beds.filter((b) => !b.occupant).length,
-    overdue:  beds.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
-    dueToday: beds.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
+    clients:       beds.filter((b) => b.occupant).length,
+    available:     beds.filter((b) => !b.occupant).length,
+    overdue:       beds.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
+    dueToday:      beds.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
+    dischargeSoon: beds.filter((b) => b.occupant !== null && b.occupant.daysUntilDischarge <= 7).length,
+    noTherapist:   beds.filter((b) => b.occupant !== null && !b.occupant.therapist).length,
   }), [beds]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return beds.filter((bed) => {
-      if (activeFilter === 'overdue'   && (bed.occupant?.overdueCount ?? 0) === 0) return false;
-      if (activeFilter === 'due_today' && (bed.occupant?.dueTodayCount ?? 0) === 0) return false;
-      if (activeFilter === 'available' && bed.occupant !== null) return false;
+      if (activeFilter === 'overdue'        && (bed.occupant?.overdueCount ?? 0) === 0) return false;
+      if (activeFilter === 'due_today'      && (bed.occupant?.dueTodayCount ?? 0) === 0) return false;
+      if (activeFilter === 'available'      && bed.occupant !== null) return false;
+      if (activeFilter === 'discharge_soon' && (bed.occupant === null || bed.occupant.daysUntilDischarge > 7)) return false;
+      if (activeFilter === 'no_therapist'   && (bed.occupant === null || !!bed.occupant.therapist)) return false;
       if (!q) return true;
       const o = bed.occupant;
       return (
@@ -252,6 +256,22 @@ export function TreatmentBoard({
           tone="warn"
           active={activeFilter === 'due_today'}
           onClick={() => toggle('due_today')}
+          hint="Click to filter"
+        />
+        <StatTile
+          label="Discharging this week"
+          value={counts.dischargeSoon}
+          icon="↗"
+          tone="warn"
+          active={activeFilter === 'discharge_soon'}
+          onClick={() => toggle('discharge_soon')}
+          hint="Click to filter"
+        />
+        <StatTile
+          label="No therapist assigned"
+          value={counts.noTherapist}
+          active={activeFilter === 'no_therapist'}
+          onClick={() => toggle('no_therapist')}
           hint="Click to filter"
         />
       </div>
