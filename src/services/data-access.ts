@@ -307,6 +307,7 @@ export interface AdmitClientInput {
   substanceName?: string | undefined;
   peepRequired: boolean;
   highRisk: boolean;
+  safeguardingNotes?: string | undefined;
   focalTherapistLabel?: string | undefined;
   buddyLabel?: string | undefined;
   doctorLabel?: string | undefined;
@@ -334,6 +335,7 @@ export const admissions = {
       p_substance_name: input.substanceName ?? null,
       p_peep_required: input.peepRequired,
       p_high_risk: input.highRisk,
+      p_safeguarding_notes: input.safeguardingNotes ?? null,
       p_focal_therapist_label: input.focalTherapistLabel ?? null,
       p_buddy_label: input.buddyLabel ?? null,
       p_doctor_label: input.doctorLabel ?? null,

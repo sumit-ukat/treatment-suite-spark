@@ -177,14 +177,6 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
     try {
       const admittedAt = new Date(`${form.admittedDate}T${form.admittedTime}:00`).toISOString();
       const substanceName = form.substanceName.trim() || undefined;
-      // Safeguarding concerns are prepended to the admission reason so they survive in the audit
-      // trail even before a dedicated column and sensitivity-gated view exist for them.
-      const safeguarding = form.safeguardingConcerns.trim();
-      const notes = form.reason.trim();
-      const combinedReason = safeguarding
-        ? `Safeguarding/Risks: ${safeguarding}${notes ? `\n\nNotes: ${notes}` : ''}`
-        : notes || undefined;
-
       const admissionId = await admissions.admitClient({
         centreId: centre.id,
         bedId: selectedBed.bed.id,
@@ -199,10 +191,11 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         substanceName,
         peepRequired: form.peepRequired,
         highRisk: form.highRisk,
+        safeguardingNotes: form.safeguardingConcerns.trim() || undefined,
         focalTherapistLabel: form.focalTherapistLabel.trim() || undefined,
         buddyLabel: form.buddyLabel.trim() || undefined,
         doctorLabel: form.doctorLabel.trim() || undefined,
-        reason: combinedReason,
+        reason: form.reason.trim() || undefined,
       });
       setResult({ admissionId });
       setStep('done');
