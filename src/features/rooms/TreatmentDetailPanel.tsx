@@ -7,6 +7,8 @@ import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { tasks as taskService } from '../../services/data-access.js';
 import { ConcernSection } from './ConcernSection.tsx';
+import { ExtendStayCard } from './ExtendStayCard.tsx';
+import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PhotoBadge } from './BedCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
@@ -650,6 +652,15 @@ export function TreatmentDetailPanel({
         {/* ── Scrollable task body ── */}
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="divide-y divide-[var(--color-line)] px-4">
+
+            {/* Extension + discharge — side by side when admission is real */}
+            {o.admissionId ? (
+              <div className="grid grid-cols-2 gap-3 py-3">
+                <ExtendStayCard occupant={o} onChanged={onChanged} />
+                <DischargeWorkflowCard occupant={o} onChanged={onChanged} />
+              </div>
+            ) : null}
+
             {needsAction.length > 0 ? (
               <Section title="Needs action" count={needsAction.length} defaultOpen>
                 {needsAction.map((t) => (
