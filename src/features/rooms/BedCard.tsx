@@ -142,13 +142,16 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex w-full flex-col gap-3 rounded-2xl border bg-card p-3.5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      className={`group relative flex w-full flex-col gap-3 rounded-2xl border bg-card p-3.5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+        o.hasOpenConcern
+          ? 'border-t-[3px] border-t-amber-400 hover:border-[var(--color-accent)]/55 hover:border-t-amber-400 dark:border-t-amber-500 dark:hover:border-t-amber-500'
+          : 'hover:border-[var(--color-accent)]/55'
+      }`}
     >
       {o.hasOpenConcern ? (
         <span
           aria-hidden="true"
-          title="Open concern logged"
-          className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl bg-amber-400 dark:bg-amber-500"
+          className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-amber-50/70 to-transparent dark:from-amber-950/25"
         />
       ) : null}
       {attentionCount > 0 ? (
