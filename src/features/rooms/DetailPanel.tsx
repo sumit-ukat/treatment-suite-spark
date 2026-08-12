@@ -254,6 +254,12 @@ export function DetailPanel({
                 <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
               </div>
             </div>
+            {o.admissionNotes ? (
+              <div className="mt-3.5 border-t border-[var(--color-line)] pt-3">
+                <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
+                <p className="mt-1 whitespace-pre-wrap text-[11.5px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+              </div>
+            ) : null}
           </div>
         </div>
 

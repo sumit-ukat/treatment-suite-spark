@@ -428,6 +428,7 @@ export interface ClientRow {
 export interface RoomAllocationRow {
   admission_id: string;
   bed_id: string;
+  allocation_reason: string | null;
 }
 
 export interface StaffAssignmentRow {
@@ -808,7 +809,7 @@ export const roomBoard = {
         'roomBoard.allocations',
         client()
           .from('room_allocations')
-          .select('admission_id,bed_id')
+          .select('admission_id,bed_id,allocation_reason')
           .eq('centre_id', centreId)
           .is('ended_at', null),
       ),

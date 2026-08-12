@@ -371,6 +371,7 @@ export interface Occupant {
   photoUrl: string | null;
   hasRestrictedAlert: boolean;
   hasOpenConcern: boolean;
+  admissionNotes: string | null;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
   tasks: readonly BoardTask[];
@@ -483,6 +484,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     photoUrl: null,
     hasRestrictedAlert: row.hasSafeguardingNote,
     hasOpenConcern: false,
+    admissionNotes: null,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

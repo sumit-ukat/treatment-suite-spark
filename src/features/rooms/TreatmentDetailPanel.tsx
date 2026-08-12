@@ -609,6 +609,12 @@ export function TreatmentDetailPanel({
                 </p>
               )}
             </div>
+            {o.admissionNotes ? (
+              <div className="mt-2 rounded-lg border border-[var(--color-line)] px-3 py-2.5">
+                <p className="text-[10px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+              </div>
+            ) : null}
           </div>
 
           {/* Col 3 — Programme progress */}

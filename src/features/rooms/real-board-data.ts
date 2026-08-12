@@ -74,6 +74,7 @@ function buildRealOccupant(
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
   extensionRequestByAdmission: Map<string, ExtensionRequestRow>,
   openConcernClientIds: Set<string>,
+  admissionNotes: string | null,
   now: Date,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
@@ -191,6 +192,7 @@ function buildRealOccupant(
     photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
     hasRestrictedAlert: admission.high_risk,
     hasOpenConcern: openConcernClientIds.has(admission.client_id),
+    admissionNotes: admissionNotes?.trim() || null,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,
@@ -245,9 +247,13 @@ export async function buildRealBoard(
   }
 
   const admissionByBed = new Map<string, AdmissionRow>();
+  const admissionNotesByBed = new Map<string, string | null>();
   for (const alloc of data.allocations as RoomAllocationRow[]) {
     const admission = data.admissions.find((a) => a.id === alloc.admission_id);
-    if (admission) admissionByBed.set(alloc.bed_id, admission);
+    if (admission) {
+      admissionByBed.set(alloc.bed_id, admission);
+      admissionNotesByBed.set(alloc.bed_id, alloc.allocation_reason);
+    }
   }
 
   const staffByAdmission = new Map<string, StaffAssignmentRow[]>();
@@ -283,6 +289,7 @@ export async function buildRealBoard(
             dischargeRequestByAdmission,
             extensionRequestByAdmission,
             openConcernIds,
+            admissionNotesByBed.get(bed.id) ?? null,
             now,
           )
         : null;
