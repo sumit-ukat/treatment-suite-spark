@@ -406,6 +406,15 @@ function Section({
   );
 }
 
+function TFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[10px] text-[var(--color-ink-muted)]">{label}</dt>
+      <dd className="mt-0.5 font-medium">{value}</dd>
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function TreatmentDetailPanel({
@@ -472,80 +481,144 @@ export function TreatmentDetailPanel({
   const timelineTasks = tasks.filter((t) => t.dueAt !== null);
 
   const navBtn =
-    'flex size-8 items-center justify-center rounded-lg border border-[var(--color-line)] text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30';
+    'flex size-7 items-center justify-center rounded-lg border border-[var(--color-line)] text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30';
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[90vh] w-full max-w-[1200px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Treatment detail — {o.displayName}</DialogTitle>
 
-        {/* ── Pinned header ── */}
-        <div className="shrink-0 border-b border-[var(--color-line)] px-4 pb-0 pt-4">
-          <div className="flex flex-col items-center pb-3 text-center">
-            {/* Nav arrows flank the photo so the whole group is centred */}
-            <div className="flex items-center gap-3">
+        {/* ── Pinned header — 3-column: profile+nav | facts+safeguarding | progress ── */}
+        <div className="grid shrink-0 grid-cols-1 gap-4 border-b border-[var(--color-line)] p-4 lg:grid-cols-[160px_minmax(0,1fr)_220px]">
+
+          {/* Col 1 — Profile card with nav arrows flanking the photo */}
+          <div
+            className={`relative flex flex-col items-center gap-2 overflow-hidden rounded-xl p-3 text-center ${
+              o.hasRestrictedAlert ? 'border-t-[3px] border-t-red-400 dark:border-t-red-500' : ''
+            }`}
+          >
+            {o.hasRestrictedAlert ? (
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-16 rounded-t-xl bg-gradient-to-b from-red-50/80 to-transparent dark:from-red-950/30" />
+            ) : null}
+            <div className="flex items-center gap-2">
               <button type="button" disabled={!onPrev} onClick={onPrev} className={navBtn} aria-label="Previous client">
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-3.5" />
               </button>
               <PhotoBadge occupant={o} size="md" />
               <button type="button" disabled={!onNext} onClick={onNext} className={navBtn} aria-label="Next client">
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-3.5" />
               </button>
             </div>
-
-            {/* Name → badges → ref — all centred below the photo */}
-            <div className="mt-2">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="font-display text-[17px] font-semibold leading-tight">{o.displayName}</span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-display text-[15px] font-semibold leading-snug">{o.displayName}</span>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
                 <StatusBadge status={overallStatus} />
                 {o.hasRestrictedAlert ? (
-                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
-                    Safeguarding alert
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+                    &#9888; High risk
                   </span>
                 ) : null}
               </div>
-              <div className="nums mt-0.5 text-[11px] text-[var(--color-ink-muted)]">
-                Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}{' '}
-                &middot; {o.substance || '—'}
+              <div className="nums text-[10.5px] text-[var(--color-ink-muted)]">
+                Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
               </div>
             </div>
           </div>
 
-          {/* Key facts strip */}
-          <div className="nums mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 pb-3 text-[12px]">
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Day </span>
-              <strong className="font-semibold">{o.treatmentDay}</strong>
-              <span className="text-[var(--color-ink-muted)]">/{o.durationDays}</span>
-            </span>
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Admitted </span>
-              {formatDate(o.admittedAt)}
-            </span>
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Discharge </span>
-              {fmtDateStr(o.plannedDischargeDate)}
-            </span>
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Therapist </span>
-              {o.therapist ?? (
-                <span className="text-amber-600 dark:text-amber-400">Not assigned</span>
-              )}
-            </span>
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Keyworker </span>
-              {o.keyworker ?? '—'}
-            </span>
-            <span>
-              <span className="text-[var(--color-ink-muted)]">Tasks </span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{o.completedCount} done</span>
-              {o.overdueCount > 0 ? (
-                <span className="ml-1 font-semibold text-red-600 dark:text-red-400">· {o.overdueCount} overdue</span>
-              ) : null}
-              {o.dueTodayCount > 0 ? (
-                <span className="ml-1 font-semibold text-amber-600 dark:text-amber-400">· {o.dueTodayCount} due today</span>
-              ) : null}
-            </span>
+          {/* Col 2 — Key facts grid + safeguarding banner */}
+          <div className="min-w-0">
+            <dl className="nums grid grid-cols-2 gap-x-5 gap-y-3 text-[11.5px] sm:grid-cols-4">
+              <TFact label="Admitted" value={formatDate(o.admittedAt)} />
+              <TFact label="Planned discharge" value={fmtDateStr(o.plannedDischargeDate)} />
+              <TFact label="Programme" value={`${o.durationDays} days`} />
+              <TFact label="Primary concern" value={o.substance || '—'} />
+              <TFact
+                label="Family meeting"
+                value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
+              />
+              <TFact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
+              <TFact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
+              <TFact label="Buddy" value={o.buddy} />
+            </dl>
+
+            <div
+              className={`mt-3 rounded-lg border-l-4 px-3 py-2 ${
+                o.hasRestrictedAlert
+                  ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
+                  : o.hasOpenConcern
+                  ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
+                  : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-semibold tracking-[0.05em] uppercase ${
+                    o.hasRestrictedAlert
+                      ? 'text-red-700 dark:text-red-400'
+                      : o.hasOpenConcern
+                      ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-[var(--color-ink-muted)]'
+                  }`}
+                >
+                  Safeguarding / Risks / Concerns
+                </span>
+                {o.hasRestrictedAlert ? (
+                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                    Alert
+                  </span>
+                ) : o.hasOpenConcern ? (
+                  <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                    Open
+                  </span>
+                ) : null}
+              </div>
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  o.hasRestrictedAlert
+                    ? 'font-medium text-red-700 dark:text-red-300'
+                    : o.hasOpenConcern
+                    ? 'text-amber-700 dark:text-amber-300'
+                    : 'text-[var(--color-ink-muted)]'
+                }`}
+              >
+                {o.hasRestrictedAlert
+                  ? 'Restricted alert on record — full details require sensitivity level 3 access.'
+                  : o.hasOpenConcern
+                  ? 'Concerns on record — review the client file for details.'
+                  : 'No concerns logged.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Col 3 — Programme progress */}
+          <div className="h-fit rounded-xl border border-[var(--color-line)] p-3.5">
+            <p className="text-[9.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+              Programme progress
+            </p>
+            <p className="nums mt-1.5 text-[22px] font-semibold leading-none">
+              Day {o.treatmentDay}
+              <span className="text-[13px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
+            </p>
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="brand-gradient h-full rounded-full" style={{ width: `${todayPct}%` }} />
+            </div>
+            <p className="nums mt-1 text-[10px] text-[var(--color-ink-muted)]">
+              {Math.round(todayPct)}% of planned stay elapsed
+            </p>
+            <div className="nums mt-3 grid grid-cols-2 gap-1.5 text-center text-[10.5px]">
+              <div className="rounded-lg border border-[var(--color-line)] p-2">
+                <p className="text-[15px] font-semibold leading-none">{o.completedCount}</p>
+                <p className="mt-0.5 text-[var(--color-ink-muted)]">Done</p>
+              </div>
+              <div
+                className={`rounded-lg border p-2 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
+              >
+                <p className={`text-[15px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>
+                  {o.overdueCount}
+                </p>
+                <p className="mt-0.5 text-[var(--color-ink-muted)]">Overdue</p>
+              </div>
+            </div>
           </div>
         </div>
 
