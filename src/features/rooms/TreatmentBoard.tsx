@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Printer, Search } from 'lucide-react';
 import { buildRealBoard } from './real-board-data.js';
 import type { BoardBed } from './board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
@@ -121,6 +122,7 @@ export function TreatmentBoard({
   centreId: string;
   centreName: string;
 }) {
+  const navigate = useNavigate();
   const [beds, setBeds] = useState<readonly BoardBed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -212,6 +214,13 @@ export function TreatmentBoard({
                 className="h-9 w-[220px] rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
             </label>
+            <button
+              type="button"
+              onClick={() => navigate('../admissions')}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:opacity-90"
+            >
+              <Plus className="size-4" /> Admit client
+            </button>
             <button
               type="button"
               onClick={() => window.print()}
