@@ -427,11 +427,15 @@ export function TreatmentBoard({
                   </td>
 
                   {/* Frozen: Client — shadow marks freeze boundary */}
-                  <td className={`${stickyCell} left-16 min-w-[168px] border-r border-[var(--color-line)] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)]`}>
+                  <td
+                    className={`${stickyCell} left-16 min-w-[168px] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] ${
+                      o.hasOpenConcern
+                        ? 'border-r-[3px] border-r-amber-400 dark:border-r-amber-500'
+                        : 'border-r border-[var(--color-line)]'
+                    }`}
+                    title={o.hasOpenConcern ? 'Open concern logged — see client profile' : undefined}
+                  >
                     <div className="flex items-center gap-1.5">
-                      {o.hasOpenConcern && (
-                        <span className="text-[13px] text-amber-500" title="Open concern logged — see client profile">&#9873;</span>
-                      )}
                       {o.hasRestrictedAlert && (
                         <span className="size-2 shrink-0 rounded-full bg-red-500" title="Safeguarding alert" />
                       )}

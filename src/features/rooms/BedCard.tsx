@@ -144,6 +144,13 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
       onClick={onOpen}
       className="group relative flex w-full flex-col gap-3 rounded-2xl border bg-card p-3.5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:border-[var(--color-accent)]/55 hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
+      {o.hasOpenConcern ? (
+        <span
+          aria-hidden="true"
+          title="Open concern logged"
+          className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl bg-amber-400 dark:bg-amber-500"
+        />
+      ) : null}
       {attentionCount > 0 ? (
         <span
           aria-hidden="true"
@@ -164,15 +171,6 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
               className={`size-2 shrink-0 rounded-full ${STATUS_DOT_TONE[statusTone]}`}
             />
             <span className="sr-only">{statusLabel}</span>
-            {o.hasOpenConcern ? (
-              <span
-                className="shrink-0 text-[13px] text-amber-600 dark:text-amber-400"
-                title="Open concern logged — see client profile"
-              >
-                <span aria-hidden="true">&#9873;</span>
-                <span className="sr-only">Open concern logged</span>
-              </span>
-            ) : null}
             {o.hasRestrictedAlert ? (
               <span
                 className="ml-auto shrink-0 text-[13px] text-red-600 dark:text-red-400"
