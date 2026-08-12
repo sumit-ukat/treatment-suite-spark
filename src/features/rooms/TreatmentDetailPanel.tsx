@@ -476,7 +476,7 @@ export function TreatmentDetailPanel({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] w-full max-w-[900px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="flex max-h-[90vh] w-full max-w-[1200px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Treatment detail — {o.displayName}</DialogTitle>
 
         {/* ── Pinned header ── */}
@@ -649,59 +649,65 @@ export function TreatmentDetailPanel({
           </div>
         </div>
 
-        {/* ── Scrollable task body ── */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="divide-y divide-[var(--color-line)] px-4">
+        {/* ── Body: tasks left, workflow right ── */}
+        <div className="min-h-0 flex-1 overflow-hidden flex">
 
-            {/* Extension + discharge — side by side when admission is real */}
-            {o.admissionId ? (
-              <div className="grid grid-cols-2 gap-3 py-3">
+          {/* Left — scrollable task list */}
+          <div className="min-h-0 flex-1 overflow-y-auto border-r border-[var(--color-line)]">
+            <div className="divide-y divide-[var(--color-line)] px-4">
+              {needsAction.length > 0 ? (
+                <Section title="Needs action" count={needsAction.length} defaultOpen>
+                  {needsAction.map((t) => (
+                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                  ))}
+                </Section>
+              ) : null}
+
+              {comingUp.length > 0 ? (
+                <Section title="Coming up" count={comingUp.length} defaultOpen={false}>
+                  {comingUp.map((t) => (
+                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                  ))}
+                </Section>
+              ) : null}
+
+              {done.length > 0 ? (
+                <Section title="Done" count={done.length} defaultOpen={false}>
+                  {done.map((t) => (
+                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                  ))}
+                </Section>
+              ) : null}
+
+              {filtered.length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
+                  No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
+                </p>
+              ) : null}
+
+              {o.admissionId && o.clientId ? (
+                <div className="py-3">
+                  <ConcernSection
+                    clientId={o.clientId}
+                    admissionId={o.admissionId}
+                    centreId={centreId}
+                    compact
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Right — extend stay + discharge, scrollable */}
+          {o.admissionId ? (
+            <div className="w-[360px] shrink-0 overflow-y-auto">
+              <div className="flex flex-col gap-3 p-4">
                 <ExtendStayCard occupant={o} onChanged={onChanged} />
                 <DischargeWorkflowCard occupant={o} onChanged={onChanged} />
               </div>
-            ) : null}
+            </div>
+          ) : null}
 
-            {needsAction.length > 0 ? (
-              <Section title="Needs action" count={needsAction.length} defaultOpen>
-                {needsAction.map((t) => (
-                  <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                ))}
-              </Section>
-            ) : null}
-
-            {comingUp.length > 0 ? (
-              <Section title="Coming up" count={comingUp.length} defaultOpen={false}>
-                {comingUp.map((t) => (
-                  <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                ))}
-              </Section>
-            ) : null}
-
-            {done.length > 0 ? (
-              <Section title="Done" count={done.length} defaultOpen={false}>
-                {done.map((t) => (
-                  <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                ))}
-              </Section>
-            ) : null}
-
-            {filtered.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
-                No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
-              </p>
-            ) : null}
-
-            {o.admissionId && o.clientId ? (
-              <div className="py-3">
-                <ConcernSection
-                  clientId={o.clientId}
-                  admissionId={o.admissionId}
-                  centreId={centreId}
-                  compact
-                />
-              </div>
-            ) : null}
-          </div>
         </div>
       </DialogContent>
     </Dialog>
