@@ -7,6 +7,7 @@ import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { tasks as taskService } from '../../services/data-access.js';
 import { ConcernSection } from './ConcernSection.tsx';
+import { PhotoBadge } from './BedCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -488,9 +489,7 @@ export function TreatmentDetailPanel({
               </button>
             </div>
 
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[13px] font-bold text-[var(--color-accent)]">
-              {o.initials}
-            </div>
+            <PhotoBadge occupant={o} size="md" />
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">

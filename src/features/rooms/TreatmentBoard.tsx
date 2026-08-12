@@ -4,6 +4,7 @@ import { Plus, Printer, Search } from 'lucide-react';
 import { buildRealBoard } from './real-board-data.js';
 import type { BoardBed } from './board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
+import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { TreatmentDetailPanel } from './TreatmentDetailPanel.tsx';
 
@@ -346,7 +347,7 @@ export function TreatmentBoard({
                 <th
                   key={g.label}
                   colSpan={g.count}
-                  className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase ${g.cls}`}
+                  className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls}`}
                 >
                   {g.label}
                 </th>
@@ -441,10 +442,8 @@ export function TreatmentBoard({
                         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-50/70 to-transparent dark:from-amber-950/25"
                       />
                     ) : null}
-                    <div className="relative flex items-center gap-1.5">
-                      {o.hasRestrictedAlert && (
-                        <span className="size-2 shrink-0 rounded-full bg-red-500" title="Safeguarding alert" />
-                      )}
+                    <div className="relative flex items-center gap-2">
+                      <PhotoBadge occupant={o} size="sm" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate text-[13px] font-medium text-[var(--color-ink)]">
