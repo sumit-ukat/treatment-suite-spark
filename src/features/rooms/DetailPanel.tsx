@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -7,7 +7,7 @@ import { PhotoBadge } from './BedCard.tsx';
 import { Panel, Timeline } from '../../components/ui.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
-import { clientPhotos, tasks as taskService } from '../../services/data-access.js';
+import { clientPhotos, concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
@@ -17,6 +17,14 @@ import { useAuth } from '../auth/AuthProvider.tsx';
 // Europe/London.
 const TZ = PRIMROSE_LODGE_SETTINGS.timezone;
 
+
+const CONCERN_LABEL: Record<string, string> = {
+  behaviour: 'Behaviour',
+  risk: 'Risk',
+  medical: 'Medical',
+  welfare: 'Welfare',
+  general: 'General',
+};
 
 const CATEGORY_LABEL: Record<string, string> = {
   family_contact: 'Family contact',
@@ -57,6 +65,12 @@ export function DetailPanel({
   onChanged?: (() => void) | undefined;
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
+  const clientId = bed.occupant?.clientId;
+  useEffect(() => {
+    if (!clientId) return;
+    concerns.list(centreId, clientId).then(setConcernRows).catch(() => {});
+  }, [centreId, clientId]);
 
   const o = bed.occupant;
   if (!o) return null;
@@ -186,21 +200,40 @@ export function DetailPanel({
                   </span>
                 ) : null}
               </div>
-              <p
-                className={`mt-0.5 text-[12px] ${
-                  o.hasRestrictedAlert
-                    ? 'font-medium text-red-700 dark:text-red-300'
+              {concernRows.length > 0 ? (
+                <ul className="mt-1.5 space-y-1.5">
+                  {concernRows.map((r) => (
+                    <li key={r.id} className={`text-[11.5px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
+                      <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
+                        r.category === 'risk'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                          : r.category === 'medical'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                      }`}>{CONCERN_LABEL[r.category]}</span>
+                      <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
+                      <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
+                      {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
+                  className={`mt-0.5 text-[12px] ${
+                    o.hasRestrictedAlert
+                      ? 'font-medium text-red-700 dark:text-red-300'
+                      : o.hasOpenConcern
+                      ? 'text-amber-700 dark:text-amber-300'
+                      : 'text-[var(--color-ink-muted)]'
+                  }`}
+                >
+                  {o.hasRestrictedAlert
+                    ? 'Restricted alert on record.'
                     : o.hasOpenConcern
-                    ? 'text-amber-700 dark:text-amber-300'
-                    : 'text-[var(--color-ink-muted)]'
-                }`}
-              >
-                {o.hasRestrictedAlert
-                  ? 'Restricted alert on record — full details require sensitivity level 3 access.'
-                  : o.hasOpenConcern
-                  ? 'Concerns on record — review the client file for details.'
-                  : 'No concerns logged.'}
-              </p>
+                    ? 'Concerns on record.'
+                    : 'No concerns logged.'}
+                </p>
+              )}
             </div>
           </div>
 
