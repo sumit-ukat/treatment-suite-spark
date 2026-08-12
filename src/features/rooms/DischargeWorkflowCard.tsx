@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Panel } from '../../components/ui.tsx';
 import { discharge as dischargeService } from '../../services/data-access.js';
 import type { DischargeRequestSummary, Occupant } from './board-data.js';
-import { DischargeStep } from './ExtendStayCard.tsx';
-import type { StepStatus } from './ExtendStayCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -16,26 +14,51 @@ const DISCHARGE_TYPE_LABEL: Record<DischargeRequestSummary['dischargeType'], str
   other: 'Other',
 };
 
-/**
- * The date field has no time component, so a time of day has to be invented for a date-only pick.
- * Noon is the convention used everywhere else in this codebase for a past or future calendar date —
- * but `app.finalise_discharge` refuses anything after "now" (with a small tolerance), and noon on
- * *today* is in the future for every user signing in before midday. Using the real current instant
- * whenever the naive noon value would be later than it keeps "today" always valid, and still gives a
- * stable noon timestamp for a genuinely backdated entry, where the exact time is not known anyway.
- */
 function dischargeTimestamp(dateStr: string): Date {
   const noon = fromZonedDateString(dateStr, TZ, { hour: 12, minute: 0 });
   const now = new Date();
   return noon.getTime() > now.getTime() ? now : noon;
 }
 
-/**
- * The discharge workflow — see migration 0027 for the reasoning behind the two paths this mirrors.
- *
- * `occupant.admissionId === null` (the fictional and frozen boards) renders nothing: there is no real
- * admission to discharge.
- */
+const STEP_LABELS = ['Requested', 'Approved', 'Finalised'] as const;
+
+function StepPills({ active }: { active: 1 | 2 | 3 }) {
+  return (
+    <div className="mb-4 flex items-center">
+      {STEP_LABELS.map((label, i) => {
+        const step = (i + 1) as 1 | 2 | 3;
+        const done = step < active;
+        const current = step === active;
+        return (
+          <div key={step} className="flex min-w-0 flex-1 items-center">
+            <div className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              done
+                ? 'bg-[var(--color-accent)] text-white'
+                : current
+                ? 'border border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                : 'border border-[var(--color-line)] text-[var(--color-ink-muted)]'
+            }`}>
+              <span className={`grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold ${
+                done
+                  ? 'bg-white/20'
+                  : current
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'bg-black/[0.06] dark:bg-white/10'
+              }`}>
+                {done ? '✓' : step}
+              </span>
+              {label}
+            </div>
+            {step < 3 ? (
+              <div className={`mx-1.5 h-px flex-1 ${done ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-line)]'}`} />
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DischargeWorkflowCard({
   occupant: o,
   onChanged,
@@ -66,6 +89,9 @@ export function DischargeWorkflowCard({
   const req = o.dischargeRequest;
   const isOwnRequest = req?.requestedBy != null && req.requestedBy === session?.user.id;
 
+  // Which step is currently active.
+  const activeStep: 1 | 2 | 3 = !req ? 1 : req.status === 'pending' ? 2 : 3;
+
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -92,17 +118,12 @@ export function DischargeWorkflowCard({
     } else if (dischargeType === 'transfer') {
       void run(async () => {
         await dischargeService.requestTransfer(
-          admissionId,
-          reason,
-          transferDestination,
-          transferTreatmentType,
+          admissionId, reason, transferDestination, transferTreatmentType,
           transferDurationDays ? parseInt(transferDurationDays, 10) : null,
         );
       });
     } else {
-      void run(async () => {
-        await dischargeService.request(admissionId, dischargeType, reason);
-      });
+      void run(async () => { await dischargeService.request(admissionId, dischargeType, reason); });
     }
   };
 
@@ -124,30 +145,27 @@ export function DischargeWorkflowCard({
     </label>
   );
 
-  const step1Status: StepStatus = req ? 'complete' : mode === 'form' ? 'ready' : 'waiting';
-  const step2Status: StepStatus = !req ? 'waiting' : req.status === 'approved' ? 'complete' : 'ready';
-  const step3Status: StepStatus = req?.status === 'approved' ? 'ready' : 'waiting';
-
   return (
     <Panel title="Discharge workflow" subtitle="Three sign-off steps. Each one is written to the audit trail.">
-      <div className="flex flex-col">
-        <DischargeStep number={1} isLast={false} title="Requested" status={step1Status}>
-          {!req && mode === 'idle' ? (
+      <StepPills active={activeStep} />
+
+      {/* ── Step 1: Initiate ── */}
+      {activeStep === 1 ? (
+        <div>
+          {mode === 'idle' ? (
             canInitiate || canFinalise ? (
               <button
                 type="button"
                 onClick={() => setMode('form')}
-                className="mt-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                className="rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
               >
                 Discharge&hellip;
               </button>
             ) : (
-              <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">No discharge in progress.</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">No discharge in progress.</p>
             )
-          ) : null}
-
-          {!req && mode === 'form' ? (
-            <div className="mt-2 flex flex-col gap-2">
+          ) : (
+            <div className="flex flex-col gap-2">
               <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                 Type
                 <select
@@ -176,34 +194,21 @@ export function DischargeWorkflowCard({
                 <>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                     Destination facility
-                    <input
-                      type="text"
-                      value={transferDestination}
-                      onChange={(e) => setTransferDestination(e.target.value)}
+                    <input type="text" value={transferDestination} onChange={(e) => setTransferDestination(e.target.value)}
                       placeholder="e.g. Castle Craig, another UKAT centre…"
-                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-                    />
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
                   </label>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                     Treatment type at destination
-                    <input
-                      type="text"
-                      value={transferTreatmentType}
-                      onChange={(e) => setTransferTreatmentType(e.target.value)}
+                    <input type="text" value={transferTreatmentType} onChange={(e) => setTransferTreatmentType(e.target.value)}
                       placeholder="e.g. Day programme, outpatient…"
-                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-                    />
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
                   </label>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                     Duration at destination (days, optional)
-                    <input
-                      type="number"
-                      min={1}
-                      value={transferDurationDays}
-                      onChange={(e) => setTransferDurationDays(e.target.value)}
+                    <input type="number" min={1} value={transferDurationDays} onChange={(e) => setTransferDurationDays(e.target.value)}
                       placeholder="Leave blank if unknown"
-                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-                    />
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
                   </label>
                 </>
               ) : null}
@@ -213,144 +218,106 @@ export function DischargeWorkflowCard({
                 </p>
               ) : null}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={busy || !reason.trim()}
-                  onClick={submitNewDischarge}
-                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
-                >
+                <button type="button" disabled={busy || !reason.trim()} onClick={submitNewDischarge}
+                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
                   {busy ? 'Saving…' : dischargeType === 'planned' ? 'Discharge' : 'Submit for approval'}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => { setMode('idle'); setReason(''); setError(null); }}
-                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
-                >
+                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setError(null); }}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Cancel
                 </button>
               </div>
             </div>
-          ) : null}
+          )}
+        </div>
+      ) : null}
 
-          {req ? (
-            <div className="mt-1 space-y-0.5 text-[11px] text-[var(--color-ink-muted)]">
-              <p>{DISCHARGE_TYPE_LABEL[req.dischargeType]} &mdash; {req.reason}</p>
-              {req.dischargeType === 'transfer' && req.transferDestination ? (
-                <p>To: {req.transferDestination}{req.transferTreatmentType ? ` · ${req.transferTreatmentType}` : ''}{req.transferDurationDays ? ` · ${req.transferDurationDays}d` : ''}</p>
-              ) : null}
-            </div>
-          ) : null}
-        </DischargeStep>
+      {/* ── Step 2: Approve ── */}
+      {activeStep === 2 && req ? (
+        <div className="flex flex-col gap-2">
+          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)]">
+            <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</p>
+            <p className="mt-0.5">{req.reason}</p>
+            {req.dischargeType === 'transfer' && req.transferDestination ? (
+              <p className="mt-0.5">To: {req.transferDestination}{req.transferTreatmentType ? ` · ${req.transferTreatmentType}` : ''}{req.transferDurationDays ? ` · ${req.transferDurationDays}d` : ''}</p>
+            ) : null}
+          </div>
 
-        <DischargeStep number={2} isLast={false} title="Approved" status={step2Status}>
-          {req && req.status === 'pending' ? (
-            canApprove && !isOwnRequest && mode === 'idle' ? (
-              <div className="mt-1.5 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
+          {mode === 'idle' ? (
+            canApprove && !isOwnRequest ? (
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={busy}
                   onClick={() => void run(() => dischargeService.decide(req.id, true, null))}
-                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
-                >
-                  Approve
+                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
+                  {busy ? 'Saving…' : 'Approve'}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setMode('reject')}
-                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
-                >
+                <button type="button" disabled={busy} onClick={() => setMode('reject')}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Reject
                 </button>
               </div>
             ) : canApprove && isOwnRequest ? (
-              <p className="mt-1 text-[10px] text-[var(--color-ink-muted)]">
-                You requested this &mdash; a different person must approve it.
-              </p>
+              <p className="text-[10px] text-[var(--color-ink-muted)]">You requested this — a different person must approve it.</p>
             ) : (
-              <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">Centre manager signs it off.</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">Centre manager signs it off.</p>
             )
-          ) : !req ? (
-            <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">Centre manager signs it off.</p>
-          ) : (
-            <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
-              {req.approvalNotes || 'Approved — ready to finalise.'}
-            </p>
-          )}
+          ) : null}
 
-          {mode === 'reject' && req ? (
-            <div className="mt-2">
+          {mode === 'reject' ? (
+            <div className="flex flex-col gap-1.5">
               <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                 Why is this being rejected?
+                <textarea autoFocus rows={2} value={reason} onChange={(e) => setReason(e.target.value)}
+                  className="mt-0.5 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
               </label>
-              <textarea
-                autoFocus
-                rows={2}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="mt-0.5 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-              />
-              <div className="mt-1.5 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={busy || !reason.trim()}
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={busy || !reason.trim()}
                   onClick={() => void run(() => dischargeService.decide(req.id, false, reason))}
-                  className="rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
-                >
+                  className="rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
                   {busy ? 'Saving…' : 'Reject'}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => { setMode('idle'); setReason(''); }}
-                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
-                >
+                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); }}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Cancel
                 </button>
               </div>
             </div>
           ) : null}
-        </DischargeStep>
+        </div>
+      ) : null}
 
-        <DischargeStep number={3} isLast={true} title="Finalised" status={step3Status}>
-          {req && req.status === 'approved' ? (
-            canFinalise && mode === 'idle' ? (
-              <button
-                type="button"
-                onClick={() => setMode('form')}
-                className="mt-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
-              >
-                Finalise discharge&hellip;
-              </button>
-            ) : mode === 'form' ? (
-              <div className="mt-2 flex flex-col gap-2">
-                {dateField}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={finaliseApprovedRequest}
-                    className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
-                  >
-                    {busy ? 'Saving…' : 'Finalise discharge'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setMode('idle')}
-                    className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
-                  >
-                    Cancel
-                  </button>
-                </div>
+      {/* ── Step 3: Finalise ── */}
+      {activeStep === 3 && req ? (
+        <div className="flex flex-col gap-2">
+          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)]">
+            <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]} — approved</p>
+            <p className="mt-0.5">{req.approvalNotes || req.reason}</p>
+          </div>
+
+          {canFinalise && mode === 'idle' ? (
+            <button type="button" onClick={() => setMode('form')}
+              className="rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10">
+              Finalise discharge&hellip;
+            </button>
+          ) : mode === 'form' ? (
+            <div className="flex flex-col gap-2">
+              {dateField}
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={busy} onClick={finaliseApprovedRequest}
+                  className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
+                  {busy ? 'Saving…' : 'Finalise discharge'}
+                </button>
+                <button type="button" disabled={busy} onClick={() => setMode('idle')}
+                  className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
+                  Cancel
+                </button>
               </div>
-            ) : null
-          ) : (
-            <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">Bed released and record closed.</p>
-          )}
-        </DischargeStep>
-      </div>
+            </div>
+          ) : !canFinalise ? (
+            <p className="text-[11px] text-[var(--color-ink-muted)]">Waiting for someone with finalise permission.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <p role="alert" className="mt-2 text-[11px] text-red-600 dark:text-red-400">{error}</p>
