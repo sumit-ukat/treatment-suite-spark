@@ -559,7 +559,7 @@ export function TreatmentDetailPanel({
               className={`mt-3 rounded-lg border-l-4 px-3 py-2 ${
                 o.hasRestrictedAlert
                   ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
-                  : o.hasOpenConcern
+                  : (o.hasOpenConcern || o.legacySafeguardingNote)
                   ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
                   : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
               }`}
@@ -569,7 +569,7 @@ export function TreatmentDetailPanel({
                   className={`text-[10px] font-semibold tracking-[0.05em] uppercase ${
                     o.hasRestrictedAlert
                       ? 'text-red-700 dark:text-red-400'
-                      : o.hasOpenConcern
+                      : (o.hasOpenConcern || o.legacySafeguardingNote)
                       ? 'text-amber-700 dark:text-amber-400'
                       : 'text-[var(--color-ink-muted)]'
                   }`}
@@ -614,7 +614,7 @@ export function TreatmentDetailPanel({
               )}
             </div>
             {o.admissionNotes ? (
-              <div className="mt-2 rounded-lg border border-[var(--color-line)] px-3 py-2.5">
+              <div className="mt-2 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2">
                 <p className="text-[10px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
                 <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
               </div>

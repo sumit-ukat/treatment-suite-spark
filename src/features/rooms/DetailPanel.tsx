@@ -173,7 +173,7 @@ export function DetailPanel({
               className={`mt-4 rounded-lg border-l-4 px-3 py-2.5 ${
                 o.hasRestrictedAlert
                   ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
-                  : o.hasOpenConcern
+                  : (o.hasOpenConcern || o.legacySafeguardingNote)
                   ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
                   : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
               }`}
@@ -183,7 +183,7 @@ export function DetailPanel({
                   className={`text-[10.5px] font-semibold tracking-[0.05em] uppercase ${
                     o.hasRestrictedAlert
                       ? 'text-red-700 dark:text-red-400'
-                      : o.hasOpenConcern
+                      : (o.hasOpenConcern || o.legacySafeguardingNote)
                       ? 'text-amber-700 dark:text-amber-400'
                       : 'text-[var(--color-ink-muted)]'
                   }`}
@@ -227,6 +227,12 @@ export function DetailPanel({
                 </p>
               )}
             </div>
+            {o.admissionNotes ? (
+              <div className="mt-3 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2.5">
+                <p className="text-[10.5px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-[12px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+              </div>
+            ) : null}
           </div>
 
           {/* Col 3 — Programme progress */}
@@ -258,12 +264,6 @@ export function DetailPanel({
                 <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
               </div>
             </div>
-            {o.admissionNotes ? (
-              <div className="mt-3.5 border-t border-[var(--color-line)] pt-3">
-                <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
-                <p className="mt-1 whitespace-pre-wrap text-[11.5px] text-[var(--color-ink)]">{o.admissionNotes}</p>
-              </div>
-            ) : null}
           </div>
         </div>
 
