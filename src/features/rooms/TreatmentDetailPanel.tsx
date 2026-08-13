@@ -590,28 +590,32 @@ export function TreatmentDetailPanel({
                 </div>
                 <div className="relative h-3.5 overflow-visible rounded-full bg-black/[0.06] dark:bg-white/10">
                   <div className="brand-gradient absolute left-0 top-0 h-full rounded-full opacity-40" style={{ width: `${todayPct}%` }} />
-                  {timelineTasks.map((t, i) => {
-                    const pct = Math.min(100, Math.max(0, (calendarDaysBetween(o.admittedAt, t.dueAt!, TZ) / o.durationDays) * 100));
-                    return (
-                      <span
-                        key={i}
-                        title={`${t.title} — Due ${formatDate(t.dueAt!)}`}
-                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-default"
-                        style={{ left: `${pct}%` }}
-                      >
-                        <span className="block size-3 rounded-full ring-2 ring-white dark:ring-[var(--color-panel)]" style={{ backgroundColor: dotColor(t) }} />
-                      </span>
-                    );
-                  })}
+                  {/* Only render meaningful dots — skip plain grey upcoming tasks */}
+                  {timelineTasks
+                    .filter((t) => t.isComplete || t.isOverdue || t.isDueToday || t.recorded.kind === 'scheduled')
+                    .map((t, i) => {
+                      const pct = Math.min(100, Math.max(0, (calendarDaysBetween(o.admittedAt, t.dueAt!, TZ) / o.durationDays) * 100));
+                      return (
+                        <span
+                          key={i}
+                          title={`${t.title} — Due ${formatDate(t.dueAt!)}`}
+                          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-default"
+                          style={{ left: `${pct}%` }}
+                        >
+                          <span className="block size-3 rounded-full ring-2 ring-white dark:ring-[var(--color-panel)]" style={{ backgroundColor: dotColor(t) }} />
+                        </span>
+                      );
+                    })}
                   <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${todayPct}%` }}>
                     <span className="block h-7 w-0.5 rounded-full bg-[var(--color-accent)]" />
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <StatPill color="#1D9E75" count={o.completedCount} label="done" />
-                  <StatPill color="#E24B4A" count={o.overdueCount} label="overdue" />
-                  <StatPill color="#EF9F27" count={o.dueTodayCount} label="due today" />
-                  <StatPill color="#B4B2A9" count={tasks.filter((t) => !t.isComplete && !t.isOverdue && !t.isDueToday && !t.isNotApplicable).length} label="upcoming" />
+                {/* Colour legend only — counts already shown in Programme Progress above */}
+                <div className="mt-2 flex items-center gap-3 text-[10px] text-[var(--color-ink-muted)]">
+                  <span className="flex items-center gap-1"><span className="block size-2 rounded-full bg-[#1D9E75]" />Done</span>
+                  <span className="flex items-center gap-1"><span className="block size-2 rounded-full bg-[#E24B4A]" />Overdue</span>
+                  <span className="flex items-center gap-1"><span className="block size-2 rounded-full bg-[#EF9F27]" />Due today</span>
+                  <span className="flex items-center gap-1"><span className="block size-2 rounded-full bg-[#85B7EB]" />Booked</span>
                 </div>
               </div>
 
