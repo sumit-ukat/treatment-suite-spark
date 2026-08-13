@@ -436,6 +436,8 @@ export interface AdmissionRow {
   peep_required: boolean;
   high_risk: boolean;
   admission_notes: string | null;
+  admission_notes_updated_by_name: string | null;
+  admission_notes_updated_at: string | null;
 }
 
 export interface ClientRow {
@@ -857,7 +859,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at',
           )
           .eq('centre_id', centreId)
           .eq('status', 'active'),

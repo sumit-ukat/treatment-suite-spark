@@ -685,6 +685,7 @@ export function TreatmentDetailPanel({
   const [concernBusy, setConcernBusy] = useState(false);
   const [concernError, setConcernError] = useState<string | null>(null);
   const [concernInfoRow, setConcernInfoRow] = useState<ConcernRow | null>(null);
+  const [showNotesEditInfo, setShowNotesEditInfo] = useState(false);
   const [newConcernMode, setNewConcernMode] = useState(false);
   const [newConcernText, setNewConcernText] = useState('');
   const [newConcernBusy, setNewConcernBusy] = useState(false);
@@ -737,7 +738,8 @@ export function TreatmentDetailPanel({
     setConcernError(null);
     try {
       await concerns.updateNote(concernEditId, concernEditText);
-      setConcernRows((prev) => prev.map((r) => r.id === concernEditId ? { ...r, note: concernEditText } : r));
+      const rows = await concerns.list(centreId, oc.clientId ?? '');
+      setConcernRows(rows);
       setConcernEditId(null);
       setConcernEditText('');
     } catch (err) {
@@ -1086,6 +1088,18 @@ export function TreatmentDetailPanel({
                   ) : (
                     <p className="mt-0.5 text-[11px] italic text-[var(--color-ink-muted)]">No notes recorded.</p>
                   )}
+                  {o.admissionNotesUpdatedByName && !editNotesMode ? (
+                    <div className="mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowNotesEditInfo(true)}
+                        className="flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9.5px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-400 dark:hover:bg-sky-950/60"
+                      >
+                        <Info className="size-2.5 shrink-0" />
+                        Last edited
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -1231,21 +1245,58 @@ export function TreatmentDetailPanel({
         </Dialog>
       ) : null}
 
-      {/* ── Concern edit-history popup ── */}
+      {/* ── Concern last-edited popup ── */}
       {concernInfoRow ? (
         <Dialog open onOpenChange={(v) => !v && setConcernInfoRow(null)}>
-          <DialogContent className="max-w-xs p-5">
-            <DialogTitle className="text-[13px] font-semibold">Last edited by</DialogTitle>
-            <div className="mt-3 space-y-1 text-[12px]">
-              <p><span className="font-semibold text-[var(--color-ink)]">{concernInfoRow.updated_by_name}</span></p>
-              {concernInfoRow.updated_at ? (
-                <p className="text-[var(--color-ink-muted)]">
-                  {formatDate(new Date(concernInfoRow.updated_at))} at {new Date(concernInfoRow.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              ) : null}
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Note edit history</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">Safeguarding / Risks / Concerns</p>
+            <div className="mt-4">
+              <div className="rounded-lg border border-[var(--color-line)] px-3 py-2.5 text-[11.5px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[var(--color-ink)]">{concernInfoRow.updated_by_name}</span>
+                  {concernInfoRow.updated_at ? (
+                    <span className="text-[10px] text-[var(--color-ink-muted)]">
+                      {formatDate(new Date(concernInfoRow.updated_at))} at {new Date(concernInfoRow.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">Note text edited</p>
+                <p className="mt-1 text-[11px] text-[var(--color-ink)]">&ldquo;{concernInfoRow.note}&rdquo;</p>
+              </div>
             </div>
             <button type="button" onClick={() => setConcernInfoRow(null)}
-              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
+              Close
+            </button>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {/* ── Admission notes last-edited popup ── */}
+      {showNotesEditInfo && o.admissionNotesUpdatedByName ? (
+        <Dialog open onOpenChange={(v) => !v && setShowNotesEditInfo(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Note edit history</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">Admission notes</p>
+            <div className="mt-4">
+              <div className="rounded-lg border border-[var(--color-line)] px-3 py-2.5 text-[11.5px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[var(--color-ink)]">{o.admissionNotesUpdatedByName}</span>
+                  {o.admissionNotesUpdatedAt ? (
+                    <span className="text-[10px] text-[var(--color-ink-muted)]">
+                      {formatDate(new Date(o.admissionNotesUpdatedAt))} at {new Date(o.admissionNotesUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">Notes last updated</p>
+                {o.admissionNotes ? (
+                  <p className="mt-1 text-[11px] text-[var(--color-ink)]">&ldquo;{o.admissionNotes.slice(0, 120)}{o.admissionNotes.length > 120 ? '…' : ''}&rdquo;</p>
+                ) : null}
+              </div>
+            </div>
+            <button type="button" onClick={() => setShowNotesEditInfo(false)}
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
               Close
             </button>
           </DialogContent>

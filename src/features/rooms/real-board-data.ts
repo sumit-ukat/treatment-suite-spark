@@ -212,6 +212,8 @@ function buildRealOccupant(
     legacySafeguardingNote: legacyParsed.legacySafeguardingNote,
     // Prefer the proper DB column introduced in migration 0039 over the legacy allocation_reason field.
     admissionNotes: admission.admission_notes ?? legacyParsed.admissionNotes,
+    admissionNotesUpdatedByName: admission.admission_notes_updated_by_name ?? null,
+    admissionNotesUpdatedAt: admission.admission_notes_updated_at ?? null,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

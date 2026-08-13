@@ -378,6 +378,8 @@ export interface Occupant {
    * fictional boards and for any client that has real concern rows. */
   legacySafeguardingNote: string | null;
   admissionNotes: string | null;
+  admissionNotesUpdatedByName: string | null;
+  admissionNotesUpdatedAt: string | null;
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
   tasks: readonly BoardTask[];
@@ -493,6 +495,8 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     hasOpenConcern: false,
     legacySafeguardingNote: null,
     admissionNotes: null,
+    admissionNotesUpdatedByName: null,
+    admissionNotesUpdatedAt: null,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,
