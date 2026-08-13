@@ -363,6 +363,15 @@ export const admissions = {
     });
     if (error) throw new DataAccessError('admissions.updateNotes', error);
   },
+
+  /** Set or clear the high-risk flag on an existing admission. */
+  async setHighRisk(admissionId: string, highRisk: boolean): Promise<void> {
+    const { error } = await client().rpc('set_admission_high_risk', {
+      p_admission_id: admissionId,
+      p_high_risk: highRisk,
+    });
+    if (error) throw new DataAccessError('admissions.setHighRisk', error);
+  },
 };
 
 export interface ClientSearchResult {

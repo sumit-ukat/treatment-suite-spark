@@ -690,6 +690,7 @@ export function TreatmentDetailPanel({
   const [newConcernText, setNewConcernText] = useState('');
   const [newConcernBusy, setNewConcernBusy] = useState(false);
   const [newConcernError, setNewConcernError] = useState<string | null>(null);
+  const [highRiskBusy, setHighRiskBusy] = useState(false);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
     if (!clientId) return;
@@ -699,6 +700,17 @@ export function TreatmentDetailPanel({
   const o = bed.occupant;
   if (!o) return null;
   const oc = o;
+
+  async function toggleHighRisk() {
+    if (!oc.admissionId) return;
+    setHighRiskBusy(true);
+    try {
+      await admissions.setHighRisk(oc.admissionId, !oc.hasRestrictedAlert);
+      onChanged?.();
+    } finally {
+      setHighRiskBusy(false);
+    }
+  }
 
   async function saveNotes() {
     if (!oc.admissionId) return;
@@ -935,6 +947,20 @@ export function TreatmentDetailPanel({
                       <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Alert</span>
                     ) : o.hasOpenConcern ? (
                       <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Open</span>
+                    ) : null}
+                    {can('risk.record') ? (
+                      <button
+                        type="button"
+                        disabled={highRiskBusy}
+                        onClick={() => void toggleHighRisk()}
+                        className={`ml-auto rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide uppercase transition disabled:opacity-40 ${
+                          o.hasRestrictedAlert
+                            ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400'
+                            : 'border-[var(--color-line)] bg-transparent text-[var(--color-ink-muted)] hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-800 dark:hover:bg-red-950/40 dark:hover:text-red-400'
+                        }`}
+                      >
+                        {highRiskBusy ? '…' : o.hasRestrictedAlert ? 'Remove high risk' : 'Set high risk'}
+                      </button>
                     ) : null}
                   </div>
 
