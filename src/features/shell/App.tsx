@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BrowserRouter,
+  HashRouter,
   Navigate,
   Outlet,
   Route,
@@ -86,9 +86,9 @@ export default function App() {
       return <AccessErrorScreen />;
     case 'signed_in':
       return (
-        <BrowserRouter>
+        <HashRouter>
           <AppRoutes />
-        </BrowserRouter>
+        </HashRouter>
       );
   }
 }
