@@ -3,39 +3,50 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Printer, Search } from 'lucide-react';
 import { buildRealBoard } from './real-board-data.js';
 import type { BoardBed } from './board-data.js';
-import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
+import { Chip, StatTile } from '../../components/ui.tsx';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { TreatmentDetailPanel } from './TreatmentDetailPanel.tsx';
 
-// ─── Column definitions ───────────────────────────────────────────────────────
+// ─── Task group summaries — each group shows done/total + a progress bar ──────
 
-const COLUMNS = [
-  { code: 'family_contact_24h',          label: '24-Hour',        full: '24-hour family contact',              group: 'family'    },
-  { code: 'family_contact_week_1',        label: 'Week 1',         full: 'Week 1 family contact',               group: 'family'    },
-  { code: 'family_contact_week_2',        label: 'Week 2',         full: 'Week 2 family contact',               group: 'family'    },
-  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'family'  },
-  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',           group: 'survey'    },
-  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',        group: 'medical'   },
-  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',              group: 'milestone' },
-  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',          group: 'milestone' },
-  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',          group: 'milestone' },
-  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',          group: 'milestone' },
-  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',         group: 'milestone' },
-  { code: 'session_intro',                label: 'Intro',          full: 'Introductory counselling session',    group: 'session'   },
-  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 counselling session',          group: 'session'   },
-  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 counselling session',          group: 'session'   },
-  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 counselling session',          group: 'session'   },
-  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 counselling session',          group: 'session'   },
-] as const;
-
-const COL_GROUPS = [
-  { label: 'Family contact', count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { label: 'Survey',         count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { label: 'Medical',        count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { label: 'Care Plan',      count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { label: 'Milestone',      count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
-] as const;
+const GROUPS = [
+  {
+    key: 'family',
+    label: 'Family contact',
+    codes: ['family_contact_24h', 'family_contact_week_1', 'family_contact_week_2', 'family_contact_pre_discharge'],
+    hdrCls: 'bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300',
+    barCls: 'bg-sky-500',
+  },
+  {
+    key: 'survey',
+    label: 'Survey',
+    codes: ['satisfaction_survey_7day'],
+    hdrCls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300',
+    barCls: 'bg-yellow-400',
+  },
+  {
+    key: 'medical',
+    label: 'Medical',
+    codes: ['gp_summary'],
+    hdrCls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+    barCls: 'bg-emerald-500',
+  },
+  {
+    key: 'milestone',
+    label: 'Care plan',
+    codes: ['life_story', 'step_1', 'step_2', 'step_3', 'ccp'],
+    hdrCls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300',
+    barCls: 'bg-violet-500',
+  },
+  {
+    key: 'session',
+    label: 'Sessions',
+    codes: ['session_intro', 'session_week_1', 'session_week_2', 'session_week_3', 'session_week_4'],
+    hdrCls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300',
+    barCls: 'bg-indigo-500',
+  },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,60 +65,50 @@ function fmtTime(d: Date): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ─── Task cell ────────────────────────────────────────────────────────────────
+// ─── Group summary cell ───────────────────────────────────────────────────────
 
-// Uses the same icon + tone vocabulary as the attention chips in BedList.
-function TaskCell({ bed, code }: { bed: BoardBed; code: string }) {
-  const o = bed.occupant;
-  const td = 'w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center';
-
-  if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
-
-  const task = o.tasks.find((t) => t.code === code);
-  if (!task) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
-
-  if (task.isNotApplicable) {
-    return (
-      <td className={td}>
-        <span className="text-[13px] text-[var(--color-ink-muted)]" title={task.notApplicableReason ?? 'Not applicable'}>×</span>
-      </td>
-    );
+function GroupSummaryCell({
+  tasks,
+  codes,
+  barCls,
+}: {
+  tasks: readonly { code: string; isComplete: boolean; isOverdue: boolean; isDueToday: boolean; isNotApplicable: boolean }[];
+  codes: string[];
+  barCls: string;
+}) {
+  const applicable = tasks.filter((t) => codes.includes(t.code) && !t.isNotApplicable);
+  if (applicable.length === 0) {
+    return <td className="min-w-[120px] border-b border-[var(--color-line)] px-3 py-3 text-center text-[var(--color-ink-muted)]">—</td>;
   }
-  if (task.isComplete) {
-    return (
-      <td className={td}>
-        <span title={task.completedBy ? `Done by ${task.completedBy}` : 'Done'}>
-          <Chip icon="✓" label="" tone="good" />
-        </span>
-      </td>
-    );
-  }
-  if (task.isOverdue) {
-    return (
-      <td className={td}>
-        <span title="Overdue — action needed">
-          <Chip icon="▲" label="" tone="alert" />
-        </span>
-      </td>
-    );
-  }
-  if (task.isDueToday) {
-    return (
-      <td className={td}>
-        <span title="Due today">
-          <Chip icon="●" label="" tone="warn" />
-        </span>
-      </td>
-    );
-  }
+  const done = applicable.filter((t) => t.isComplete).length;
+  const overdue = applicable.filter((t) => t.isOverdue).length;
+  const dueToday = applicable.filter((t) => t.isDueToday && !t.isOverdue).length;
+  const total = applicable.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
-    <td className={td}>
-      <span
-        className="text-[15px] leading-none text-[var(--color-ink-muted)]"
-        title={task.dueAt ? `Due ${fmt(task.dueAt)}` : 'Not yet due'}
-      >
-        —
-      </span>
+    <td className="min-w-[120px] border-b border-[var(--color-line)] px-3 py-2.5">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="nums tabular-nums text-[13px] font-semibold text-[var(--color-ink)]">
+            {done}<span className="font-normal text-[var(--color-ink-muted)]">/{total}</span>
+          </span>
+          {overdue > 0 ? (
+            <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/60 dark:text-red-300">
+              ▲ {overdue} late
+            </span>
+          ) : dueToday > 0 ? (
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+              ● {dueToday} today
+            </span>
+          ) : null}
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
+          <div
+            className={`h-full rounded-full ${overdue > 0 ? 'bg-red-500' : barCls}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
     </td>
   );
 }
@@ -350,11 +351,10 @@ export function TreatmentBoard({
               >
                 Client &amp; Placement
               </th>
-              {COL_GROUPS.map((g) => (
+              {GROUPS.map((g) => (
                 <th
-                  key={g.label}
-                  colSpan={g.count}
-                  className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls}`}
+                  key={g.key}
+                  className={`border-b border-[var(--color-line)] px-3 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.hdrCls}`}
                 >
                   {g.label}
                 </th>
@@ -374,13 +374,12 @@ export function TreatmentBoard({
               <th className={th}>Discharge</th>
               <th className={th}>Group</th>
               <th className={th}>Therapist</th>
-              {COLUMNS.map((col) => (
+              {GROUPS.map((g) => (
                 <th
-                  key={col.code}
-                  title={col.full}
-                  className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
+                  key={g.key}
+                  className="min-w-[120px] border-b border-[var(--color-line)] bg-card px-3 py-2.5 text-left text-[10px] font-semibold tracking-[0.04em] uppercase text-[var(--color-ink-muted)]"
                 >
-                  {col.label}
+                  {g.codes.length} task{g.codes.length !== 1 ? 's' : ''}
                 </th>
               ))}
             </tr>
@@ -410,7 +409,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 5 + COLUMNS.length }).map((_, i) => (
+                    {Array.from({ length: 5 + GROUPS.length }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -534,9 +533,9 @@ export function TreatmentBoard({
                     )}
                   </td>
 
-                  {/* Task cells */}
-                  {COLUMNS.map((col) => (
-                    <TaskCell key={col.code} bed={bed} code={col.code} />
+                  {/* Task group summaries */}
+                  {GROUPS.map((g) => (
+                    <GroupSummaryCell key={g.key} tasks={o.tasks} codes={g.codes} barCls={g.barCls} />
                   ))}
                 </tr>
               );
@@ -567,29 +566,28 @@ export function TreatmentBoard({
       {/* ── Legend ── */}
       <div className="rounded-2xl border bg-card p-5 shadow-soft">
         <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]">
-          What the icons and colours mean
+          How to read the task summary columns
         </p>
-        <div className="flex flex-wrap gap-x-5 gap-y-2.5 text-[12px] text-[var(--color-ink)]">
-          {(
-            [
-              { icon: '✓', tone: 'good'    as Tone, label: 'Done — this task has been completed'              },
-              { icon: '▲', tone: 'alert'   as Tone, label: 'Overdue — this task was due and has not been done' },
-              { icon: '●', tone: 'warn'    as Tone, label: 'Due today — this task must be done today'          },
-              { icon: '—', tone: 'neutral' as Tone, label: 'Still to come — not due yet'                       },
-            ] satisfies Array<{ icon: string; tone: Tone; label: string }>
-          ).map(({ icon, tone, label }) => (
-            <div key={label} className="flex items-center gap-2">
-              <Chip icon={icon} label="" tone={tone} />
-              {label}
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-x-6 gap-y-3 text-[12px] text-[var(--color-ink)]">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--color-ink-muted)]">×</span>
-            Not applicable — this task is not part of this programme
+            <span className="nums text-[13px] font-semibold">3<span className="font-normal text-[var(--color-ink-muted)]">/4</span></span>
+            Tasks completed out of total applicable
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/60 dark:text-red-300">▲ 2 late</span>
+            Tasks in this group are overdue — click the row to action them
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">● 1 today</span>
+            Tasks due today in this group
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-1.5 w-10 rounded-full bg-[var(--color-accent)]" />
+            Progress bar — fills as tasks complete; turns red if any are overdue
           </div>
           <div className="flex items-center gap-2">
             <span className="size-2 shrink-0 rounded-full bg-red-500" />
-            Red dot — safeguarding concern flagged for this client
+            Red border on client name — safeguarding concern flagged
           </div>
         </div>
       </div>
