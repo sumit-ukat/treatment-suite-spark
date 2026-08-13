@@ -145,6 +145,7 @@ function buildRealOccupant(
   });
 
   const eligibility = assessEligibility(admittedAt, settings, now);
+  const legacyParsed = parseLegacyReason(admissionNotes);
   // c.display_name is null when the caller holds clients.view_operational but not
   // clients.view_identity — the bed is still occupied and known, just not by name.
   const displayName = c.display_name ?? c.reference;
@@ -207,7 +208,9 @@ function buildRealOccupant(
     photoUrl: photoUrlByClientId.get(admission.client_id) ?? null,
     hasRestrictedAlert: admission.high_risk,
     hasOpenConcern: openConcernClientIds.has(admission.client_id),
-    ...parseLegacyReason(admissionNotes),
+    legacySafeguardingNote: legacyParsed.legacySafeguardingNote,
+    // Prefer the proper DB column introduced in migration 0039 over the legacy allocation_reason field.
+    admissionNotes: admission.admission_notes ?? legacyParsed.admissionNotes,
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

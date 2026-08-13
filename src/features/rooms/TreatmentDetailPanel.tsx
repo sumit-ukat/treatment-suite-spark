@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowRightFromLine, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowRightFromLine, Calendar, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, Info, Pencil, X } from 'lucide-react';
 import type { BoardBed, BoardTask } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
-import { concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
+import { admissions, concerns, tasks as taskService, type ConcernRow, type TaskDateChangeRow } from '../../services/data-access.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PhotoBadge } from './BedCard.tsx';
@@ -108,6 +108,12 @@ function TaskCard({
   const [error, setError] = useState<string | null>(null);
   const [showAllReopens, setShowAllReopens] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduleBusy, setRescheduleBusy] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const [rescheduleHistory, setRescheduleHistory] = useState<TaskDateChangeRow[]>([]);
 
   // After the green flash, trigger the refresh so the card moves to Done.
   useEffect(() => {
@@ -119,7 +125,34 @@ function TaskCard({
   const isReal = t.id !== null;
   const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const canReopen = isReal && t.isComplete && can('tasks.reopen');
+  const canReschedule = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const v = variance(t);
+
+  function openReschedule() {
+    setRescheduleDate(t.dueAt ? t.dueAt.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setRescheduleReason('');
+    setRescheduleError(null);
+    setRescheduleHistory([]);
+    setRescheduleOpen(true);
+    if (t.id) taskService.dateHistory(t.id).then(setRescheduleHistory).catch(() => {});
+  }
+
+  async function doReschedule() {
+    if (!t.id || !rescheduleDate || !rescheduleReason.trim()) return;
+    setRescheduleBusy(true);
+    setRescheduleError(null);
+    try {
+      await taskService.reschedule(t.id, new Date(rescheduleDate + 'T12:00:00'), rescheduleReason);
+      setRescheduleOpen(false);
+      setRescheduleDate('');
+      setRescheduleReason('');
+      onChanged?.();
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setRescheduleBusy(false);
+    }
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -214,6 +247,17 @@ function TaskCard({
               className="rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
             >
               Reopen
+            </button>
+          ) : null}
+
+          {canReschedule && mode === 'idle' ? (
+            <button
+              type="button"
+              title="Change due date"
+              onClick={openReschedule}
+              className="rounded-md border border-[var(--color-line)] p-1 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <Calendar className="size-3.5" />
             </button>
           ) : null}
         </div>
@@ -393,6 +437,73 @@ function TaskCard({
           ) : null}
         </div>
       ) : null}
+
+      {rescheduleOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setRescheduleOpen(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Change due date</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{t.title}</p>
+            <div className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--color-ink-muted)]">New due date</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-transparent px-3 py-1.5 text-[13px] outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--color-ink-muted)]">Reason (required)</label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="Why is this date being changed?"
+                  className="mt-1 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-3 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
+              {rescheduleError ? <p className="text-[11px] text-red-600 dark:text-red-400">{rescheduleError}</p> : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!rescheduleDate || !rescheduleReason.trim() || rescheduleBusy}
+                  onClick={() => void doReschedule()}
+                  className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+                >
+                  {rescheduleBusy ? 'Saving…' : 'Save change'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRescheduleOpen(false)}
+                  className="rounded-md px-3 py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+              {rescheduleHistory.length > 0 ? (
+                <div className="border-t border-[var(--color-line)] pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--color-ink-muted)]">Date change history</p>
+                  <ul className="mt-1.5 space-y-2">
+                    {rescheduleHistory.map((h) => (
+                      <li key={h.id} className="text-[10.5px] leading-snug">
+                        <span className="font-semibold text-[var(--color-ink)]">{h.changed_by_name}</span>
+                        {h.old_due_at ? (
+                          <span className="text-[var(--color-ink-muted)]"> moved from {formatDate(new Date(h.old_due_at))} to {formatDate(new Date(h.new_due_at))}</span>
+                        ) : (
+                          <span className="text-[var(--color-ink-muted)]"> set to {formatDate(new Date(h.new_due_at))}</span>
+                        )}
+                        <span className="block text-[var(--color-ink-muted)]">{formatDate(new Date(h.changed_at))} — &ldquo;{h.reason}&rdquo;</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   );
 }
@@ -490,10 +601,20 @@ export function TreatmentDetailPanel({
   onPrev?: (() => void) | undefined;
   onNext?: (() => void) | undefined;
 }) {
+  const { can } = useAuth();
   const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
   const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
   const [showExtend, setShowExtend] = useState(false);
   const [showDischarge, setShowDischarge] = useState(false);
+  const [editNotesMode, setEditNotesMode] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesBusy, setNotesBusy] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [concernEditId, setConcernEditId] = useState<string | null>(null);
+  const [concernEditText, setConcernEditText] = useState('');
+  const [concernBusy, setConcernBusy] = useState(false);
+  const [concernError, setConcernError] = useState<string | null>(null);
+  const [concernInfoRow, setConcernInfoRow] = useState<ConcernRow | null>(null);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
     if (!clientId) return;
@@ -502,6 +623,38 @@ export function TreatmentDetailPanel({
 
   const o = bed.occupant;
   if (!o) return null;
+  const oc = o;
+
+  async function saveNotes() {
+    if (!oc.admissionId) return;
+    setNotesBusy(true);
+    setNotesError(null);
+    try {
+      await admissions.updateNotes(oc.admissionId, notesText);
+      setEditNotesMode(false);
+      onChanged?.();
+    } catch (err) {
+      setNotesError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setNotesBusy(false);
+    }
+  }
+
+  async function saveConcern() {
+    if (!concernEditId) return;
+    setConcernBusy(true);
+    setConcernError(null);
+    try {
+      await concerns.updateNote(concernEditId, concernEditText);
+      setConcernRows((prev) => prev.map((r) => r.id === concernEditId ? { ...r, note: concernEditText } : r));
+      setConcernEditId(null);
+      setConcernEditText('');
+    } catch (err) {
+      setConcernError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setConcernBusy(false);
+    }
+  }
 
   const tasks = [...o.tasks];
 
@@ -695,14 +848,61 @@ export function TreatmentDetailPanel({
                     <ul className="mt-1 space-y-1.5">
                       {concernRows.map((r) => (
                         <li key={r.id} className={`text-[11px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
-                          <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
-                            r.category === 'risk' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                            : r.category === 'medical' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                          }`}>{CONCERN_LABEL[r.category]}</span>
-                          <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
-                          <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
-                          {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                          <div className="flex items-start gap-1">
+                            <div className="flex-1">
+                              <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
+                                r.category === 'risk' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                : r.category === 'medical' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                              }`}>{CONCERN_LABEL[r.category]}</span>
+                              {concernEditId === r.id ? (
+                                <div className="mt-1">
+                                  <textarea
+                                    autoFocus
+                                    rows={3}
+                                    value={concernEditText}
+                                    onChange={(e) => setConcernEditText(e.target.value)}
+                                    className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                                  />
+                                  {concernError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{concernError}</p> : null}
+                                  <div className="mt-1 flex gap-2">
+                                    <button type="button" disabled={!concernEditText.trim() || concernBusy}
+                                      onClick={() => void saveConcern()}
+                                      className="rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-[10.5px] font-medium text-white disabled:opacity-40">
+                                      {concernBusy ? 'Saving…' : 'Save'}
+                                    </button>
+                                    <button type="button" onClick={() => { setConcernEditId(null); setConcernError(null); }}
+                                      className="rounded-md px-2 py-0.5 text-[10.5px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
+                              )}
+                              <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
+                              {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                              {r.updated_by_name && !r.is_resolved && concernEditId !== r.id ? (
+                                <span className="ml-2 text-[9px] italic text-[var(--color-ink-muted)]">edited</span>
+                              ) : null}
+                            </div>
+                            {!r.is_resolved && can('tasks.complete') && concernEditId !== r.id ? (
+                              <div className="flex shrink-0 items-center gap-0.5 pl-1">
+                                <button type="button" title="Edit note"
+                                  onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
+                                  className="rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                                  <Pencil className="size-2.5" />
+                                </button>
+                                {r.updated_by_name ? (
+                                  <button type="button" title="Edit history"
+                                    onClick={() => setConcernInfoRow(r)}
+                                    className="rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                                    <Info className="size-2.5" />
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -715,14 +915,48 @@ export function TreatmentDetailPanel({
               </div>
 
               {/* Admission notes */}
-              {o.admissionNotes ? (
-                <div className="border-b border-[var(--color-line)] px-4 py-3">
-                  <div className="rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2">
+              <div className="border-b border-[var(--color-line)] px-4 py-3">
+                <div className="rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2">
+                  <div className="flex items-center gap-2">
                     <p className="text-[10px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
-                    <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+                    {can('tasks.complete') && !editNotesMode ? (
+                      <button type="button" title="Edit notes"
+                        onClick={() => { setNotesText(o.admissionNotes ?? ''); setEditNotesMode(true); setNotesError(null); }}
+                        className="ml-auto rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                        <Pencil className="size-3" />
+                      </button>
+                    ) : null}
                   </div>
+                  {editNotesMode ? (
+                    <div className="mt-1.5">
+                      <textarea
+                        autoFocus
+                        rows={4}
+                        value={notesText}
+                        onChange={(e) => setNotesText(e.target.value)}
+                        placeholder="Add admission notes…"
+                        className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                      />
+                      {notesError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{notesError}</p> : null}
+                      <div className="mt-1.5 flex gap-2">
+                        <button type="button" disabled={notesBusy}
+                          onClick={() => void saveNotes()}
+                          className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40">
+                          {notesBusy ? 'Saving…' : 'Save'}
+                        </button>
+                        <button type="button" onClick={() => { setEditNotesMode(false); setNotesError(null); }}
+                          className="rounded-md px-2.5 py-1 text-[11px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : o.admissionNotes ? (
+                    <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+                  ) : (
+                    <p className="mt-0.5 text-[11px] italic text-[var(--color-ink-muted)]">No notes recorded.</p>
+                  )}
                 </div>
-              ) : null}
+              </div>
 
               {/* Extend Stay + Discharge buttons */}
               {o.admissionId ? (
@@ -862,6 +1096,27 @@ export function TreatmentDetailPanel({
             <div className="overflow-y-auto p-4">
               <ExtendStayCard occupant={o} onChanged={onChanged} />
             </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {/* ── Concern edit-history popup ── */}
+      {concernInfoRow ? (
+        <Dialog open onOpenChange={(v) => !v && setConcernInfoRow(null)}>
+          <DialogContent className="max-w-xs p-5">
+            <DialogTitle className="text-[13px] font-semibold">Last edited by</DialogTitle>
+            <div className="mt-3 space-y-1 text-[12px]">
+              <p><span className="font-semibold text-[var(--color-ink)]">{concernInfoRow.updated_by_name}</span></p>
+              {concernInfoRow.updated_at ? (
+                <p className="text-[var(--color-ink-muted)]">
+                  {formatDate(new Date(concernInfoRow.updated_at))} at {new Date(concernInfoRow.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              ) : null}
+            </div>
+            <button type="button" onClick={() => setConcernInfoRow(null)}
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+              Close
+            </button>
           </DialogContent>
         </Dialog>
       ) : null}

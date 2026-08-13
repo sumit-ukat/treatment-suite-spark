@@ -354,6 +354,15 @@ export const admissions = {
     if (!row) throw new DataAccessError('admissions.getClientId', { message: 'Admission not found.' });
     return row.client_id;
   },
+
+  /** Set or clear clinical admission notes. Tracks who edited and when. */
+  async updateNotes(admissionId: string, notes: string): Promise<void> {
+    const { error } = await client().rpc('update_admission_notes', {
+      p_admission_id: admissionId,
+      p_notes: notes,
+    });
+    if (error) throw new DataAccessError('admissions.updateNotes', error);
+  },
 };
 
 export interface ClientSearchResult {
@@ -426,6 +435,7 @@ export interface AdmissionRow {
   primary_substance_id: string | null;
   peep_required: boolean;
   high_risk: boolean;
+  admission_notes: string | null;
 }
 
 export interface ClientRow {
@@ -486,6 +496,15 @@ export interface TaskTemplateRow {
   requires_completion_note: boolean;
 }
 
+export interface TaskDateChangeRow {
+  id: string;
+  old_due_at: string | null;
+  new_due_at: string;
+  reason: string;
+  changed_by_name: string;
+  changed_at: string;
+}
+
 export const tasks = {
   /**
    * Completing and reopening go through RPCs because they are the *only* way to do it: migration 0026
@@ -510,6 +529,22 @@ export const tasks = {
     });
     if (error) throw new DataAccessError('tasks.reopen', error);
   },
+
+  /** Move a task's due date. A non-empty reason is mandatory; the change is logged to task_date_changes. */
+  async reschedule(taskId: string, newDueAt: Date, reason: string): Promise<void> {
+    const { error } = await client().rpc('reschedule_task', {
+      p_task_id: taskId,
+      p_new_due_at: newDueAt.toISOString(),
+      p_reason: reason,
+    });
+    if (error) throw new DataAccessError('tasks.reschedule', error);
+  },
+
+  async dateHistory(taskId: string): Promise<TaskDateChangeRow[]> {
+    const { data, error } = await client().rpc('task_date_history', { p_task_id: taskId });
+    if (error) throw new DataAccessError('tasks.dateHistory', error);
+    return (data ?? []) as TaskDateChangeRow[];
+  },
 };
 
 // ─── Concerns ────────────────────────────────────────────────────────────────
@@ -525,6 +560,8 @@ export interface ConcernRow {
   is_resolved: boolean;
   resolved_note: string | null;
   resolved_at: string | null;
+  updated_by_name: string | null;
+  updated_at: string | null;
 }
 
 export const concerns = {
@@ -570,6 +607,15 @@ export const concerns = {
       p_note: note?.trim() || null,
     });
     if (error) throw new DataAccessError('concerns.resolve', error);
+  },
+
+  /** Amend the text of a concern. The DB records who made the change and when. */
+  async updateNote(concernId: string, note: string): Promise<void> {
+    const { error } = await client().rpc('update_concern_note', {
+      p_concern_id: concernId,
+      p_note: note,
+    });
+    if (error) throw new DataAccessError('concerns.updateNote', error);
   },
 };
 
@@ -810,7 +856,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes',
           )
           .eq('centre_id', centreId)
           .eq('status', 'active'),
