@@ -272,14 +272,12 @@ export function TreatmentBoard({
           tone="accent"
           active={activeFilter === 'all'}
           onClick={() => setActiveFilter('all')}
-          hint="Click to show all"
         />
         <StatTile
           label="Beds free"
           value={counts.available}
           active={activeFilter === 'available'}
           onClick={() => toggle('available')}
-          hint="Click to filter"
         />
         <StatTile
           label="With overdue tasks"
@@ -288,7 +286,6 @@ export function TreatmentBoard({
           tone="alert"
           active={activeFilter === 'overdue'}
           onClick={() => toggle('overdue')}
-          hint="Click to filter"
         />
         <StatTile
           label="With tasks due today"
@@ -297,7 +294,6 @@ export function TreatmentBoard({
           tone="warn"
           active={activeFilter === 'due_today'}
           onClick={() => toggle('due_today')}
-          hint="Click to filter"
         />
         <StatTile
           label="Discharging this week"
@@ -306,14 +302,12 @@ export function TreatmentBoard({
           tone="warn"
           active={activeFilter === 'discharge_soon'}
           onClick={() => toggle('discharge_soon')}
-          hint="Click to filter"
         />
         <StatTile
           label="No therapist assigned"
           value={counts.noTherapist}
           active={activeFilter === 'no_therapist'}
           onClick={() => toggle('no_therapist')}
-          hint="Click to filter"
         />
         <StatTile
           label="Open concerns"
@@ -322,7 +316,6 @@ export function TreatmentBoard({
           tone="warn"
           active={activeFilter === 'open_concerns'}
           onClick={() => toggle('open_concerns')}
-          hint="Click to filter"
         />
       </div>
 
