@@ -285,7 +285,7 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
               { label: 'North', regions: ['North', 'Midlands', 'East'] },
               { label: 'South', regions: ['South'] },
             ] as const).map(({ label, regions }) => {
-              const group = sorted.filter((c) => regions.includes(c.region));
+              const group = sorted.filter((c) => (regions as readonly string[]).includes(c.region));
               if (group.length === 0) return null;
               return (
                 <div key={label}>

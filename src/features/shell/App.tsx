@@ -110,7 +110,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/hub" replace />} />
       <Route path="/hub" element={<HubPage />} />
       <Route path="/centre/:centreSlug" element={<CentreShell />}>
-        <Route index element={<Navigate to="board" replace />} />
+        <Route index element={<Navigate to="treatment-board" replace />} />
         <Route path="board" element={<BoardPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="admissions" element={<AdmissionsPage />} />
@@ -316,7 +316,7 @@ function HubPage() {
       <ProvenanceBanner />
       <HubHeader />
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <GroupDashboard onOpenCentre={(slug) => navigate(`/centre/${slug}/board`)} />
+        <GroupDashboard onOpenCentre={(slug) => navigate(`/centre/${slug}/treatment-board`)} />
       </main>
     </div>
   );
@@ -410,7 +410,7 @@ function CentreShell() {
               <CentreSwitcher
                 centres={centres}
                 value={centreSlug}
-                onChange={(slug) => navigate(`/centre/${slug}/board`)}
+                onChange={(slug) => navigate(`/centre/${slug}/treatment-board`)}
               />
               <label className="relative hidden sm:block">
                 <span className="sr-only">Search beds, clients, staff</span>

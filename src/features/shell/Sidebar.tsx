@@ -46,8 +46,8 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
   {
     heading: 'Centre',
     items: [
+      { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true },
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
-      { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true, onlyCentres: ['primrose-lodge'] },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
       { id: 'admissions', label: 'Admissions', icon: UserPlus, ready: true },
     ],
