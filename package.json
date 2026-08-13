@@ -4,8 +4,9 @@
   "type": "module",
   "description": "Multi-centre treatment operations and client journey platform",
   "scripts": {
-    "dev": "vite --port 3100",
+    "dev": "vite --host :: --port 8080",
     "build": "vite build",
+    "build:dev": "vite build --mode development",
     "preview": "vite preview --port 3100",
     "test": "vitest run",
     "test:watch": "vitest",
