@@ -936,20 +936,6 @@ export function TreatmentDetailPanel({
                     ) : o.hasOpenConcern ? (
                       <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Open</span>
                     ) : null}
-                    {can('tasks.complete') && !newConcernMode ? (
-                      <button
-                        type="button"
-                        title="Add / edit note"
-                        onClick={() => {
-                          setNewConcernText(concernRows.length === 0 ? (o.legacySafeguardingNote ?? '') : '');
-                          setNewConcernError(null);
-                          setNewConcernMode(true);
-                        }}
-                        className="ml-auto rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
-                      >
-                        <Pencil className="size-3" />
-                      </button>
-                    ) : null}
                   </div>
 
                   {concernRows.length > 0 ? (
@@ -1019,6 +1005,20 @@ export function TreatmentDetailPanel({
                   ) : (
                     <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">No notes on file.</p>
                   )}
+
+                  {can('tasks.complete') && !newConcernMode ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewConcernText(concernRows.length === 0 ? (o.legacySafeguardingNote ?? '') : '');
+                        setNewConcernError(null);
+                        setNewConcernMode(true);
+                      }}
+                      className="mt-2 text-[10.5px] font-medium text-[var(--color-accent)] hover:underline"
+                    >
+                      + Add note
+                    </button>
+                  ) : null}
 
                   {newConcernMode ? (
                     <div className="mt-2 border-t border-[var(--color-line)]/50 pt-2">
