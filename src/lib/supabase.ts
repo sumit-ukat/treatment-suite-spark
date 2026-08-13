@@ -13,8 +13,18 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  * at the first query.
  */
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+// Development project defaults. Both values are public by design: the URL is a public endpoint and
+// the publishable/anon key carries no privileges of its own — every request is still evaluated by
+// RLS. Env vars override them so production can point elsewhere.
+const DEV_SUPABASE_URL = 'https://ygustqrxjaqfbdjftcmq.supabase.co';
+const DEV_SUPABASE_PUBLISHABLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlndXN0cXJ4amFxZmJkamZ0Y21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NDU1OTUsImV4cCI6MjEwMTMyMTU5NX0.hCchkK6R1nQaxeX7QBRsNZYPB5gTtvOCMqaCROjwfGg';
+
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEV_SUPABASE_URL;
+const publishableKey =
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
+  DEV_SUPABASE_PUBLISHABLE_KEY;
+
 
 export const supabaseConfigError: string | null =
   !url || !publishableKey
