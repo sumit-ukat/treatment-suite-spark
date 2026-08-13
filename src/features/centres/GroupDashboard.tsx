@@ -279,10 +279,9 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
             </div>
           </div>
 
-          {/* Centres split into North (North + Midlands + East) and South */}
           <div className="mt-4 flex flex-col gap-6">
             {([
-              { label: 'North', regions: ['North', 'Midlands', 'East'] },
+              { label: 'North', regions: ['North'] },
               { label: 'South', regions: ['South'] },
             ] as const).map(({ label, regions }) => {
               const group = sorted.filter((c) => (regions as readonly string[]).includes(c.region));

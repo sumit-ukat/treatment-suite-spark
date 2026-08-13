@@ -50,8 +50,8 @@ interface CentreSpec {
   capacityConfirmed: boolean;
 }
 
-/** Region grouping matches the zones seeded in the database. Placeholder — needs confirming. */
-export const REGIONS = ['South', 'East', 'Midlands', 'North'] as const;
+/** Region grouping — two zones only. */
+export const REGIONS = ['South', 'North'] as const;
 
 const SPECS: readonly CentreSpec[] = [
   // Primrose Lodge: 19 is confirmed. The room board still shows 18 because which bed is the
@@ -60,10 +60,10 @@ const SPECS: readonly CentreSpec[] = [
   { slug: 'primrose-lodge',      name: 'Primrose Lodge',      county: 'Surrey',         region: 'South',    capacity: 19, capacityConfirmed: true },
   { slug: 'providence-projects', name: 'Providence Projects', county: 'Dorset',         region: 'South',    capacity: 32, capacityConfirmed: false },
   { slug: 'recovery-lighthouse', name: 'Recovery Lighthouse', county: 'West Sussex',    region: 'South',    capacity: 22, capacityConfirmed: false },
-  { slug: 'sanctuary-lodge',     name: 'Sanctuary Lodge',     county: 'Essex',          region: 'East',     capacity: 26, capacityConfirmed: false },
-  { slug: 'liberty-house',       name: 'Liberty House',       county: 'Bedfordshire',   region: 'East',     capacity: 20, capacityConfirmed: false },
-  { slug: 'banbury-lodge',       name: 'Banbury Lodge',       county: 'Oxfordshire',    region: 'Midlands', capacity: 24, capacityConfirmed: false },
-  { slug: 'bayberry-rehab',      name: 'Bayberry Rehab',      county: 'Warwickshire',   region: 'Midlands', capacity: 18, capacityConfirmed: false },
+  { slug: 'sanctuary-lodge',     name: 'Sanctuary Lodge',     county: 'Essex',          region: 'North',    capacity: 26, capacityConfirmed: false },
+  { slug: 'liberty-house',       name: 'Liberty House',       county: 'Bedfordshire',   region: 'North',    capacity: 20, capacityConfirmed: false },
+  { slug: 'banbury-lodge',       name: 'Banbury Lodge',       county: 'Oxfordshire',    region: 'North',    capacity: 24, capacityConfirmed: false },
+  { slug: 'bayberry-rehab',      name: 'Bayberry Rehab',      county: 'Warwickshire',   region: 'North',    capacity: 18, capacityConfirmed: false },
   { slug: 'linwood-house',       name: 'Linwood House',       county: 'South Yorkshire', region: 'North',   capacity: 21, capacityConfirmed: false },
   { slug: 'oasis-runcorn',       name: 'Oasis Runcorn',       county: 'Cheshire',       region: 'North',    capacity: 25, capacityConfirmed: false },
   { slug: 'oasis-bradford',      name: 'Oasis Bradford',      county: 'West Yorkshire', region: 'North',    capacity: 23, capacityConfirmed: false },
