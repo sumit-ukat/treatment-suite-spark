@@ -744,39 +744,78 @@ export function TreatmentDetailPanel({
                 </div>
               </div>
 
-              {/* Scrollable task list */}
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="divide-y divide-[var(--color-line)] px-4">
-                  {needsAction.length > 0 ? (
-                    <Section title="Needs action" count={needsAction.length} defaultOpen>
-                      {needsAction.map((t) => (
-                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                      ))}
-                    </Section>
-                  ) : null}
+              {/* Task body — Needs action + Coming up side by side, Done below */}
+              <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
 
-                  {comingUp.length > 0 ? (
-                    <Section title="Coming up" count={comingUp.length} defaultOpen={false}>
-                      {comingUp.map((t) => (
-                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                      ))}
-                    </Section>
-                  ) : null}
+                {/* Two active columns */}
+                <div className="min-h-0 flex-1 grid grid-cols-2 divide-x divide-[var(--color-line)] overflow-hidden">
 
-                  {done.length > 0 ? (
-                    <Section title="Done" count={done.length} defaultOpen={false}>
-                      {done.map((t) => (
-                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                      ))}
-                    </Section>
-                  ) : null}
+                  {/* Left — Needs action */}
+                  <div className="overflow-y-auto px-4 py-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink)]">
+                        Needs action
+                      </span>
+                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        needsAction.length > 0
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                          : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                      }`}>
+                        {needsAction.length}
+                      </span>
+                    </div>
+                    {needsAction.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {needsAction.map((t) => (
+                          <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[12.5px] text-[var(--color-ink-muted)]">All clear — nothing overdue or due today.</p>
+                    )}
+                  </div>
 
-                  {filtered.length === 0 ? (
-                    <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
-                      No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
-                    </p>
-                  ) : null}
+                  {/* Right — Coming up */}
+                  <div className="overflow-y-auto px-4 py-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink)]">
+                        Coming up
+                      </span>
+                      <span className="rounded-full bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-accent)]">
+                        {comingUp.length}
+                      </span>
+                    </div>
+                    {comingUp.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {comingUp.map((t) => (
+                          <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[12.5px] text-[var(--color-ink-muted)]">Nothing scheduled.</p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Done — full width, collapsed by default */}
+                {done.length > 0 ? (
+                  <div className="shrink-0 border-t border-[var(--color-line)] px-4">
+                    <Section title="Done" count={done.length} defaultOpen={false}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {done.map((t) => (
+                          <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                        ))}
+                      </div>
+                    </Section>
+                  </div>
+                ) : null}
+
+                {filtered.length === 0 ? (
+                  <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
+                    No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
+                  </p>
+                ) : null}
+
               </div>
             </div>
           </div>
