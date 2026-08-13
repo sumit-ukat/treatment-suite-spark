@@ -129,41 +129,6 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
     }
   });
 
-  /**
-   * The triage list: which centres need a look, worst first, and why.
-   *
-   * The ordering weight is a judgement, so the *reasons* carry the real counts and the score is
-   * never shown — a manager acts on "3 past their discharge date", not on "risk 94". A client past
-   * their planned discharge outranks everything else because it is both a compliance breach and a
-   * bed that cannot be offered; a full centre is listed because it cannot take an admission at all,
-   * which is operationally urgent even though nothing is wrong.
-   */
-  const attention = useMemo(() => {
-    return visible
-      .map((c) => {
-        const reasons: string[] = [];
-        if (c.pastPlannedDischarge > 0) {
-          reasons.push(
-            `${c.pastPlannedDischarge} past planned discharge${c.pastPlannedDischarge === 1 ? '' : 's'}`,
-          );
-        }
-        if (c.overdue > 0) reasons.push(`${c.overdue} overdue action${c.overdue === 1 ? '' : 's'}`);
-        if (c.available === 0) reasons.push('No free beds');
-        if (c.photoAttention > 0) reasons.push(`${c.photoAttention} without a photograph`);
-        if (c.onTimePercent < 80) reasons.push(`${c.onTimePercent}% on time`);
-
-        const score =
-          c.pastPlannedDischarge * 40 +
-          c.overdue * 5 +
-          (c.available === 0 ? 15 : 0) +
-          c.photoAttention * 2 +
-          Math.max(0, 80 - c.onTimePercent);
-
-        return { centre: c, reasons, score };
-      })
-      .filter((r) => r.reasons.length > 0)
-      .sort((a, b) => b.score - a.score);
-  }, [visible]);
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-5">
@@ -250,85 +215,11 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
         </div>
       )}
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
-        <div className="flex flex-col gap-6">
-          <Panel
-            title="Attention required"
-            subtitle={
-              attention.length === 0
-                ? 'Nothing outstanding across the centres in view.'
-                : `${attention.length} of ${visible.length} centres need a look`
-            }
-          >
-            {attention.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No overdue actions, no clients past their discharge date, no missing photographs.
-              </p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-[var(--color-line)]">
-                {attention.map(({ centre, reasons }) => (
-                  <li key={centre.slug}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenCentre(centre.slug)}
-                      className="flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{centre.name}</span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                          {reasons.join(' · ')}
-                        </span>
-                      </div>
-                      <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-
-          <Panel
-            title="Capacity outlook"
-            subtitle="Beds free now, and what the planned discharges would add."
-          >
-            <dl className="flex flex-col gap-3.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-sm text-muted-foreground">Free now</dt>
-                <dd className="tabular text-lg font-semibold">{totals.available}</dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-sm text-muted-foreground">Discharging by Sunday</dt>
-                <dd className="tabular text-lg font-semibold">+{totals.dischargingThisWeek}</dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3 border-t border-[var(--color-line)] pt-3">
-                <dt className="text-sm font-medium">Free by Sunday</dt>
-                <dd className="tabular text-lg font-semibold text-[var(--color-accent)]">
-                  {totals.available + totals.dischargingThisWeek}
-                </dd>
-              </div>
-            </dl>
-            {/* Said plainly rather than presented as a forecast: this is addition, not a model. It
-                assumes every planned discharge happens on time and nobody is admitted meanwhile —
-                neither of which this system can currently predict. */}
-            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-              Arithmetic, not a forecast: assumes every planned discharge goes ahead and no new
-              admissions arrive. {totals.pastPlannedDischarge > 0 ? (
-                <>
-                  {totals.pastPlannedDischarge} client
-                  {totals.pastPlannedDischarge === 1 ? ' is' : 's are'} already past a planned
-                  discharge date, so treat it as optimistic.
-                </>
-              ) : null}
-            </p>
-          </Panel>
-        </div>
-
+      <div className="mt-4">
         <Panel title="Centres">
           <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
             <p className="text-sm text-muted-foreground">Occupancy and status at a glance</p>
             <div className="flex shrink-0 items-center gap-2">
-              {/* Filters the figures above as well as this list, so it sits with the list it visibly
-                  changes rather than off on its own. */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -348,8 +239,6 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
                       <DropdownMenuCheckboxItem
                         key={c.slug}
                         checked={scope.includes(c.slug)}
-                        // Radix closes the menu on select by default; picking several centres in one
-                        // go is the whole point of a multi-select.
                         onSelect={(e) => e.preventDefault()}
                         onCheckedChange={() => toggle(c.slug)}
                       >
@@ -390,10 +279,26 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col divide-y divide-[var(--color-line)]">
-            {sorted.map((c) => (
-              <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-            ))}
+          {/* Centres grouped by region, two columns side by side */}
+          <div className="mt-4 grid gap-6 lg:grid-cols-2">
+            {(['North', 'Midlands', 'East', 'South'] as const)
+              .map((region) => {
+                const group = sorted.filter((c) => c.region === region);
+                if (group.length === 0) return null;
+                return (
+                  <div key={region}>
+                    <h3 className="mb-1 flex items-center gap-2 text-[11px] font-semibold tracking-[0.07em] uppercase text-[var(--color-ink-muted)]">
+                      {region}
+                      <span className="font-normal">· {group.length} centre{group.length !== 1 ? 's' : ''}</span>
+                    </h3>
+                    <div className="flex flex-col divide-y divide-[var(--color-line)] rounded-lg border border-[var(--color-line)]">
+                      {group.map((c) => (
+                        <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </Panel>
       </div>
