@@ -310,6 +310,8 @@ export interface BoardTask {
   notApplicableReason: string | null;
   /** From the task template. The server enforces this too; the UI uses it to ask for the note up front. */
   requiresCompletionNote: boolean;
+  /** True when the due date has been moved at least once via the reschedule_task RPC. Always false on fictional boards. */
+  hasDateChanges: boolean;
 }
 
 /** Current state of a non-routine discharge request. See migration 0027 — 'rejected'/'finalised' are not "current" and never appear here. */
@@ -437,6 +439,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
         : null,
       // Irrelevant here: with id null nothing on this board can be completed anyway.
       requiresCompletionNote: false,
+      hasDateChanges: false,
       // A not-applicable task is never overdue. The programme does not reach it, so there is no
       // work to be late for — counting it would manufacture a failure out of a shorter stay.
       isOverdue:

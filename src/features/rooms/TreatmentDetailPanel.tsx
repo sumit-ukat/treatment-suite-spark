@@ -114,6 +114,9 @@ function TaskCard({
   const [rescheduleBusy, setRescheduleBusy] = useState(false);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [rescheduleHistory, setRescheduleHistory] = useState<TaskDateChangeRow[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRows, setHistoryRows] = useState<TaskDateChangeRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // After the green flash, trigger the refresh so the card moves to Done.
   useEffect(() => {
@@ -152,6 +155,17 @@ function TaskCard({
     } finally {
       setRescheduleBusy(false);
     }
+  }
+
+  function openHistory() {
+    if (!t.id) return;
+    setHistoryRows([]);
+    setHistoryLoading(true);
+    setHistoryOpen(true);
+    taskService.dateHistory(t.id)
+      .then(setHistoryRows)
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
   }
 
   async function run(action: () => Promise<void>) {
@@ -300,6 +314,18 @@ function TaskCard({
           <p className="text-[var(--color-ink-muted)]">No due date recorded</p>
         )}
 
+        {/* RESCHEDULED indicator — clickable badge */}
+        {t.hasDateChanges ? (
+          <button
+            type="button"
+            onClick={openHistory}
+            className="flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9.5px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-400 dark:hover:bg-sky-950/60"
+          >
+            <Calendar className="size-2.5 shrink-0" />
+            Date changed
+          </button>
+        ) : null}
+
         {/* DONE — completion timestamp + variance */}
         {t.isComplete ? (
           t.completedAt ? (
@@ -436,6 +462,50 @@ function TaskCard({
             <p role="alert" className="mt-1 text-[11px] text-red-600 dark:text-red-400">{error}</p>
           ) : null}
         </div>
+      ) : null}
+
+      {historyOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setHistoryOpen(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Due date history</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{t.title}</p>
+            <div className="mt-4">
+              {historyLoading ? (
+                <p className="text-[12px] text-[var(--color-ink-muted)]">Loading…</p>
+              ) : historyRows.length === 0 ? (
+                <p className="text-[12px] text-[var(--color-ink-muted)]">No changes recorded.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {historyRows.map((h) => (
+                    <li key={h.id} className="rounded-lg border border-[var(--color-line)] px-3 py-2.5 text-[11.5px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[var(--color-ink)]">{h.changed_by_name}</span>
+                        <span className="text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(h.changed_at))} at {new Date(h.changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                        {h.old_due_at ? (
+                          <>
+                            <span className="text-[var(--color-ink-muted)] line-through">{formatDate(new Date(h.old_due_at))}</span>
+                            <span className="text-[var(--color-ink-muted)]">→</span>
+                          </>
+                        ) : null}
+                        <span className="font-medium text-[var(--color-ink)]">{formatDate(new Date(h.new_due_at))}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] italic text-[var(--color-ink-muted)]">&ldquo;{h.reason}&rdquo;</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(false)}
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Close
+            </button>
+          </DialogContent>
+        </Dialog>
       ) : null}
 
       {rescheduleOpen ? (

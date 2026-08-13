@@ -475,6 +475,7 @@ export interface ClientTaskRow {
    * 'done_no_date' means the cell said only "TRUE": `completed_at` for those rows is the import
    * snapshot timestamp, not a real completion time, and must never be displayed as one. */
   source_interpretation: string | null;
+  reschedule_count: number;
 }
 
 export interface TaskCompleterRow {
@@ -882,7 +883,7 @@ export const roomBoard = {
         client()
           .from('client_tasks')
           .select(
-            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation',
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
           )
           .eq('centre_id', centreId),
       ),

@@ -141,6 +141,7 @@ function buildRealOccupant(
       // shape isOverdue expects.
       isOverdue: !isNotApplicable && isOverdue({ dueAt, completedAt, status: t.status as never }, now),
       isDueToday: !isComplete && !isNotApplicable && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
+      hasDateChanges: t.reschedule_count > 0,
     };
   });
 
