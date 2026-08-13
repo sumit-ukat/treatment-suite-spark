@@ -344,6 +344,16 @@ export const admissions = {
     if (error) throw new DataAccessError('admissions.admitClient', error);
     return data as string;
   },
+
+  async getClientId(admissionId: string): Promise<string> {
+    const rows = await run<Array<{ client_id: string }>>(
+      'admissions.getClientId',
+      client().from('admissions').select('client_id').eq('id', admissionId).limit(1),
+    );
+    const row = rows[0];
+    if (!row) throw new DataAccessError('admissions.getClientId', { message: 'Admission not found.' });
+    return row.client_id;
+  },
 };
 
 export interface ClientSearchResult {

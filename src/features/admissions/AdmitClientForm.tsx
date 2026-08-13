@@ -1,10 +1,11 @@
-import { CheckCircle2 } from 'lucide-react';
+import { Camera, CheckCircle2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   admissions,
+  clientPhotos,
   roomsAndBeds,
   type BedRow,
   type ClientSearchResult,
@@ -14,6 +15,7 @@ import { Chip } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { useClientSearch } from '../clients/useClientSearch.js';
 import { formatDate } from '../../lib/format.js';
+import { formatBytes } from '../../lib/image.js';
 
 /**
  * The admission form — the first UI that calls `app.admit_client`.
@@ -133,6 +135,26 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ admissionId: string } | null>(null);
 
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError(null);
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  }
+
+  function clearPhoto() {
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoError(null);
+  }
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -197,6 +219,18 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         doctorLabel: form.doctorLabel.trim() || undefined,
         reason: form.reason.trim() || undefined,
       });
+      // Upload photo after admission — non-blocking: a photo failure never rolls back the admission.
+      if (photoFile) {
+        try {
+          const clientId =
+            mode === 'existing'
+              ? selectedClient!.client_id
+              : await admissions.getClientId(admissionId);
+          await clientPhotos.upload({ centreId: centre.id, clientId, file: photoFile });
+        } catch {
+          // Swallowed intentionally — admission succeeded; photo can be added later.
+        }
+      }
       setResult({ admissionId });
       setStep('done');
     } catch (err) {
@@ -254,6 +288,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             setSelectedClient(null);
             setResult(null);
             setStep('form');
+            clearPhoto();
             void roomsAndBeds.availableBeds(centre.id).then(setBeds);
           }}
           className="mt-4 rounded-lg bg-[var(--color-ink)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--color-surface)]"
@@ -285,6 +320,16 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           title="Review before admitting"
           description="Nothing is saved until you confirm. The server will still refuse this if the bed has since been taken, or anything else is wrong — this screen cannot override that."
         />
+
+        {photoPreview ? (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-[var(--color-line)] bg-card p-3">
+            <img src={photoPreview} alt="Client photo preview" className="size-14 rounded-full object-cover border border-[var(--color-line)]" />
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-[var(--color-ink)]">Photo attached</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)] truncate">{photoFile?.name} · {formatBytes(photoFile?.size ?? 0)}</p>
+            </div>
+          </div>
+        ) : null}
 
         <dl className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border bg-card p-4 text-[13px] shadow-soft">
           <div>
@@ -714,6 +759,41 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             onChange={(e) => set('reason', e.target.value)}
           />
         </Field>
+
+        <SectionHeading>Client photo (optional)</SectionHeading>
+
+        {photoPreview ? (
+          <div className="flex items-center gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+            <img src={photoPreview} alt="Preview" className="size-14 rounded-full object-cover border border-[var(--color-line)]" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-medium">{photoFile?.name}</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">{formatBytes(photoFile?.size ?? 0)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={clearPhoto}
+              className="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-muted)] hover:bg-muted/60"
+              aria-label="Remove photo"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[var(--color-line)] px-4 py-3 transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]">
+            <Camera className="size-5 shrink-0 text-[var(--color-ink-muted)]" />
+            <div>
+              <p className="text-[12.5px] font-medium text-[var(--color-ink)]">Upload a photo</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">JPEG, PNG or WebP · max 5MB · resized automatically</p>
+            </div>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={handlePhotoChange}
+            />
+          </label>
+        )}
+        {photoError ? <p className="text-[11px] text-red-600 dark:text-red-400">{photoError}</p> : null}
 
         <button
           type="submit"
