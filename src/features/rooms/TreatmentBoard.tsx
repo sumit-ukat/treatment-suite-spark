@@ -11,30 +11,30 @@ import { TreatmentDetailPanel } from './TreatmentDetailPanel.tsx';
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMNS = [
-  { code: 'family_contact_24h',          label: '24h',        full: '24-hour family contact',             group: 'family'    },
-  { code: 'family_contact_week_1',        label: 'Week 1',     full: 'Week 1 family contact',              group: 'family'    },
-  { code: 'family_contact_week_2',        label: 'Week 2',     full: 'Week 2 family contact',              group: 'family'    },
-  { code: 'family_contact_pre_discharge', label: 'Pre-D',      full: 'Family contact 24h before discharge',group: 'family'    },
-  { code: 'satisfaction_survey_7day',     label: '7-day',      full: '7-day satisfaction survey',          group: 'survey'    },
-  { code: 'gp_summary',                   label: 'GP Sum.',    full: 'GP summary letter',                  group: 'medical'   },
-  { code: 'life_story',                   label: 'Life Story', full: 'Life story / surrender',             group: 'milestone' },
-  { code: 'step_1',                       label: 'Step 1',     full: 'Step 1',                             group: 'milestone' },
-  { code: 'step_2',                       label: 'Step 2',     full: 'Step 2',                             group: 'milestone' },
-  { code: 'step_3',                       label: 'Step 3',     full: 'Step 3',                             group: 'milestone' },
-  { code: 'ccp',                          label: 'CCP',        full: 'CCP milestone',                      group: 'milestone' },
-  { code: 'session_intro',                label: 'Intro',      full: 'Intro counselling session',          group: 'session'   },
-  { code: 'session_week_1',               label: 'Week 1',     full: 'Week 1 counselling session',         group: 'session'   },
-  { code: 'session_week_2',               label: 'Week 2',     full: 'Week 2 counselling session',         group: 'session'   },
-  { code: 'session_week_3',               label: 'Week 3',     full: 'Week 3 counselling session',         group: 'session'   },
-  { code: 'session_week_4',               label: 'Week 4',     full: 'Week 4 counselling session',         group: 'session'   },
+  { code: 'family_contact_24h',          label: '24-Hour',        full: '24-hour family contact',              group: 'family'    },
+  { code: 'family_contact_week_1',        label: 'Week 1',         full: 'Week 1 family contact',               group: 'family'    },
+  { code: 'family_contact_week_2',        label: 'Week 2',         full: 'Week 2 family contact',               group: 'family'    },
+  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'family'  },
+  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',           group: 'survey'    },
+  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',        group: 'medical'   },
+  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',              group: 'milestone' },
+  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',          group: 'milestone' },
+  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',          group: 'milestone' },
+  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',          group: 'milestone' },
+  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',         group: 'milestone' },
+  { code: 'session_intro',                label: 'Intro',          full: 'Introductory counselling session',    group: 'session'   },
+  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 counselling session',          group: 'session'   },
+  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 counselling session',          group: 'session'   },
+  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 counselling session',          group: 'session'   },
+  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 counselling session',          group: 'session'   },
 ] as const;
 
 const COL_GROUPS = [
   { label: 'Family contact', count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
   { label: 'Survey',         count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
   { label: 'Medical',        count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { label: 'Milestones',     count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { label: 'Sessions',       count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
+  { label: 'Care Plan',      count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { label: 'Milestone',      count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ function fmtTime(d: Date): string {
 // Uses the same icon + tone vocabulary as the attention chips in BedList.
 function TaskCell({ bed, code }: { bed: BoardBed; code: string }) {
   const o = bed.occupant;
-  const td = 'w-[52px] border-b border-[var(--color-line)] px-1 py-2.5 text-center';
+  const td = 'w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center';
 
   if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
 
@@ -371,7 +371,7 @@ export function TreatmentBoard({
                 <th
                   key={col.code}
                   title={col.full}
-                  className="w-[52px] border-b border-[var(--color-line)] bg-card px-1 py-2 text-center text-[9.5px] font-semibold tracking-[0.04em] uppercase text-[var(--color-ink-muted)]"
+                  className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
                 >
                   {col.label}
                 </th>

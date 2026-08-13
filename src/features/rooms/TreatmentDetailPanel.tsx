@@ -6,7 +6,6 @@ import { formatDate } from '../../lib/format.js';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
-import { ConcernSection } from './ConcernSection.tsx';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PhotoBadge } from './BedCard.tsx';
@@ -790,16 +789,6 @@ export function TreatmentDetailPanel({
                 </p>
               ) : null}
 
-              {o.admissionId && o.clientId ? (
-                <div className="py-3">
-                  <ConcernSection
-                    clientId={o.clientId}
-                    admissionId={o.admissionId}
-                    centreId={centreId}
-                    compact
-                  />
-                </div>
-              ) : null}
             </div>
           </div>
 
