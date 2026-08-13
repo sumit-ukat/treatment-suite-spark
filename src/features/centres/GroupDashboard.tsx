@@ -279,26 +279,28 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
             </div>
           </div>
 
-          {/* Centres grouped by region, two columns side by side */}
-          <div className="mt-4 grid gap-6 lg:grid-cols-2">
-            {(['North', 'Midlands', 'East', 'South'] as const)
-              .map((region) => {
-                const group = sorted.filter((c) => c.region === region);
-                if (group.length === 0) return null;
-                return (
-                  <div key={region}>
-                    <h3 className="mb-1 flex items-center gap-2 text-[11px] font-semibold tracking-[0.07em] uppercase text-[var(--color-ink-muted)]">
-                      {region}
-                      <span className="font-normal">· {group.length} centre{group.length !== 1 ? 's' : ''}</span>
-                    </h3>
-                    <div className="flex flex-col divide-y divide-[var(--color-line)] rounded-lg border border-[var(--color-line)]">
-                      {group.map((c) => (
-                        <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
-                      ))}
-                    </div>
+          {/* Centres split into North (North + Midlands + East) and South */}
+          <div className="mt-4 flex flex-col gap-6">
+            {([
+              { label: 'North', regions: ['North', 'Midlands', 'East'] },
+              { label: 'South', regions: ['South'] },
+            ] as const).map(({ label, regions }) => {
+              const group = sorted.filter((c) => regions.includes(c.region));
+              if (group.length === 0) return null;
+              return (
+                <div key={label}>
+                  <h3 className="mb-1 flex items-center gap-2 text-[11px] font-semibold tracking-[0.07em] uppercase text-[var(--color-ink-muted)]">
+                    {label}
+                    <span className="font-normal">· {group.length} centre{group.length !== 1 ? 's' : ''}</span>
+                  </h3>
+                  <div className="flex flex-col divide-y divide-[var(--color-line)] rounded-lg border border-[var(--color-line)]">
+                    {group.map((c) => (
+                      <CentreRow key={c.slug} centre={c} onOpen={() => onOpenCentre(c.slug)} />
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
           </div>
         </Panel>
       </div>
