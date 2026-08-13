@@ -107,6 +107,14 @@ function TaskCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAllReopens, setShowAllReopens] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
+
+  // After the green flash, trigger the refresh so the card moves to Done.
+  useEffect(() => {
+    if (!justCompleted) return;
+    const timer = setTimeout(() => { onChanged?.(); }, 1500);
+    return () => clearTimeout(timer);
+  }, [justCompleted, onChanged]);
 
   const isReal = t.id !== null;
   const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
@@ -120,7 +128,7 @@ function TaskCard({
       await action();
       setMode('idle');
       setText('');
-      onChanged?.();
+      setJustCompleted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
@@ -153,6 +161,18 @@ function TaskCard({
     : 'border-[var(--color-line)]';
 
   const mostRecentReopen = t.reopens[0] ?? null;
+
+  if (justCompleted) {
+    return (
+      <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-[11px] font-bold">✓</span>
+          <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-emerald-800 dark:text-emerald-200">{t.title}</p>
+          <span className="shrink-0 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">Marked done</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-lg border px-3 py-2.5 ${borderCls}`}>
