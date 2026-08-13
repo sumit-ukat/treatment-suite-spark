@@ -130,26 +130,40 @@ export function TreatmentBoard({
 
   const [beds, setBeds] = useState<readonly BoardBed[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadedAt, setLoadedAt] = useState<Date | null>(null);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [boardVersion, setBoardVersion] = useState(0);
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
+  // True once we have data — subsequent refreshes update silently without blanking the board.
+  const hasDataRef = useRef(false);
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    if (hasDataRef.current) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     buildRealBoard(centreId)
       .then(({ board }) => {
-        if (!cancelled) { setBeds(board); setError(null); setLoadedAt(new Date()); }
+        if (!cancelled) {
+          setBeds(board);
+          hasDataRef.current = true;
+          setError(null);
+          setLoadedAt(new Date());
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .finally(() => {
+        if (!cancelled) { setLoading(false); setRefreshing(false); }
+      });
     return () => { cancelled = true; };
   }, [centreId, boardVersion]);
 
@@ -216,7 +230,7 @@ export function TreatmentBoard({
       {/* ── Page header — matches BoardPage's PageHeader ── */}
       <PageHeader
         title={`${centreName} treatment board`}
-        description={`Every bed and every clinical task in one view.${loadedAt ? ` Last updated at ${fmtTime(loadedAt)}.` : ''}`}
+        description={`Every bed and every clinical task in one view.${loadedAt ? ` Last updated at ${fmtTime(loadedAt)}.` : ''}${refreshing ? ' Updating…' : ''}`}
         actions={
           <>
             <label className="relative flex items-center">

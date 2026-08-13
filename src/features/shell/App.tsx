@@ -478,10 +478,13 @@ function BoardPage() {
 
   const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);
+  const [boardRefreshing, setBoardRefreshing] = useState(false);
   const [boardError, setBoardError] = useState<string | null>(null);
   // Bumped after a task is completed/reopened or a discharge action lands, to re-read the board rather
   // than patch local state to what we assume the server did.
   const [boardVersion, setBoardVersion] = useState(0);
+  // True once we have data — subsequent refreshes update silently without blanking the board.
+  const boardHasDataRef = useRef(false);
   // The available bed a "admit here?" confirmation is open for — a separate confirm step, not a
   // straight jump to the admission form, since clicking an empty bed is otherwise a single misclick
   // away from the full admit-a-client flow.
@@ -493,11 +496,16 @@ function BoardPage() {
       return;
     }
     let cancelled = false;
-    setBoardLoading(true);
+    if (boardHasDataRef.current) {
+      setBoardRefreshing(true);
+    } else {
+      setBoardLoading(true);
+    }
     buildRealBoard(authCentre.id)
       .then((result) => {
         if (cancelled) return;
         setRealBoard(result.board);
+        boardHasDataRef.current = true;
         setBoardError(null);
       })
       .catch((err: unknown) => {
@@ -505,7 +513,7 @@ function BoardPage() {
         setBoardError(err instanceof Error ? err.message : String(err));
       })
       .finally(() => {
-        if (!cancelled) setBoardLoading(false);
+        if (!cancelled) { setBoardLoading(false); setBoardRefreshing(false); }
       });
     return () => {
       cancelled = true;
@@ -601,7 +609,7 @@ function BoardPage() {
       <PageHeader
         eyebrow={centre.county}
         title={`${centre.name} room board`}
-        description={`${summary.bedsOccupied} of ${summary.bedsTotal} beds occupied · ${counts.overdue} beds with overdue actions`}
+        description={`${summary.bedsOccupied} of ${summary.bedsTotal} beds occupied · ${counts.overdue} beds with overdue actions${boardRefreshing ? ' · Updating…' : ''}`}
         actions={
           <>
             <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)]">
