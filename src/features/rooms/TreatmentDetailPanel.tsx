@@ -433,6 +433,37 @@ function Section({
   );
 }
 
+function DoneSection({ done, onChanged }: { done: BoardTask[]; onChanged?: (() => void) | undefined }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="shrink-0 border-t-2 border-emerald-200 dark:border-emerald-800">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 bg-emerald-50/70 px-4 py-2.5 transition hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30"
+      >
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">✓</span>
+        <span className="text-[11.5px] font-semibold tracking-[0.06em] uppercase text-emerald-800 dark:text-emerald-300">
+          Done
+        </span>
+        <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-800/60 dark:text-emerald-300">
+          {done.length}
+        </span>
+        <ChevronDown
+          className={`ml-auto size-3.5 shrink-0 text-emerald-600 transition-transform dark:text-emerald-400 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open ? (
+        <div className="grid grid-cols-2 gap-2 px-4 py-3">
+          {done.map((t) => (
+            <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -797,17 +828,9 @@ export function TreatmentDetailPanel({
                   </div>
                 </div>
 
-                {/* Done — full width, collapsed by default */}
+                {/* Done — full width, collapsed by default, prominent green header */}
                 {done.length > 0 ? (
-                  <div className="shrink-0 border-t border-[var(--color-line)] px-4">
-                    <Section title="Done" count={done.length} defaultOpen={false}>
-                      <div className="grid grid-cols-2 gap-2">
-                        {done.map((t) => (
-                          <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                        ))}
-                      </div>
-                    </Section>
-                  </div>
+                  <DoneSection done={done} onChanged={onChanged} />
                 ) : null}
 
                 {filtered.length === 0 ? (
