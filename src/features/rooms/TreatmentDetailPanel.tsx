@@ -685,6 +685,10 @@ export function TreatmentDetailPanel({
   const [concernBusy, setConcernBusy] = useState(false);
   const [concernError, setConcernError] = useState<string | null>(null);
   const [concernInfoRow, setConcernInfoRow] = useState<ConcernRow | null>(null);
+  const [newConcernMode, setNewConcernMode] = useState(false);
+  const [newConcernText, setNewConcernText] = useState('');
+  const [newConcernBusy, setNewConcernBusy] = useState(false);
+  const [newConcernError, setNewConcernError] = useState<string | null>(null);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
     if (!clientId) return;
@@ -707,6 +711,23 @@ export function TreatmentDetailPanel({
       setNotesError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
       setNotesBusy(false);
+    }
+  }
+
+  async function createConcern() {
+    if (!newConcernText.trim() || !oc.admissionId || !oc.clientId) return;
+    setNewConcernBusy(true);
+    setNewConcernError(null);
+    try {
+      await concerns.log(oc.clientId, oc.admissionId, centreId, newConcernText.trim(), 'risk');
+      const rows = await concerns.list(centreId, oc.clientId);
+      setConcernRows(rows);
+      setNewConcernMode(false);
+      setNewConcernText('');
+    } catch (err) {
+      setNewConcernError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setNewConcernBusy(false);
     }
   }
 
@@ -913,7 +934,22 @@ export function TreatmentDetailPanel({
                     ) : o.hasOpenConcern ? (
                       <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Open</span>
                     ) : null}
+                    {can('tasks.complete') && !newConcernMode ? (
+                      <button
+                        type="button"
+                        title="Add / edit note"
+                        onClick={() => {
+                          setNewConcernText(concernRows.length === 0 ? (o.legacySafeguardingNote ?? '') : '');
+                          setNewConcernError(null);
+                          setNewConcernMode(true);
+                        }}
+                        className="ml-auto rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
+                      >
+                        <Pencil className="size-3" />
+                      </button>
+                    ) : null}
                   </div>
+
                   {concernRows.length > 0 ? (
                     <ul className="mt-1 space-y-1.5">
                       {concernRows.map((r) => (
@@ -953,24 +989,24 @@ export function TreatmentDetailPanel({
                               <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
                               {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
                               {r.updated_by_name && !r.is_resolved && concernEditId !== r.id ? (
-                                <span className="ml-2 text-[9px] italic text-[var(--color-ink-muted)]">edited</span>
+                                <div className="mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setConcernInfoRow(r)}
+                                    className="flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9.5px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-400 dark:hover:bg-sky-950/60"
+                                  >
+                                    <Info className="size-2.5 shrink-0" />
+                                    Last edited
+                                  </button>
+                                </div>
                               ) : null}
                             </div>
                             {!r.is_resolved && can('tasks.complete') && concernEditId !== r.id ? (
-                              <div className="flex shrink-0 items-center gap-0.5 pl-1">
-                                <button type="button" title="Edit note"
-                                  onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
-                                  className="rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
-                                  <Pencil className="size-2.5" />
-                                </button>
-                                {r.updated_by_name ? (
-                                  <button type="button" title="Edit history"
-                                    onClick={() => setConcernInfoRow(r)}
-                                    className="rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
-                                    <Info className="size-2.5" />
-                                  </button>
-                                ) : null}
-                              </div>
+                              <button type="button" title="Edit note"
+                                onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
+                                className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                                <Pencil className="size-2.5" />
+                              </button>
                             ) : null}
                           </div>
                         </li>
@@ -981,6 +1017,31 @@ export function TreatmentDetailPanel({
                   ) : (
                     <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">No notes on file.</p>
                   )}
+
+                  {newConcernMode ? (
+                    <div className="mt-2 border-t border-[var(--color-line)]/50 pt-2">
+                      <textarea
+                        autoFocus
+                        rows={3}
+                        value={newConcernText}
+                        onChange={(e) => setNewConcernText(e.target.value)}
+                        placeholder="Add safeguarding / risk note…"
+                        className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                      />
+                      {newConcernError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{newConcernError}</p> : null}
+                      <div className="mt-1.5 flex gap-2">
+                        <button type="button" disabled={!newConcernText.trim() || newConcernBusy}
+                          onClick={() => void createConcern()}
+                          className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40">
+                          {newConcernBusy ? 'Saving…' : 'Log note'}
+                        </button>
+                        <button type="button" onClick={() => { setNewConcernMode(false); setNewConcernError(null); }}
+                          className="rounded-md px-2.5 py-1 text-[11px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
