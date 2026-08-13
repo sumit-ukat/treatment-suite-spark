@@ -420,15 +420,21 @@ export function TreatmentBoard({
               /* ── Occupied bed ── */
               const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
               const urgentDischarge = o.daysUntilDischarge <= 2;
+              const rowBg = o.overdueCount > 0
+                ? 'bg-red-50 dark:bg-red-950/30'
+                : o.dueTodayCount > 0
+                ? 'bg-amber-50 dark:bg-amber-950/25'
+                : '';
+              const osc = `sticky z-10 ${rowBg || 'bg-card'} ${cb}`;
 
               return (
                 <tr
                   key={bed.label}
-                  className="cursor-pointer transition-colors hover:bg-[var(--color-accent-soft)]"
+                  className={`cursor-pointer transition-colors hover:bg-[var(--color-accent-soft)] ${rowBg}`}
                   onClick={() => setOpenBedLabel(bed.label)}
                 >
                   {/* Frozen: Bed */}
-                  <td className={`${stickyCell} left-0 w-16 px-3 py-3`}>
+                  <td className={`${osc} left-0 w-16 px-3 py-3`}>
                     <span className="nums rounded-md bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--color-accent)]">
                       {bed.label}
                     </span>
@@ -436,7 +442,7 @@ export function TreatmentBoard({
 
                   {/* Frozen: Client — shadow marks freeze boundary */}
                   <td
-                    className={`${stickyCell} relative left-16 min-w-[168px] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] ${
+                    className={`${osc} relative left-16 min-w-[168px] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
