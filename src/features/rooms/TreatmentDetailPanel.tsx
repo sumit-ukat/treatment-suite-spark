@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRightFromLine, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { BoardBed, BoardTask } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
@@ -441,6 +441,8 @@ export function TreatmentDetailPanel({
 }) {
   const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
   const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
+  const [showExtend, setShowExtend] = useState(false);
+  const [showDischarge, setShowDischarge] = useState(false);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
     if (!clientId) return;
@@ -465,7 +467,6 @@ export function TreatmentDetailPanel({
   const needsAction = filtered.filter(
     (t) => (t.isOverdue || (t.isDueToday && !t.isComplete)) && !t.isNotApplicable,
   );
-  // Sort overdue tasks by most overdue first (largest daysOverdue first).
   needsAction.sort((a, b) => {
     if (!a.dueAt || !b.dueAt) return 0;
     return a.dueAt.getTime() - b.dueAt.getTime();
@@ -484,7 +485,7 @@ export function TreatmentDetailPanel({
   done.sort((a, b) => {
     if (!a.completedAt) return 1;
     if (!b.completedAt) return -1;
-    return b.completedAt.getTime() - a.completedAt.getTime(); // most recently done first
+    return b.completedAt.getTime() - a.completedAt.getTime();
   });
 
   const overallStatus: StatusKey =
@@ -497,313 +498,308 @@ export function TreatmentDetailPanel({
     'flex size-7 items-center justify-center rounded-lg border border-[var(--color-line)] text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-30';
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] w-full max-w-[1200px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
-        <DialogTitle className="sr-only">Treatment detail — {o.displayName}</DialogTitle>
+    <>
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="flex max-h-[90vh] w-full max-w-[1240px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogTitle className="sr-only">Treatment detail — {o.displayName}</DialogTitle>
 
-        {/* ── Pinned header — 3-column: profile+nav | facts+safeguarding | progress ── */}
-        <div className="grid shrink-0 grid-cols-1 gap-4 border-b border-[var(--color-line)] p-4 lg:grid-cols-[160px_minmax(0,1fr)_220px]">
+          {/* ── 2-column body ── */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
 
-          {/* Col 1 — Profile card with nav arrows flanking the photo */}
-          <div
-            className={`relative flex flex-col items-center gap-2 overflow-hidden rounded-xl p-3 text-center ${
-              o.hasRestrictedAlert ? 'border-t-[3px] border-t-red-400 dark:border-t-red-500' : ''
-            }`}
-          >
-            {o.hasRestrictedAlert ? (
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-16 rounded-t-xl bg-gradient-to-b from-red-50/80 to-transparent dark:from-red-950/30" />
-            ) : null}
-            <div className="flex items-center gap-2">
-              <button type="button" disabled={!onPrev} onClick={onPrev} className={navBtn} aria-label="Previous client">
-                <ChevronLeft className="size-3.5" />
-              </button>
-              <PhotoBadge occupant={o} size="md" />
-              <button type="button" disabled={!onNext} onClick={onNext} className={navBtn} aria-label="Next client">
-                <ChevronRight className="size-3.5" />
-              </button>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="font-display text-[15px] font-semibold leading-snug">{o.displayName}</span>
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <StatusBadge status={overallStatus} />
+            {/* ══ LEFT PANEL — client context (fixed width, scrollable) ══ */}
+            <div className="flex w-[380px] shrink-0 flex-col overflow-y-auto border-r border-[var(--color-line)] bg-[var(--color-surface)]">
+
+              {/* Profile header */}
+              <div className={`relative flex flex-col gap-3 p-4 ${o.hasRestrictedAlert ? 'border-b-0' : 'border-b border-[var(--color-line)]'}`}>
                 {o.hasRestrictedAlert ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
-                    &#9888; High risk
-                  </span>
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-red-50/80 to-transparent dark:from-red-950/30" />
                 ) : null}
-              </div>
-              <div className="nums text-[10.5px] text-[var(--color-ink-muted)]">
-                Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
-              </div>
-            </div>
-          </div>
 
-          {/* Col 2 — Key facts grid + safeguarding banner */}
-          <div className="min-w-0">
-            <dl className="nums grid grid-cols-2 gap-x-5 gap-y-3 text-[11.5px] sm:grid-cols-4">
-              <TFact label="Admitted" value={formatDate(o.admittedAt)} />
-              <TFact label="Planned discharge" value={fmtDateStr(o.plannedDischargeDate)} />
-              <TFact label="Programme" value={`${o.durationDays} days`} />
-              <TFact label="Primary concern" value={o.substance || '—'} />
-              <TFact
-                label="Family meeting"
-                value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
-              />
-              <TFact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
-              <TFact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
-              <TFact label="Buddy" value={o.buddy} />
-            </dl>
+                {/* Avatar row + nav */}
+                <div className="flex items-center gap-3">
+                  <button type="button" disabled={!onPrev} onClick={onPrev} className={navBtn} aria-label="Previous client">
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                  <PhotoBadge occupant={o} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-[15px] font-semibold leading-snug truncate">{o.displayName}</p>
+                    <p className="nums mt-0.5 text-[10.5px] text-[var(--color-ink-muted)]">
+                      Ref {o.reference} · Bed {bed.label} · {o.group || 'No group'}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={overallStatus} />
+                      {o.hasRestrictedAlert ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+                          &#9888; High risk
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <button type="button" disabled={!onNext} onClick={onNext} className={navBtn} aria-label="Next client">
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </div>
 
-            <div
-              className={`mt-3 rounded-lg border-l-4 px-3 py-2 ${
-                o.hasRestrictedAlert
-                  ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
-                  : (o.hasOpenConcern || o.legacySafeguardingNote)
-                  ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
-                  : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-surface)]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[10px] font-semibold tracking-[0.05em] uppercase ${
-                    o.hasRestrictedAlert
-                      ? 'text-red-700 dark:text-red-400'
-                      : (o.hasOpenConcern || o.legacySafeguardingNote)
-                      ? 'text-amber-700 dark:text-amber-400'
-                      : 'text-[var(--color-ink-muted)]'
-                  }`}
-                >
-                  Safeguarding / Risks / Concerns
-                </span>
-                {o.hasRestrictedAlert ? (
-                  <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
-                    Alert
-                  </span>
-                ) : o.hasOpenConcern ? (
-                  <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
-                    Open
-                  </span>
-                ) : null}
-              </div>
-              {concernRows.length > 0 ? (
-                <ul className="mt-1 space-y-1.5">
-                  {concernRows.map((r) => (
-                    <li key={r.id} className={`text-[11px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
-                      <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
-                        r.category === 'risk'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                          : r.category === 'medical'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      }`}>{CONCERN_LABEL[r.category]}</span>
-                      <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
-                      <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
-                      {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
-                    </li>
-                  ))}
-                </ul>
-              ) : o.legacySafeguardingNote ? (
-                <p className={`mt-0.5 text-[11px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>
-                  {o.legacySafeguardingNote}
-                </p>
-              ) : (
-                <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">
-                  No notes on file.
-                </p>
-              )}
-            </div>
-            {o.admissionNotes ? (
-              <div className="mt-2 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2">
-                <p className="text-[10px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
-                <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Col 3 — Programme progress */}
-          <div className="h-fit rounded-xl border border-[var(--color-line)] p-3.5">
-            <p className="text-[9.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-              Programme progress
-            </p>
-            <p className="nums mt-1.5 text-[22px] font-semibold leading-none">
-              Day {o.treatmentDay}
-              <span className="text-[13px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
-            </p>
-            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div className="brand-gradient h-full rounded-full" style={{ width: `${todayPct}%` }} />
-            </div>
-            <p className="nums mt-1 text-[10px] text-[var(--color-ink-muted)]">
-              {Math.round(todayPct)}% of planned stay elapsed
-            </p>
-            <div className="nums mt-3 grid grid-cols-2 gap-1.5 text-center text-[10.5px]">
-              <div className="rounded-lg border border-[var(--color-line)] p-2">
-                <p className="text-[15px] font-semibold leading-none">{o.completedCount}</p>
-                <p className="mt-0.5 text-[var(--color-ink-muted)]">Done</p>
-              </div>
-              <div
-                className={`rounded-lg border p-2 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)]'}`}
-              >
-                <p className={`text-[15px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>
-                  {o.overdueCount}
-                </p>
-                <p className="mt-0.5 text-[var(--color-ink-muted)]">Overdue</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Stay timeline ── */}
-        <div className="shrink-0 border-b border-[var(--color-line)] px-4 pb-3 pt-3">
-
-          {/* Date anchors + day counter */}
-          <div className="mb-2 flex items-baseline justify-between text-[10.5px]">
-            <span className="text-[var(--color-ink-muted)]">
-              <span className="text-[9px] font-semibold uppercase tracking-wider">Admitted </span>
-              {formatDate(o.admittedAt)}
-            </span>
-            <span className="text-[12px] font-semibold">
-              Day {o.treatmentDay}
-              <span className="font-normal text-[var(--color-ink-muted)]"> / {o.durationDays}</span>
-            </span>
-            <span className="text-right text-[var(--color-ink-muted)]">
-              <span className="text-[9px] font-semibold uppercase tracking-wider">Discharge </span>
-              {fmtDateStr(o.plannedDischargeDate)}
-            </span>
-          </div>
-
-          {/* Track */}
-          <div className="relative h-4 overflow-visible rounded-full bg-black/[0.06] dark:bg-white/10">
-            {/* Progress fill */}
-            <div
-              className="brand-gradient absolute left-0 top-0 h-full rounded-full opacity-40"
-              style={{ width: `${todayPct}%` }}
-            />
-            {/* Task dots — larger + ring so they read clearly even when clustered */}
-            {timelineTasks.map((t, i) => {
-              const pct = Math.min(
-                100,
-                Math.max(0, (calendarDaysBetween(o.admittedAt, t.dueAt!, TZ) / o.durationDays) * 100),
-              );
-              return (
-                <span
-                  key={i}
-                  title={`${t.title} — Due ${formatDate(t.dueAt!)}`}
-                  className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-default"
-                  style={{ left: `${pct}%` }}
-                >
-                  <span
-                    className="block size-3.5 rounded-full ring-2 ring-white dark:ring-[var(--color-panel)]"
-                    style={{ backgroundColor: dotColor(t) }}
+                {/* Key facts */}
+                <dl className="nums grid grid-cols-2 gap-x-4 gap-y-3 text-[11.5px]">
+                  <TFact label="Admitted" value={formatDate(o.admittedAt)} />
+                  <TFact label="Planned discharge" value={fmtDateStr(o.plannedDischargeDate)} />
+                  <TFact label="Programme" value={`${o.durationDays} days`} />
+                  <TFact label="Primary concern" value={o.substance || '—'} />
+                  <TFact
+                    label="Family meeting"
+                    value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
                   />
-                </span>
-              );
-            })}
-            {/* Today marker */}
-            <span
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${todayPct}%` }}
-            >
-              <span className="block h-8 w-0.5 rounded-full bg-[var(--color-accent)]" />
-            </span>
-          </div>
+                  <TFact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
+                  <TFact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
+                  <TFact label="Buddy" value={o.buddy} />
+                </dl>
+              </div>
 
-          {/* Stat chips — double as the legend */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <StatPill color="#1D9E75" count={o.completedCount} label="done" />
-            <StatPill color="#E24B4A" count={o.overdueCount} label="overdue" />
-            <StatPill color="#EF9F27" count={o.dueTodayCount} label="due today" />
-            <StatPill
-              color="#B4B2A9"
-              count={tasks.filter((t) => !t.isComplete && !t.isOverdue && !t.isDueToday && !t.isNotApplicable).length}
-              label="upcoming"
-            />
-            <span className="flex items-center gap-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
-              <span className="block h-3.5 w-0.5 rounded-full bg-[var(--color-accent)]" />
-              Today
-            </span>
-          </div>
-        </div>
-
-        {/* ── Category filter pills ── */}
-        <div className="shrink-0 border-b border-[var(--color-line)] px-4 py-2">
-          <div className="flex flex-wrap gap-1.5">
-            {CAT_KEYS.filter((cat) => cat === 'all' || catCounts[cat] > 0).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCatFilter(cat)}
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition ${
-                  catFilter === cat
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : 'border border-[var(--color-line)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
-                }`}
-              >
-                {CAT_LABELS[cat]}
-                <span
-                  className={`rounded-full px-1 text-[9px] font-bold ${
-                    catFilter === cat
-                      ? 'bg-white/20 text-white'
-                      : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                  }`}
-                >
-                  {catCounts[cat]}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Body: tasks left, workflow right ── */}
-        <div className="min-h-0 flex-1 overflow-hidden flex">
-
-          {/* Left — scrollable task list */}
-          <div className="min-h-0 flex-1 overflow-y-auto border-r border-[var(--color-line)]">
-            <div className="divide-y divide-[var(--color-line)] px-4">
-              {needsAction.length > 0 ? (
-                <Section title="Needs action" count={needsAction.length} defaultOpen>
-                  {needsAction.map((t) => (
-                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                  ))}
-                </Section>
-              ) : null}
-
-              {comingUp.length > 0 ? (
-                <Section title="Coming up" count={comingUp.length} defaultOpen={false}>
-                  {comingUp.map((t) => (
-                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                  ))}
-                </Section>
-              ) : null}
-
-              {done.length > 0 ? (
-                <Section title="Done" count={done.length} defaultOpen={false}>
-                  {done.map((t) => (
-                    <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
-                  ))}
-                </Section>
-              ) : null}
-
-              {filtered.length === 0 ? (
-                <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
-                  No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
+              {/* Programme progress */}
+              <div className="border-b border-[var(--color-line)] px-4 py-3">
+                <p className="text-[9.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">Programme progress</p>
+                <p className="nums mt-1.5 text-[22px] font-semibold leading-none">
+                  Day {o.treatmentDay}
+                  <span className="text-[13px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
                 </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="brand-gradient h-full rounded-full" style={{ width: `${todayPct}%` }} />
+                </div>
+                <p className="nums mt-1 text-[10px] text-[var(--color-ink-muted)]">
+                  {Math.round(todayPct)}% of planned stay elapsed
+                </p>
+                <div className="nums mt-2.5 grid grid-cols-2 gap-1.5 text-center text-[10.5px]">
+                  <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] p-2">
+                    <p className="text-[15px] font-semibold leading-none">{o.completedCount}</p>
+                    <p className="mt-0.5 text-[var(--color-ink-muted)]">Done</p>
+                  </div>
+                  <div className={`rounded-lg border p-2 ${o.overdueCount > 0 ? 'border-overdue/60 bg-overdue-soft' : 'border-[var(--color-line)] bg-[var(--color-panel)]'}`}>
+                    <p className={`text-[15px] font-semibold leading-none ${o.overdueCount > 0 ? 'text-overdue' : ''}`}>{o.overdueCount}</p>
+                    <p className="mt-0.5 text-[var(--color-ink-muted)]">Overdue</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stay timeline */}
+              <div className="border-b border-[var(--color-line)] px-4 py-3">
+                <p className="text-[9.5px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">Stay timeline</p>
+                <div className="mt-2 mb-1.5 flex items-baseline justify-between text-[10px] text-[var(--color-ink-muted)]">
+                  <span>{formatDate(o.admittedAt)}</span>
+                  <span>{fmtDateStr(o.plannedDischargeDate)}</span>
+                </div>
+                <div className="relative h-3.5 overflow-visible rounded-full bg-black/[0.06] dark:bg-white/10">
+                  <div className="brand-gradient absolute left-0 top-0 h-full rounded-full opacity-40" style={{ width: `${todayPct}%` }} />
+                  {timelineTasks.map((t, i) => {
+                    const pct = Math.min(100, Math.max(0, (calendarDaysBetween(o.admittedAt, t.dueAt!, TZ) / o.durationDays) * 100));
+                    return (
+                      <span
+                        key={i}
+                        title={`${t.title} — Due ${formatDate(t.dueAt!)}`}
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-default"
+                        style={{ left: `${pct}%` }}
+                      >
+                        <span className="block size-3 rounded-full ring-2 ring-white dark:ring-[var(--color-panel)]" style={{ backgroundColor: dotColor(t) }} />
+                      </span>
+                    );
+                  })}
+                  <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${todayPct}%` }}>
+                    <span className="block h-7 w-0.5 rounded-full bg-[var(--color-accent)]" />
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <StatPill color="#1D9E75" count={o.completedCount} label="done" />
+                  <StatPill color="#E24B4A" count={o.overdueCount} label="overdue" />
+                  <StatPill color="#EF9F27" count={o.dueTodayCount} label="due today" />
+                  <StatPill color="#B4B2A9" count={tasks.filter((t) => !t.isComplete && !t.isOverdue && !t.isDueToday && !t.isNotApplicable).length} label="upcoming" />
+                </div>
+              </div>
+
+              {/* Safeguarding / Risks / Concerns */}
+              <div className="border-b border-[var(--color-line)] px-4 py-3">
+                <div className={`rounded-lg border-l-4 px-3 py-2 ${
+                  o.hasRestrictedAlert
+                    ? 'border border-red-300 border-l-red-600 bg-red-50 dark:border-red-800 dark:bg-red-950/50'
+                    : (o.hasOpenConcern || o.legacySafeguardingNote)
+                    ? 'border border-amber-200 border-l-amber-500 bg-amber-50/60 dark:border-amber-800/60 dark:bg-amber-950/30'
+                    : 'border border-[var(--color-line)] border-l-[var(--color-line)] bg-[var(--color-panel)]'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-semibold tracking-[0.05em] uppercase ${
+                      o.hasRestrictedAlert ? 'text-red-700 dark:text-red-400'
+                      : (o.hasOpenConcern || o.legacySafeguardingNote) ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-[var(--color-ink-muted)]'
+                    }`}>Safeguarding / Risks / Concerns</span>
+                    {o.hasRestrictedAlert ? (
+                      <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Alert</span>
+                    ) : o.hasOpenConcern ? (
+                      <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">Open</span>
+                    ) : null}
+                  </div>
+                  {concernRows.length > 0 ? (
+                    <ul className="mt-1 space-y-1.5">
+                      {concernRows.map((r) => (
+                        <li key={r.id} className={`text-[11px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
+                          <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
+                            r.category === 'risk' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                            : r.category === 'medical' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                          }`}>{CONCERN_LABEL[r.category]}</span>
+                          <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
+                          <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
+                          {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : o.legacySafeguardingNote ? (
+                    <p className={`mt-0.5 text-[11px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>{o.legacySafeguardingNote}</p>
+                  ) : (
+                    <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">No notes on file.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Admission notes */}
+              {o.admissionNotes ? (
+                <div className="border-b border-[var(--color-line)] px-4 py-3">
+                  <div className="rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2">
+                    <p className="text-[10px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+                  </div>
+                </div>
               ) : null}
 
+              {/* Extend Stay + Discharge buttons */}
+              {o.admissionId ? (
+                <div className="mt-auto border-t border-[var(--color-line)] p-4">
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowExtend(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-2.5 text-[12.5px] font-semibold text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent)]"
+                    >
+                      <CalendarPlus className="size-4 shrink-0" />
+                      Extend stay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDischarge(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-4 py-2.5 text-[12.5px] font-semibold text-[var(--color-ink)] transition hover:border-red-400 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-700 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                    >
+                      <ArrowRightFromLine className="size-4 shrink-0" />
+                      Discharge workflow
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
-          </div>
 
-          {/* Right — extend stay + discharge, scrollable */}
-          {o.admissionId ? (
-            <div className="w-[360px] shrink-0 overflow-y-auto">
-              <div className="flex flex-col gap-3 p-4">
-                <ExtendStayCard occupant={o} onChanged={onChanged} />
-                <DischargeWorkflowCard occupant={o} onChanged={onChanged} />
+            {/* ══ RIGHT PANEL — tasks & therapy actions ══ */}
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+
+              {/* Category filter bar — sticky at top */}
+              <div className="shrink-0 border-b border-[var(--color-line)] px-4 py-2.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {CAT_KEYS.filter((cat) => cat === 'all' || catCounts[cat] > 0).map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCatFilter(cat)}
+                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition ${
+                        catFilter === cat
+                          ? 'bg-[var(--color-accent)] text-white'
+                          : 'border border-[var(--color-line)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+                      }`}
+                    >
+                      {CAT_LABELS[cat]}
+                      <span className={`rounded-full px-1 text-[9px] font-bold ${catFilter === cat ? 'bg-white/20 text-white' : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'}`}>
+                        {catCounts[cat]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scrollable task list */}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="divide-y divide-[var(--color-line)] px-4">
+                  {needsAction.length > 0 ? (
+                    <Section title="Needs action" count={needsAction.length} defaultOpen>
+                      {needsAction.map((t) => (
+                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                      ))}
+                    </Section>
+                  ) : null}
+
+                  {comingUp.length > 0 ? (
+                    <Section title="Coming up" count={comingUp.length} defaultOpen={false}>
+                      {comingUp.map((t) => (
+                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                      ))}
+                    </Section>
+                  ) : null}
+
+                  {done.length > 0 ? (
+                    <Section title="Done" count={done.length} defaultOpen={false}>
+                      {done.map((t) => (
+                        <TaskCard key={t.id ?? t.code} task={t} onChanged={onChanged} />
+                      ))}
+                    </Section>
+                  ) : null}
+
+                  {filtered.length === 0 ? (
+                    <p className="py-8 text-center text-[13px] text-[var(--color-ink-muted)]">
+                      No {catFilter === 'all' ? '' : CAT_LABELS[catFilter].toLowerCase() + ' '}tasks recorded.
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
-          ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* ── Extend Stay overlay ── */}
+      {showExtend && o.admissionId ? (
+        <Dialog open onOpenChange={(open) => !open && setShowExtend(false)}>
+          <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+            <DialogTitle className="sr-only">Extend stay — {o.displayName}</DialogTitle>
+            <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+              <div>
+                <p className="font-semibold text-[13.5px]">Extend stay</p>
+                <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
+              </div>
+              <button type="button" onClick={() => setShowExtend(false)} className="flex size-7 items-center justify-center rounded-lg text-[var(--color-ink-muted)] hover:bg-muted/60">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4">
+              <ExtendStayCard occupant={o} onChanged={onChanged} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {/* ── Discharge Workflow overlay ── */}
+      {showDischarge && o.admissionId ? (
+        <Dialog open onOpenChange={(open) => !open && setShowDischarge(false)}>
+          <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+            <DialogTitle className="sr-only">Discharge workflow — {o.displayName}</DialogTitle>
+            <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+              <div>
+                <p className="font-semibold text-[13.5px]">Discharge workflow</p>
+                <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
+              </div>
+              <button type="button" onClick={() => setShowDischarge(false)} className="flex size-7 items-center justify-center rounded-lg text-[var(--color-ink-muted)] hover:bg-muted/60">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4">
+              <DischargeWorkflowCard occupant={o} onChanged={onChanged} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </>
   );
 }
