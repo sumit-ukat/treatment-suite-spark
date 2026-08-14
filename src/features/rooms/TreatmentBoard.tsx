@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Printer, Search } from 'lucide-react';
-import { buildRealBoard } from './real-board-data.js';
 import type { BoardBed } from './board-data.js';
+import { useBoardData } from './use-board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
@@ -128,44 +128,12 @@ export function TreatmentBoard({
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
-  const [beds, setBeds] = useState<readonly BoardBed[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null);
+  const { beds, loading, refreshing, error, loadedAt, refresh } = useBoardData(centreId);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
-  const [boardVersion, setBoardVersion] = useState(0);
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
-  // True once we have data — subsequent refreshes update silently without blanking the board.
-  const hasDataRef = useRef(false);
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
-
-  useEffect(() => {
-    let cancelled = false;
-    if (hasDataRef.current) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    buildRealBoard(centreId)
-      .then(({ board }) => {
-        if (!cancelled) {
-          setBeds(board);
-          hasDataRef.current = true;
-          setError(null);
-          setLoadedAt(new Date());
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!cancelled) { setLoading(false); setRefreshing(false); }
-      });
-    return () => { cancelled = true; };
-  }, [centreId, boardVersion]);
 
   // Keep top scrollbar phantom width in sync with real table scroll width.
   useEffect(() => {
@@ -424,6 +392,8 @@ export function TreatmentBoard({
                 ? 'bg-red-50 dark:bg-red-950/30'
                 : o.dueTodayCount > 0
                 ? 'bg-amber-50 dark:bg-amber-950/25'
+                : o.isExtendedStay
+                ? 'bg-teal-50/70 dark:bg-teal-950/20'
                 : '';
               const osc = `sticky z-10 ${rowBg || 'bg-card'} ${cb}`;
 
@@ -447,6 +417,8 @@ export function TreatmentBoard({
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
                         ? 'border-r-[3px] border-r-amber-400 dark:border-r-amber-500'
+                        : o.isExtendedStay
+                        ? 'border-r-[3px] border-r-teal-400 dark:border-r-teal-500'
                         : 'border-r border-[var(--color-line)]'
                     }`}
                     title={o.hasRestrictedAlert ? 'High risk — see client profile' : o.hasOpenConcern ? 'Open concern logged — see client profile' : undefined}
@@ -460,6 +432,11 @@ export function TreatmentBoard({
                       <span
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-50/70 to-transparent dark:from-amber-950/25"
+                      />
+                    ) : o.isExtendedStay ? (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-teal-50/70 to-transparent dark:from-teal-950/25"
                       />
                     ) : null}
                     <div className="relative flex items-center gap-2">
@@ -560,7 +537,7 @@ export function TreatmentBoard({
             bed={selected}
             centreId={centreId}
             onClose={() => setOpenBedLabel(null)}
-            onChanged={() => setBoardVersion((v) => v + 1)}
+            onChanged={() => refresh()}
             onPrev={idx > 0 ? () => setOpenBedLabel(occupiedVisible[idx - 1]!.label) : undefined}
             onNext={idx < occupiedVisible.length - 1 ? () => setOpenBedLabel(occupiedVisible[idx + 1]!.label) : undefined}
           />

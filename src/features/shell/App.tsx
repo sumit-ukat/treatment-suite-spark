@@ -24,7 +24,7 @@ import {
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
-import { buildRealBoard } from '../rooms/real-board-data.js';
+import { useBoardData } from '../rooms/use-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { BrandMark } from '../../components/brand.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
@@ -476,51 +476,18 @@ function BoardPage() {
   const [therapistFilter, setTherapistFilter] = useState('all');
   const [view, setView] = useState<'board' | 'list'>('board');
 
-  const [realBoard, setRealBoard] = useState<readonly BoardBed[]>([]);
-  const [boardLoading, setBoardLoading] = useState(true);
-  const [boardRefreshing, setBoardRefreshing] = useState(false);
-  const [boardError, setBoardError] = useState<string | null>(null);
-  // Bumped after a task is completed/reopened or a discharge action lands, to re-read the board rather
-  // than patch local state to what we assume the server did.
-  const [boardVersion, setBoardVersion] = useState(0);
-  // True once we have data — subsequent refreshes update silently without blanking the board.
-  const boardHasDataRef = useRef(false);
+  const {
+    beds: board,
+    loading: boardLoading,
+    refreshing: boardRefreshing,
+    error: boardError,
+    refresh: refreshBoard,
+  } = useBoardData(authCentre?.id);
   // The available bed a "admit here?" confirmation is open for — a separate confirm step, not a
   // straight jump to the admission form, since clicking an empty bed is otherwise a single misclick
   // away from the full admit-a-client flow.
   const [confirmBed, setConfirmBed] = useState<BoardBed | null>(null);
 
-  useEffect(() => {
-    if (!authCentre) {
-      setBoardLoading(false);
-      return;
-    }
-    let cancelled = false;
-    if (boardHasDataRef.current) {
-      setBoardRefreshing(true);
-    } else {
-      setBoardLoading(true);
-    }
-    buildRealBoard(authCentre.id)
-      .then((result) => {
-        if (cancelled) return;
-        setRealBoard(result.board);
-        boardHasDataRef.current = true;
-        setBoardError(null);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setBoardError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!cancelled) { setBoardLoading(false); setBoardRefreshing(false); }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [authCentre, boardVersion]);
-
-  const board = realBoard;
   const summary = useMemo(() => (board.length ? summarise(board) : EMPTY_SUMMARY), [board]);
 
   const therapists = useMemo(
@@ -774,7 +741,7 @@ function BoardPage() {
           bed={selected}
           centreId={authCentre.id}
           onClose={closeBed}
-          onChanged={() => setBoardVersion((v) => v + 1)}
+          onChanged={() => refreshBoard()}
         />
       ) : null}
     </div>
