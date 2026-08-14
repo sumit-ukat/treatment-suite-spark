@@ -6,7 +6,7 @@ import type { BoardBed } from './board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
-import { TreatmentDetailPanel } from './TreatmentDetailPanel.tsx';
+import { DetailPanel } from './DetailPanel.tsx';
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
@@ -546,23 +546,15 @@ export function TreatmentBoard({
       </div>
 
       {/* ── Treatment detail panel with prev/next navigation ── */}
-      {selected ? (() => {
-        const occupiedBeds = beds.filter((b) => b.occupant !== null);
-        const currentIdx = occupiedBeds.findIndex((b) => b.label === selected.label);
-        const prevBed = currentIdx > 0 ? occupiedBeds[currentIdx - 1] : null;
-        const nextBed = currentIdx < occupiedBeds.length - 1 ? occupiedBeds[currentIdx + 1] : null;
-        return (
-          <TreatmentDetailPanel
-            key={selected.label}
-            bed={selected}
-            centreId={centreId}
-            onClose={() => setOpenBedLabel(null)}
-            onChanged={() => setBoardVersion((v) => v + 1)}
-            onPrev={prevBed ? () => setOpenBedLabel(prevBed.label) : undefined}
-            onNext={nextBed ? () => setOpenBedLabel(nextBed.label) : undefined}
-          />
-        );
-      })() : null}
+      {selected ? (
+        <DetailPanel
+          key={selected.label}
+          bed={selected}
+          centreId={centreId}
+          onClose={() => setOpenBedLabel(null)}
+          onChanged={() => setBoardVersion((v) => v + 1)}
+        />
+      ) : null}
 
       {/* ── Legend ── */}
       <div className="rounded-2xl border bg-card p-5 shadow-soft">

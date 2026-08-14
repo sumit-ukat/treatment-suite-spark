@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
 import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
-import { Panel, Timeline } from '../../components/ui.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { clientPhotos, concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
@@ -65,6 +65,8 @@ export function DetailPanel({
   onChanged?: (() => void) | undefined;
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [extendStayOpen, setExtendStayOpen] = useState(false);
+  const [dischargeOpen, setDischargeOpen] = useState(false);
   const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
@@ -89,6 +91,10 @@ export function DetailPanel({
     date: t.dueAt ? formatDate(t.dueAt) : undefined,
     tone: t.isComplete ? ('good' as const) : t.isOverdue ? ('alert' as const) : t.isDueToday ? ('warn' as const) : ('neutral' as const),
   }));
+
+  const needsActionTasks = sorted.filter((t) => !t.isComplete && !t.isNotApplicable && (t.isOverdue || t.isDueToday));
+  const comingUpTasks = sorted.filter((t) => !t.isComplete && !t.isNotApplicable && !t.isOverdue && !t.isDueToday);
+  const doneTasks = sorted.filter((t) => t.isComplete || t.isNotApplicable);
 
   const overallStatus: StatusKey =
     o.overdueCount > 0 ? 'overdue' : o.dueTodayCount > 0 ? 'attention' : 'ontrack';
@@ -121,10 +127,10 @@ export function DetailPanel({
                 className="rounded-full transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                 aria-label={`View ${o.displayName}'s photograph full size`}
               >
-                <PhotoBadge occupant={o} size="xl" />
+                <PhotoBadge occupant={o} size="2xl" />
               </button>
             ) : (
-              <PhotoBadge occupant={o} size="xl" />
+              <PhotoBadge occupant={o} size="2xl" />
             )}
 
             <div className="flex flex-col items-center gap-1.5">
@@ -235,7 +241,7 @@ export function DetailPanel({
             ) : null}
           </div>
 
-          {/* Col 3 — Programme progress */}
+          {/* Col 3 — Programme progress + action buttons */}
           <div className="h-fit rounded-xl border border-[var(--color-line)] p-4">
             <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
               Programme progress
@@ -264,43 +270,74 @@ export function DetailPanel({
                 <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
               </div>
             </div>
+            {o.admissionId ? (
+              <div className="mt-3.5 flex flex-col gap-2 border-t border-[var(--color-line)] pt-3.5">
+                <button
+                  type="button"
+                  onClick={() => setExtendStayOpen(true)}
+                  className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[12px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Extend stay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDischargeOpen(true)}
+                  className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[12px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Discharge workflow
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {/* Two-column body */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-y-auto p-5 lg:grid-cols-2">
-          <div className="flex flex-col gap-5">
-            <ExtendStayCard occupant={o} onChanged={onChanged} />
-            <DischargeWorkflowCard occupant={o} onChanged={onChanged} />
-
-            {milestoneSteps.length > 0 ? (
-              <Panel
-                title="Treatment programme"
-                subtitle={`${milestones.filter((t) => t.isComplete).length} of ${milestones.length} milestones complete`}
-              >
-                <Timeline steps={milestoneSteps} />
-              </Panel>
-            ) : null}
-          </div>
-
-          <Panel title="Required actions" subtitle={`${o.completedCount} of ${o.totalCount} complete`}>
-            <p className="mb-3 rounded-lg bg-primary-soft px-2.5 py-2 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-              Each action carries a <strong className="font-semibold">due date</strong> separate from
-              its completion. That is what makes lateness measurable &mdash; the whiteboard stores one
-              value per action, so it cannot record &ldquo;due Monday, done Wednesday&rdquo;.
-            </p>
-            <ul className="flex flex-col gap-1.5">
-              {sorted.map((t) => (
-                <TaskRow key={t.id ?? t.code} task={t} admittedAt={o.admittedAt} onChanged={onChanged} />
-              ))}
-            </ul>
-          </Panel>
+        {/* Three-column task body */}
+        <div className="flex min-h-0 flex-1 gap-4 overflow-hidden p-5">
+          <TaskColumn
+            title="Needs Action"
+            tasks={needsActionTasks}
+            admittedAt={o.admittedAt}
+            emptyMsg="All clear — nothing overdue or due today."
+            onChanged={onChanged}
+          />
+          <TaskColumn
+            title="Coming Up"
+            tasks={comingUpTasks}
+            admittedAt={o.admittedAt}
+            emptyMsg="No upcoming tasks."
+            onChanged={onChanged}
+          />
+          <TaskColumn
+            title="Done"
+            tasks={doneTasks}
+            admittedAt={o.admittedAt}
+            emptyMsg="Nothing completed yet."
+            onChanged={onChanged}
+          />
         </div>
 
         <footer className="border-t border-[var(--color-line)] px-5 py-3 text-[11px] text-[var(--color-ink-muted)]">
           Detox, medical, safeguarding and therapy notes are not shown in this preview &mdash; they
           sit behind sensitivity level 3 and need the access model first.
         </footer>
+
+        {extendStayOpen ? (
+          <Dialog open onOpenChange={(v) => !v && setExtendStayOpen(false)}>
+            <DialogContent className="max-w-lg">
+              <DialogTitle>Extend stay</DialogTitle>
+              <ExtendStayCard occupant={o} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
+            </DialogContent>
+          </Dialog>
+        ) : null}
+
+        {dischargeOpen ? (
+          <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
+            <DialogContent className="max-w-lg">
+              <DialogTitle>Discharge workflow</DialogTitle>
+              <DischargeWorkflowCard occupant={o} onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
+            </DialogContent>
+          </Dialog>
+        ) : null}
 
         {/* Nested rather than a sibling so it stacks above this dialog and closing it returns here,
             instead of dismissing the whole client file. */}
@@ -616,6 +653,53 @@ function TaskRow({
 }
 
 
+
+function TaskColumn({
+  title,
+  tasks,
+  admittedAt,
+  emptyMsg,
+  onChanged,
+}: {
+  title: string;
+  tasks: BoardTask[];
+  admittedAt: Date;
+  emptyMsg: string;
+  onChanged?: (() => void) | undefined;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--color-line)]">
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-line)] px-3 py-2.5">
+        <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]">
+          {title}
+        </span>
+        <span className="nums rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-[11px] text-[var(--color-ink-muted)]">
+          {tasks.length}
+        </span>
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className="rounded p-0.5 text-[var(--color-ink-muted)] transition hover:bg-black/8 dark:hover:bg-white/10"
+          aria-label={collapsed ? 'Expand' : 'Collapse'}
+        >
+          {collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
+        </button>
+      </div>
+      {!collapsed ? (
+        <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
+          {tasks.length === 0 ? (
+            <li className="py-4 text-center text-[12px] text-[var(--color-ink-muted)]">{emptyMsg}</li>
+          ) : (
+            tasks.map((t) => (
+              <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} />
+            ))
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
