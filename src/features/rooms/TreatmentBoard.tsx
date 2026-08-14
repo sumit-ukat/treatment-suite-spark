@@ -267,7 +267,7 @@ export function TreatmentBoard({
       {/* ── Summary tiles — StatTile matches GroupDashboard / BoardPage ── */}
       <div className="flex flex-wrap gap-3 print:hidden">
         <StatTile
-          label="Clients on the ward"
+          label="Clients"
           value={counts.clients}
           tone="accent"
           active={activeFilter === 'all'}
