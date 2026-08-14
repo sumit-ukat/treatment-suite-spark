@@ -732,7 +732,7 @@ function TaskRow({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showReopens, setShowReopens] = useState(false);
+  const [reopensOpen, setReopensOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleReason, setRescheduleReason] = useState('');
@@ -854,14 +854,10 @@ function TaskRow({
           {wasReopened ? (
             <button
               type="button"
-              onClick={() => setShowReopens((v) => !v)}
-              aria-expanded={showReopens}
-              className="nums mt-0.5 block text-left text-[10px] font-medium text-amber-700 underline underline-offset-2 dark:text-amber-400"
+              onClick={() => setReopensOpen(true)}
+              className="mt-0.5 flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9.5px] font-semibold text-amber-700 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-950/60"
             >
-              {t.reopens.length === 1 ? 'Reopened once' : `Reopened ${t.reopens.length} times`} &middot;{' '}
-              {formatDate(t.reopens[0]!.at)}
-              {t.reopens[0]!.by ? ` by ${t.reopens[0]!.by}` : ''}
-              {showReopens ? ' ▴' : ' ▾'}
+              ↺ {t.reopens.length === 1 ? 'Reopened once' : `Reopened ${t.reopens.length}×`}
             </button>
           ) : null}
         </span>
@@ -917,22 +913,6 @@ function TaskRow({
         ) : null}
       </div>
 
-      {showReopens ? (
-        <ul className="mt-2 flex flex-col gap-1.5 border-t border-[var(--color-line)] pt-2">
-          {t.reopens.map((r, i) => (
-            <li key={i} className="rounded-md bg-amber-500/[0.08] px-2 py-1.5">
-              <p className="nums text-[10px] text-[var(--color-ink-muted)]">
-                {formatDateWithDay(r.at)}
-                {r.by ? ` · ${r.by}` : ''}
-              </p>
-              <p className="mt-0.5 text-[11.5px] leading-snug">
-                {r.reason ?? <span className="text-[var(--color-ink-muted)]">No reason recorded.</span>}
-              </p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
       {mode !== 'idle' ? (
         <div className="mt-2 border-t border-[var(--color-line)] pt-2">
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
@@ -983,6 +963,35 @@ function TaskRow({
         <p role="alert" className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">
           {error}
         </p>
+      ) : null}
+
+      {reopensOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setReopensOpen(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Reopen history</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{t.title}</p>
+            <ul className="mt-4 space-y-3">
+              {t.reopens.map((r, i) => (
+                <li key={i} className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-950/20">
+                  <p className="nums text-[10.5px] font-semibold text-amber-800 dark:text-amber-300">
+                    {formatDateWithDay(r.at)}
+                    {r.by ? <span className="font-normal"> · {r.by}</span> : null}
+                  </p>
+                  <p className="mt-1 text-[12px] leading-snug text-[var(--color-ink)]">
+                    {r.reason ?? <span className="italic text-[var(--color-ink-muted)]">No reason recorded.</span>}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setReopensOpen(false)}
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Close
+            </button>
+          </DialogContent>
+        </Dialog>
       ) : null}
 
       {historyOpen ? (
