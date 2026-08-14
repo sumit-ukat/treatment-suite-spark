@@ -280,7 +280,7 @@ export function TreatmentBoard({
           onClick={() => toggle('available')}
         />
         <StatTile
-          label="With overdue tasks"
+          label="Overdue tasks"
           value={counts.overdue}
           icon="▲"
           tone="alert"
@@ -288,7 +288,7 @@ export function TreatmentBoard({
           onClick={() => toggle('overdue')}
         />
         <StatTile
-          label="With tasks due today"
+          label="Tasks due today"
           value={counts.dueToday}
           icon="●"
           tone="warn"
