@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History, Plus, Printer, Search, X } from 'lucide-react';
-import { ArchivePicker } from './ArchivePicker.tsx';
+import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
@@ -129,12 +129,12 @@ export function TreatmentBoard({
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
-  // Archive / snapshot date: null = live board.
-  const [archiveDateStr, setArchiveDateStr] = useState('');
+  // Archive / snapshot: null range = live board. asOf uses the end date of the range.
+  const [archiveRange, setArchiveRange] = useState<DateRange>({ start: '', end: '' });
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const asOf = archiveDateStr
-    ? new Date(archiveDateStr + 'T23:59:59')
+  const asOf = archiveRange.end
+    ? new Date(archiveRange.end + 'T23:59:59')
     : null;
 
   const { beds, loading, refreshing, error, loadedAt, refresh } = useBoardData(centreId, asOf);
@@ -259,24 +259,28 @@ export function TreatmentBoard({
 
       {/* ── Archive date picker ── */}
       {showDatePicker ? (
-        <ArchivePicker value={archiveDateStr} onChange={setArchiveDateStr} />
+        <ArchivePicker
+          value={archiveRange}
+          onConfirm={(r) => setArchiveRange(r)}
+          onClear={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
+        />
       ) : null}
 
       {/* ── Archive banner ── */}
       {asOf ? (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
           <History className="size-4 shrink-0" />
           <span>
             <span className="font-semibold">Archive view</span>
-            {' — showing the board as it stood on '}
-            <span className="font-semibold">
-              {asOf.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </span>
+            {archiveRange.start && archiveRange.start !== archiveRange.end
+              ? <> — period <span className="font-semibold">{new Date(archiveRange.start + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} → {asOf.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span></>
+              : <> — board as it stood on <span className="font-semibold">{asOf.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span></>
+            }
             . No changes can be made in this view.
           </span>
           <button
             type="button"
-            onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
+            onClick={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
             className="ml-auto flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-[11.5px] font-medium hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/40"
           >
             <X className="size-3.5" /> Back to live
