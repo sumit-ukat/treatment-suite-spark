@@ -546,15 +546,21 @@ export function TreatmentBoard({
       </div>
 
       {/* ── Treatment detail panel with prev/next navigation ── */}
-      {selected ? (
-        <DetailPanel
-          key={selected.label}
-          bed={selected}
-          centreId={centreId}
-          onClose={() => setOpenBedLabel(null)}
-          onChanged={() => setBoardVersion((v) => v + 1)}
-        />
-      ) : null}
+      {selected ? (() => {
+        const occupiedVisible = visible.filter((b) => b.occupant !== null);
+        const idx = occupiedVisible.findIndex((b) => b.label === openBedLabel);
+        return (
+          <DetailPanel
+            key={selected.label}
+            bed={selected}
+            centreId={centreId}
+            onClose={() => setOpenBedLabel(null)}
+            onChanged={() => setBoardVersion((v) => v + 1)}
+            onPrev={idx > 0 ? () => setOpenBedLabel(occupiedVisible[idx - 1]!.label) : undefined}
+            onNext={idx < occupiedVisible.length - 1 ? () => setOpenBedLabel(occupiedVisible[idx + 1]!.label) : undefined}
+          />
+        );
+      })() : null}
 
       {/* ── Legend ── */}
       <div className="rounded-2xl border bg-card p-5 shadow-soft">

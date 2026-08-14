@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Pencil, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, X } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -53,6 +53,8 @@ export function DetailPanel({
   centreId,
   onClose,
   onChanged,
+  onPrev,
+  onNext,
 }: {
   bed: BoardBed;
   centreId: string;
@@ -63,6 +65,8 @@ export function DetailPanel({
    * on (none, once discharged), which is not something to reconstruct locally.
    */
   onChanged?: (() => void) | undefined;
+  onPrev?: (() => void) | undefined;
+  onNext?: (() => void) | undefined;
 }) {
   const { can } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -177,8 +181,30 @@ export function DetailPanel({
   return (
     <>
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="relative flex h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
+
+        {/* Prev / Next navigation — top-left corner */}
+        <div className="absolute left-3 top-3 z-10 flex gap-1.5">
+          <button
+            type="button"
+            onClick={onPrev}
+            disabled={!onPrev}
+            aria-label="Previous client"
+            className="flex size-7 items-center justify-center rounded-lg border border-[var(--color-line)] bg-card text-[var(--color-ink-muted)] transition hover:bg-muted/60 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={!onNext}
+            aria-label="Next client"
+            className="flex size-7 items-center justify-center rounded-lg border border-[var(--color-line)] bg-card text-[var(--color-ink-muted)] transition hover:bg-muted/60 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
 
         {/* 3-column header:
             [profile card] | [key facts + safeguarding status] | [progress card] */}
@@ -484,7 +510,7 @@ export function DetailPanel({
                   onClick={() => setDischargeOpen(true)}
                   className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[12px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
                 >
-                  Discharge workflow
+                  Discharge
                 </button>
               </div>
             ) : null}
@@ -563,10 +589,10 @@ export function DetailPanel({
     {dischargeOpen && o.admissionId ? (
       <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
         <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
-          <DialogTitle className="sr-only">Discharge workflow — {o.displayName}</DialogTitle>
+          <DialogTitle className="sr-only">Discharge — {o.displayName}</DialogTitle>
           <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
             <div>
-              <p className="font-semibold text-[13.5px]">Discharge workflow</p>
+              <p className="font-semibold text-[13.5px]">Discharge</p>
               <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
             </div>
             <button type="button" onClick={() => setDischargeOpen(false)}
