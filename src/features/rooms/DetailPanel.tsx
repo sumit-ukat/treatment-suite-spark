@@ -825,7 +825,7 @@ function TaskRow({
             : 'border-[var(--color-line)]'
       }`}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-start gap-2.5">
         <span className="min-w-0 flex-1">
           <span
             className={`block truncate text-[12.5px] leading-tight ${t.isComplete ? 'text-[var(--color-ink-muted)] line-through' : 'font-medium'}`}
