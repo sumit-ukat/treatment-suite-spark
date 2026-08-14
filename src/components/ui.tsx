@@ -53,12 +53,14 @@ export function Chip({
  */
 export function Panel({
   title,
+  titleExtra,
   subtitle,
   action,
   children,
   className = '',
 }: {
   title: string;
+  titleExtra?: ReactNode;
   subtitle?: string;
   action?: { label: string; onClick: () => void };
   children: ReactNode;
@@ -67,8 +69,9 @@ export function Panel({
   return (
     <section className={`rounded-2xl border bg-card p-5 shadow-soft ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
           <h3 className="truncate font-display text-[14px] font-semibold">{title}</h3>
+          {titleExtra ?? null}
           {subtitle ? (
             <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">{subtitle}</p>
           ) : null}

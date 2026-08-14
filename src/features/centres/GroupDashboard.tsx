@@ -84,6 +84,7 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
    * since those numbers are the reason to narrow the view at all. */
   const [scope, setScope] = useState<readonly string[]>([]);
   const [sort, setSort] = useState<SortKey>('name');
+  const [regionFilter, setRegionFilter] = useState<'all' | 'North' | 'South'>('all');
 
   const visible = scope.length === 0 ? centres : centres.filter((c) => scope.includes(c.slug));
   /** The one selected centre, when exactly one is selected — the only case where a caveat or a label
@@ -216,7 +217,25 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
       )}
 
       <div className="mt-4">
-        <Panel title="Centres">
+        <Panel
+          title="Centres"
+          titleExtra={
+            <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
+              {(['all', 'North', 'South'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRegionFilter(r)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    regionFilter === r ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {r === 'all' ? 'All' : r}
+                </button>
+              ))}
+            </div>
+          }
+        >
           <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
             <p className="text-sm text-muted-foreground">Occupancy and status at a glance</p>
             <div className="flex shrink-0 items-center gap-2">
@@ -284,7 +303,7 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
             {([
               { label: 'North', regions: ['North'] },
               { label: 'South', regions: ['South'] },
-            ] as const).map(({ label, regions }) => {
+            ] as const).filter(({ label }) => regionFilter === 'all' || regionFilter === label).map(({ label, regions }) => {
               const group = sorted.filter((c) => (regions as readonly string[]).includes(c.region));
               if (group.length === 0) return null;
               return (
