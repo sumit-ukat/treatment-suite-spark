@@ -472,16 +472,32 @@ export function DetailPanel({
             <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
               Programme progress
             </p>
-            <p className="nums mt-2 text-[26px] font-semibold leading-none">
-              Day {o.treatmentDay}
-              <span className="text-[15px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
-            </p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <p className="nums text-[26px] font-semibold leading-none">
+                Day {o.treatmentDay}
+                <span className="text-[15px] text-[var(--color-ink-muted)]">/{o.durationDays}</span>
+              </p>
+              {o.isExtendedStay ? (
+                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-teal-700 uppercase dark:bg-teal-900/40 dark:text-teal-400">
+                  +{o.extensionDays ?? '?'}d extended
+                </span>
+              ) : null}
+            </div>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
               <div className="brand-gradient h-full rounded-full" style={{ width: `${pct}%` }} />
             </div>
             <p className="nums mt-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
               {pct}% of the planned stay elapsed
             </p>
+            {o.isExtendedStay && o.originalDischargeDate ? (
+              <p className="nums mt-1 text-[10.5px] text-teal-700 dark:text-teal-400">
+                <span className="line-through text-[var(--color-ink-muted)]">
+                  {formatDate(new Date(o.originalDischargeDate + 'T12:00:00Z'))}
+                </span>
+                {' → '}
+                {formatDate(new Date(o.plannedDischargeDate + 'T12:00:00Z'))}
+              </p>
+            ) : null}
             <div className="nums mt-3.5 grid grid-cols-2 gap-2 text-center text-[11px]">
               <div className="rounded-lg border border-[var(--color-line)] p-2.5">
                 <p className="text-[17px] font-semibold leading-none">{o.completedCount}</p>

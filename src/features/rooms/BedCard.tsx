@@ -149,6 +149,8 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           ? 'border-t-[3px] border-t-red-400 hover:border-[var(--color-accent)]/55 hover:border-t-red-400 dark:border-t-red-500 dark:hover:border-t-red-500'
           : o.hasOpenConcern
           ? 'border-t-[3px] border-t-amber-400 hover:border-[var(--color-accent)]/55 hover:border-t-amber-400 dark:border-t-amber-500 dark:hover:border-t-amber-500'
+          : o.isExtendedStay
+          ? 'border-t-[3px] border-t-teal-400 hover:border-[var(--color-accent)]/55 hover:border-t-teal-400 dark:border-t-teal-500 dark:hover:border-t-teal-500'
           : 'hover:border-[var(--color-accent)]/55'
       }`}
     >
@@ -161,6 +163,11 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-amber-50/70 to-transparent dark:from-amber-950/25"
+        />
+      ) : o.isExtendedStay ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-teal-50/70 to-transparent dark:from-teal-950/25"
         />
       ) : null}
       {attentionCount > 0 ? (
@@ -275,6 +282,14 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         ) : null}
         {!dischargePassed && !dischargeToday && o.overdueCount === 0 && o.dueTodayCount === 0 ? (
           <StatusBadge status="ontrack" label="Nothing due" size="sm" />
+        ) : null}
+        {o.isExtendedStay ? (
+          <Chip
+            icon="↗"
+            label={`+${o.extensionDays ?? '?'}d extended`}
+            tone="good"
+            title="Stay has been extended"
+          />
         ) : null}
         {!o.familyMeetingEligibleNow ? (
           <Chip

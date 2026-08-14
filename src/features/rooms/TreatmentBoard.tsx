@@ -480,13 +480,18 @@ export function TreatmentBoard({
 
                   {/* Status — Chip tones match BedList attention column */}
                   <td className={`${cb} px-3 py-3`}>
-                    {o.overdueCount > 0 ? (
-                      <Chip icon="▲" label="Overdue" tone="alert" />
-                    ) : o.dueTodayCount > 0 ? (
-                      <Chip icon="●" label="Due today" tone="warn" />
-                    ) : (
-                      <Chip icon="✓" label="On track" tone="good" />
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {o.overdueCount > 0 ? (
+                        <Chip icon="▲" label="Overdue" tone="alert" />
+                      ) : o.dueTodayCount > 0 ? (
+                        <Chip icon="●" label="Due today" tone="warn" />
+                      ) : (
+                        <Chip icon="✓" label="On track" tone="good" />
+                      )}
+                      {o.isExtendedStay ? (
+                        <Chip icon="↗" label={`+${o.extensionDays ?? '?'}d`} tone="neutral" />
+                      ) : null}
+                    </div>
                   </td>
 
                   {/* Treatment day + progress bar */}

@@ -87,7 +87,7 @@ function buildRealOccupant(
   reopensByTaskId: Map<string, TaskReopen[]>,
   noteRequiredByTemplateId: Map<string, boolean>,
   dischargeRequestByAdmission: Map<string, DischargeRequestRow>,
-  extensionRequestByAdmission: Map<string, ExtensionRequestRow>,
+  extensionsByAdmission: Map<string, ExtensionRequestRow[]>,
   openConcernClientIds: Set<string>,
   admissionNotes: string | null,
   now: Date,
@@ -166,16 +166,16 @@ function buildRealOccupant(
       }
     : null;
 
-  const ext = extensionRequestByAdmission.get(admission.id);
-  const extensionRequest: ExtensionRequestSummary | null = ext
-    ? {
-        id: ext.id,
-        originalDischargeDate: ext.original_discharge_date,
-        additionalDays: ext.additional_days,
-        newDischargeDate: ext.new_discharge_date,
-        reason: ext.reason,
-        requestedBy: ext.requested_by,
-      }
+  const extensions = extensionsByAdmission.get(admission.id) ?? [];
+  const isExtendedStay = extensions.length > 0;
+  const extensionDays = isExtendedStay
+    ? extensions.reduce((sum, e) => sum + e.additional_days, 0)
+    : null;
+  const originalDischargeDate = isExtendedStay
+    ? extensions.reduce(
+        (min, e) => (e.original_discharge_date < min ? e.original_discharge_date : min),
+        extensions[0]!.original_discharge_date,
+      )
     : null;
 
   return {
@@ -183,7 +183,9 @@ function buildRealOccupant(
     admissionId: admission.id,
     clientId: admission.client_id,
     dischargeRequest,
-    extensionRequest,
+    isExtendedStay,
+    extensionDays,
+    originalDischargeDate,
     reference: c.reference,
     displayName,
     initials: initialsOf(c.display_name ?? c.reference),
@@ -247,10 +249,13 @@ export async function buildRealBoard(
   const dischargeRequestByAdmission = new Map(
     (data.dischargeRequests as DischargeRequestRow[]).map((r) => [r.admission_id, r]),
   );
-  // At most one pending extension per admission (migration 0036 unique index).
-  const extensionRequestByAdmission = new Map(
-    (data.extensionRequests as ExtensionRequestRow[]).map((r) => [r.admission_id, r]),
-  );
+  // Multiple approved extensions per admission are possible (a client may be extended more than once).
+  const extensionsByAdmission = new Map<string, ExtensionRequestRow[]>();
+  for (const r of data.extensionRequests as ExtensionRequestRow[]) {
+    const list = extensionsByAdmission.get(r.admission_id) ?? [];
+    list.push(r);
+    extensionsByAdmission.set(r.admission_id, list);
+  }
   const photoUrlByClientId = new Map<string, string>(
     (data.photos as ClientPhotoRow[])
       .filter((p) => p.signed_url !== null)
@@ -308,7 +313,7 @@ export async function buildRealBoard(
             reopensByTaskId,
             noteRequiredByTemplateId,
             dischargeRequestByAdmission,
-            extensionRequestByAdmission,
+            extensionsByAdmission,
             openConcernIds,
             admissionNotesByBed.get(bed.id) ?? null,
             now,

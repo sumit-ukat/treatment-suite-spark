@@ -818,25 +818,15 @@ export const discharge = {
 };
 
 export const extension = {
-  /** Proposes a stay extension. Requires extension.initiate. A different person must approve. */
-  async request(admissionId: string, additionalDays: number, reason: string): Promise<string> {
-    const { data, error } = await client().rpc('request_stay_extension', {
+  /** Applies a stay extension immediately — no second-person approval (migration 0043). */
+  async apply(admissionId: string, additionalDays: number, reason: string): Promise<string> {
+    const { data, error } = await client().rpc('apply_stay_extension', {
       p_admission_id: admissionId,
       p_additional_days: additionalDays,
       p_reason: reason,
     });
-    if (error) throw new DataAccessError('extension.request', error);
+    if (error) throw new DataAccessError('extension.apply', error);
     return data as string;
-  },
-
-  /** `approve: false` requires a reason. On approval the DB immediately updates `current_planned_discharge_date`. */
-  async decide(extensionId: string, approve: boolean, notes: string | null): Promise<void> {
-    const { error } = await client().rpc('decide_stay_extension', {
-      p_extension_id: extensionId,
-      p_approve: approve,
-      p_notes: notes,
-    });
-    if (error) throw new DataAccessError('extension.decide', error);
   },
 };
 
@@ -921,7 +911,7 @@ export const roomBoard = {
           .from('admission_extensions')
           .select('id,admission_id,original_discharge_date,additional_days,new_discharge_date,reason,status,requested_by,decision_notes')
           .eq('centre_id', centreId)
-          .eq('status', 'pending'),
+          .eq('status', 'approved'),
       ),
       // Resolves client_tasks.completed_by to a name. Needs an RPC because user_profiles RLS
       // (migration 0008) lets a caller read only their own profile — see migration 0033.
