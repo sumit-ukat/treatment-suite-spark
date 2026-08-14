@@ -1027,16 +1027,25 @@ export function TreatmentDetailPanel({
                       ))}
                     </ul>
                   ) : o.legacySafeguardingNote ? (
-                    <p className={`mt-0.5 text-[11px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>{o.legacySafeguardingNote}</p>
+                    <div className="mt-0.5 flex items-start gap-1">
+                      <p className={`flex-1 text-[11px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>{o.legacySafeguardingNote}</p>
+                      {can('tasks.complete') && !newConcernMode ? (
+                        <button type="button" title="Edit note"
+                          onClick={() => { setNewConcernText(o.legacySafeguardingNote ?? ''); setNewConcernError(null); setNewConcernMode(true); }}
+                          className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                          <Pencil className="size-2.5" />
+                        </button>
+                      ) : null}
+                    </div>
                   ) : (
                     <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">No notes on file.</p>
                   )}
 
-                  {can('tasks.complete') && !newConcernMode ? (
+                  {can('tasks.complete') && !newConcernMode && (concernRows.length > 0 || !o.legacySafeguardingNote) ? (
                     <button
                       type="button"
                       onClick={() => {
-                        setNewConcernText(concernRows.length === 0 ? (o.legacySafeguardingNote ?? '') : '');
+                        setNewConcernText('');
                         setNewConcernError(null);
                         setNewConcernMode(true);
                       }}
