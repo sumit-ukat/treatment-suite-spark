@@ -638,7 +638,7 @@ function BoardPage() {
       {showDatePicker ? (
         <ArchivePicker
           value={archiveRange}
-          onConfirm={(r) => setArchiveRange(r)}
+          onConfirm={(r) => { setArchiveRange(r); setShowDatePicker(false); }}
           onClear={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
         />
       ) : null}
