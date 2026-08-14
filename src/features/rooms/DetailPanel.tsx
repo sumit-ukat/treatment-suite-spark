@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, X } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -7,7 +7,7 @@ import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
-import { admissions, clientPhotos, concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
+import { admissions, clientPhotos, concerns, tasks as taskService, type ConcernRow, type TaskDateChangeRow } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
@@ -733,14 +733,61 @@ function TaskRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showReopens, setShowReopens] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduleBusy, setRescheduleBusy] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const [rescheduleHistory, setRescheduleHistory] = useState<TaskDateChangeRow[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRows, setHistoryRows] = useState<TaskDateChangeRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const isReal = t.id !== null;
   const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const canReopen = isReal && t.isComplete && can('tasks.reopen');
+  const canReschedule = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const dayNumber = t.dueAt ? calendarDaysBetween(admittedAt, t.dueAt, TZ) + 1 : null;
   // Whole calendar days, the same way treatment days are counted everywhere else in this codebase.
   const daysOverdue = t.isOverdue && t.dueAt ? calendarDaysBetween(t.dueAt, new Date(), TZ) : 0;
   const wasReopened = t.reopens.length > 0;
+
+  function openReschedule() {
+    setRescheduleDate(t.dueAt ? t.dueAt.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setRescheduleReason('');
+    setRescheduleError(null);
+    setRescheduleHistory([]);
+    setRescheduleOpen(true);
+    if (t.id) taskService.dateHistory(t.id).then(setRescheduleHistory).catch(() => {});
+  }
+
+  async function doReschedule() {
+    if (!t.id || !rescheduleDate || !rescheduleReason.trim()) return;
+    setRescheduleBusy(true);
+    setRescheduleError(null);
+    try {
+      await taskService.reschedule(t.id, new Date(rescheduleDate + 'T12:00:00'), rescheduleReason);
+      setRescheduleOpen(false);
+      setRescheduleDate('');
+      setRescheduleReason('');
+      onChanged?.();
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setRescheduleBusy(false);
+    }
+  }
+
+  function openHistory() {
+    if (!t.id) return;
+    setHistoryRows([]);
+    setHistoryLoading(true);
+    setHistoryOpen(true);
+    taskService.dateHistory(t.id)
+      .then(setHistoryRows)
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -788,6 +835,16 @@ function TaskRow({
             {dayNumber !== null ? `Due day ${dayNumber}` : 'No due date'} &middot;{' '}
             {CATEGORY_LABEL[t.category] ?? t.category}
           </span>
+          {t.hasDateChanges ? (
+            <button
+              type="button"
+              onClick={openHistory}
+              className="mt-0.5 flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9.5px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-400 dark:hover:bg-sky-950/60"
+            >
+              <Calendar className="size-2.5 shrink-0" />
+              Date changed
+            </button>
+          ) : null}
           {t.isComplete ? (
             <span className="nums mt-0.5 block text-[10px] text-[var(--color-ink-muted)]">
               {t.completedAt ? `Completed ${formatDate(t.completedAt)}` : 'Completed · date not recorded'}
@@ -845,6 +902,17 @@ function TaskRow({
             className="shrink-0 rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
           >
             Reopen
+          </button>
+        ) : null}
+
+        {canReschedule && mode === 'idle' ? (
+          <button
+            type="button"
+            title="Change due date"
+            onClick={openReschedule}
+            className="shrink-0 rounded-md border border-[var(--color-line)] p-1 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            <Calendar className="size-3.5" />
           </button>
         ) : null}
       </div>
@@ -915,6 +983,119 @@ function TaskRow({
         <p role="alert" className="mt-1.5 text-[11px] text-red-600 dark:text-red-400">
           {error}
         </p>
+      ) : null}
+
+      {historyOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setHistoryOpen(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Due date history</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{t.title}</p>
+            <div className="mt-4">
+              {historyLoading ? (
+                <p className="text-[12px] text-[var(--color-ink-muted)]">Loading…</p>
+              ) : historyRows.length === 0 ? (
+                <p className="text-[12px] text-[var(--color-ink-muted)]">No changes recorded.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {historyRows.map((h) => (
+                    <li key={h.id} className="rounded-lg border border-[var(--color-line)] px-3 py-2.5 text-[11.5px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[var(--color-ink)]">{h.changed_by_name}</span>
+                        <span className="text-[10px] text-[var(--color-ink-muted)]">
+                          {formatDate(new Date(h.changed_at))} at {new Date(h.changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                        {h.old_due_at ? (
+                          <>
+                            <span className="text-[var(--color-ink-muted)] line-through">{formatDate(new Date(h.old_due_at))}</span>
+                            <span className="text-[var(--color-ink-muted)]">→</span>
+                          </>
+                        ) : null}
+                        <span className="font-medium text-[var(--color-ink)]">{formatDate(new Date(h.new_due_at))}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] italic text-[var(--color-ink-muted)]">&ldquo;{h.reason}&rdquo;</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(false)}
+              className="mt-4 w-full rounded-md border border-[var(--color-line)] py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Close
+            </button>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {rescheduleOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setRescheduleOpen(false)}>
+          <DialogContent className="max-w-sm p-5">
+            <DialogTitle className="text-[14px] font-semibold">Change due date</DialogTitle>
+            <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{t.title}</p>
+            <div className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--color-ink-muted)]">New due date</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-transparent px-3 py-1.5 text-[13px] outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--color-ink-muted)]">Reason (required)</label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="Why is this date being changed?"
+                  className="mt-1 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-3 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
+              {rescheduleError ? <p className="text-[11px] text-red-600 dark:text-red-400">{rescheduleError}</p> : null}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!rescheduleDate || !rescheduleReason.trim() || rescheduleBusy}
+                  onClick={() => void doReschedule()}
+                  className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+                >
+                  {rescheduleBusy ? 'Saving…' : 'Save change'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRescheduleOpen(false)}
+                  className="rounded-md px-3 py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+              {rescheduleHistory.length > 0 ? (
+                <div className="border-t border-[var(--color-line)] pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--color-ink-muted)]">Date change history</p>
+                  <ul className="mt-1.5 space-y-2">
+                    {rescheduleHistory.map((h) => (
+                      <li key={h.id} className="text-[10.5px] leading-snug">
+                        <span className="font-semibold text-[var(--color-ink)]">{h.changed_by_name}</span>
+                        {h.old_due_at ? (
+                          <span className="text-[var(--color-ink-muted)]"> moved from {formatDate(new Date(h.old_due_at))} to {formatDate(new Date(h.new_due_at))}</span>
+                        ) : (
+                          <span className="text-[var(--color-ink-muted)]"> set to {formatDate(new Date(h.new_due_at))}</span>
+                        )}
+                        <span className="block text-[var(--color-ink-muted)]">{formatDate(new Date(h.changed_at))} — &ldquo;{h.reason}&rdquo;</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </li>
   );
