@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -7,7 +7,7 @@ import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
-import { clientPhotos, concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
+import { admissions, clientPhotos, concerns, tasks as taskService, type ConcernRow } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
@@ -64,9 +64,23 @@ export function DetailPanel({
    */
   onChanged?: (() => void) | undefined;
 }) {
+  const { can } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [extendStayOpen, setExtendStayOpen] = useState(false);
   const [dischargeOpen, setDischargeOpen] = useState(false);
+  const [highRiskBusy, setHighRiskBusy] = useState(false);
+  const [editNotesMode, setEditNotesMode] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesBusy, setNotesBusy] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [concernEditId, setConcernEditId] = useState<string | null>(null);
+  const [concernEditText, setConcernEditText] = useState('');
+  const [concernBusy, setConcernBusy] = useState(false);
+  const [concernError, setConcernError] = useState<string | null>(null);
+  const [newConcernMode, setNewConcernMode] = useState(false);
+  const [newConcernText, setNewConcernText] = useState('');
+  const [newConcernBusy, setNewConcernBusy] = useState(false);
+  const [newConcernError, setNewConcernError] = useState<string | null>(null);
   const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
@@ -76,6 +90,66 @@ export function DetailPanel({
 
   const o = bed.occupant;
   if (!o) return null;
+
+  async function toggleHighRisk() {
+    if (!o?.admissionId) return;
+    setHighRiskBusy(true);
+    try {
+      await admissions.setHighRisk(o.admissionId, !o.hasRestrictedAlert);
+      onChanged?.();
+    } finally {
+      setHighRiskBusy(false);
+    }
+  }
+
+  async function saveNotes() {
+    if (!o?.admissionId) return;
+    setNotesBusy(true);
+    setNotesError(null);
+    try {
+      await admissions.updateNotes(o.admissionId, notesText);
+      setEditNotesMode(false);
+      onChanged?.();
+    } catch (err) {
+      setNotesError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setNotesBusy(false);
+    }
+  }
+
+  async function createConcern() {
+    if (!newConcernText.trim() || !o?.admissionId || !o?.clientId) return;
+    setNewConcernBusy(true);
+    setNewConcernError(null);
+    try {
+      await concerns.log(o.clientId, o.admissionId, centreId, newConcernText.trim(), 'risk');
+      const rows = await concerns.list(centreId, o.clientId);
+      setConcernRows(rows);
+      setNewConcernMode(false);
+      setNewConcernText('');
+    } catch (err) {
+      setNewConcernError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setNewConcernBusy(false);
+    }
+  }
+
+  async function saveConcern() {
+    if (!concernEditId) return;
+    setConcernBusy(true);
+    setConcernError(null);
+    try {
+      await concerns.updateNote(concernEditId, concernEditText);
+      const rows = await concerns.list(centreId, o?.clientId ?? '');
+      setConcernRows(rows);
+      setConcernEditId(null);
+      setConcernEditText('');
+    } catch (err) {
+      setConcernError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setConcernBusy(false);
+    }
+  }
 
   const sorted = [...o.tasks].sort((a, b) => {
     if (a.dueAt === null) return 1;
@@ -102,7 +176,7 @@ export function DetailPanel({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="flex h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
 
         {/* 3-column header:
@@ -205,40 +279,165 @@ export function DetailPanel({
                     Open
                   </span>
                 ) : null}
+                {can('risk.record') ? (
+                  <button
+                    type="button"
+                    disabled={highRiskBusy}
+                    onClick={() => void toggleHighRisk()}
+                    className={`ml-auto rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide uppercase transition disabled:opacity-40 ${
+                      o.hasRestrictedAlert
+                        ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400'
+                        : 'border-[var(--color-line)] bg-transparent text-[var(--color-ink-muted)] hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-800 dark:hover:bg-red-950/40 dark:hover:text-red-400'
+                    }`}
+                  >
+                    {highRiskBusy ? '…' : o.hasRestrictedAlert ? 'Remove high risk' : 'Set high risk'}
+                  </button>
+                ) : null}
               </div>
               {concernRows.length > 0 ? (
                 <ul className="mt-1.5 space-y-1.5">
                   {concernRows.map((r) => (
-                    <li key={r.id} className={`text-[11.5px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
-                      <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
-                        r.category === 'risk'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                          : r.category === 'medical'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      }`}>{CONCERN_LABEL[r.category]}</span>
-                      <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
-                      <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
-                      {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                    <li key={r.id} className={`text-[11px] leading-snug ${r.is_resolved ? 'opacity-50' : ''}`}>
+                      <div className="flex items-start gap-1">
+                        <div className="flex-1">
+                          <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
+                            r.category === 'risk'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                              : r.category === 'medical'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                          }`}>{CONCERN_LABEL[r.category]}</span>
+                          {concernEditId === r.id ? (
+                            <div className="mt-1">
+                              <textarea
+                                autoFocus
+                                rows={3}
+                                value={concernEditText}
+                                onChange={(e) => setConcernEditText(e.target.value)}
+                                className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                              />
+                              {concernError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{concernError}</p> : null}
+                              <div className="mt-1 flex gap-2">
+                                <button type="button" disabled={!concernEditText.trim() || concernBusy}
+                                  onClick={() => void saveConcern()}
+                                  className="rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-[10.5px] font-medium text-white disabled:opacity-40">
+                                  {concernBusy ? 'Saving…' : 'Save'}
+                                </button>
+                                <button type="button" onClick={() => { setConcernEditId(null); setConcernError(null); }}
+                                  className="rounded-md px-2 py-0.5 text-[10.5px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className={o.hasRestrictedAlert ? 'text-red-700 dark:text-red-300' : o.hasOpenConcern ? 'text-amber-800 dark:text-amber-200' : 'text-[var(--color-ink)]'}>{r.note}</span>
+                          )}
+                          <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
+                          {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
+                        </div>
+                        {!r.is_resolved && can('tasks.complete') && concernEditId !== r.id ? (
+                          <button type="button" title="Edit note"
+                            onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
+                            className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                            <Pencil className="size-2.5" />
+                          </button>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
               ) : o.legacySafeguardingNote ? (
-                <p className={`mt-0.5 text-[12px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>
-                  {o.legacySafeguardingNote}
-                </p>
+                <div className="mt-0.5 flex items-start gap-1">
+                  <p className={`flex-1 text-[12px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>
+                    {o.legacySafeguardingNote}
+                  </p>
+                  {can('tasks.complete') && !newConcernMode ? (
+                    <button type="button" title="Edit note"
+                      onClick={() => { setNewConcernText(o.legacySafeguardingNote ?? ''); setNewConcernError(null); setNewConcernMode(true); }}
+                      className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                      <Pencil className="size-2.5" />
+                    </button>
+                  ) : null}
+                </div>
               ) : (
                 <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
                   No notes on file.
                 </p>
               )}
+              {can('tasks.complete') && !newConcernMode && (concernRows.length > 0 || !o.legacySafeguardingNote) ? (
+                <button
+                  type="button"
+                  onClick={() => { setNewConcernText(''); setNewConcernError(null); setNewConcernMode(true); }}
+                  className="mt-2 text-[10.5px] font-medium text-[var(--color-accent)] hover:underline"
+                >
+                  + Add note
+                </button>
+              ) : null}
+              {newConcernMode ? (
+                <div className="mt-2 border-t border-[var(--color-line)]/50 pt-2">
+                  <textarea
+                    autoFocus
+                    rows={3}
+                    value={newConcernText}
+                    onChange={(e) => setNewConcernText(e.target.value)}
+                    placeholder="Add safeguarding / risk note…"
+                    className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                  />
+                  {newConcernError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{newConcernError}</p> : null}
+                  <div className="mt-1.5 flex gap-2">
+                    <button type="button" disabled={!newConcernText.trim() || newConcernBusy}
+                      onClick={() => void createConcern()}
+                      className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40">
+                      {newConcernBusy ? 'Saving…' : 'Log note'}
+                    </button>
+                    <button type="button" onClick={() => { setNewConcernMode(false); setNewConcernError(null); }}
+                      className="rounded-md px-2.5 py-1 text-[11px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            {o.admissionNotes ? (
-              <div className="mt-3 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2.5">
+            <div className="mt-3 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2.5">
+              <div className="flex items-center gap-2">
                 <p className="text-[10.5px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
-                <p className="mt-0.5 whitespace-pre-wrap text-[12px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+                {can('tasks.complete') && !editNotesMode ? (
+                  <button type="button" title="Edit notes"
+                    onClick={() => { setNotesText(o.admissionNotes ?? ''); setEditNotesMode(true); setNotesError(null); }}
+                    className="ml-auto rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                    <Pencil className="size-3" />
+                  </button>
+                ) : null}
               </div>
-            ) : null}
+              {editNotesMode ? (
+                <div className="mt-1.5">
+                  <textarea
+                    autoFocus
+                    rows={4}
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                    placeholder="Add admission notes…"
+                    className="w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:border-[var(--color-accent)]"
+                  />
+                  {notesError ? <p className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{notesError}</p> : null}
+                  <div className="mt-1.5 flex gap-2">
+                    <button type="button" disabled={notesBusy}
+                      onClick={() => void saveNotes()}
+                      className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40">
+                      {notesBusy ? 'Saving…' : 'Save'}
+                    </button>
+                    <button type="button" onClick={() => { setEditNotesMode(false); setNotesError(null); }}
+                      className="rounded-md px-2.5 py-1 text-[11px] text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : o.admissionNotes ? (
+                <p className="mt-0.5 whitespace-pre-wrap text-[12px] text-[var(--color-ink)]">{o.admissionNotes}</p>
+              ) : (
+                <p className="mt-0.5 text-[12px] italic text-[var(--color-ink-muted)]">No notes recorded.</p>
+              )}
+            </div>
           </div>
 
           {/* Col 3 — Programme progress + action buttons */}
