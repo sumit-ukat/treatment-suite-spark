@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pencil, X } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -175,6 +175,7 @@ export function DetailPanel({
   const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
 
   return (
+    <>
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex h-[94vh] w-full max-w-[1280px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
         <DialogTitle className="sr-only">Client file — {o.displayName}</DialogTitle>
@@ -520,26 +521,7 @@ export function DetailPanel({
           sit behind sensitivity level 3 and need the access model first.
         </footer>
 
-        {extendStayOpen ? (
-          <Dialog open onOpenChange={(v) => !v && setExtendStayOpen(false)}>
-            <DialogContent className="max-w-lg">
-              <DialogTitle>Extend stay</DialogTitle>
-              <ExtendStayCard occupant={o} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
-            </DialogContent>
-          </Dialog>
-        ) : null}
-
-        {dischargeOpen ? (
-          <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
-            <DialogContent className="max-w-lg">
-              <DialogTitle>Discharge workflow</DialogTitle>
-              <DischargeWorkflowCard occupant={o} onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
-            </DialogContent>
-          </Dialog>
-        ) : null}
-
-        {/* Nested rather than a sibling so it stacks above this dialog and closing it returns here,
-            instead of dismissing the whole client file. */}
+        {/* Nested photo lightbox — intentionally inside so closing returns to client file */}
         {o.photoUrl ? (
           <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
             <DialogContent className="w-auto max-w-[92vw] border-none bg-transparent p-0 shadow-none">
@@ -554,6 +536,51 @@ export function DetailPanel({
         ) : null}
       </DialogContent>
     </Dialog>
+
+    {/* Extend Stay — sibling dialog so it gets its own full-screen overlay */}
+    {extendStayOpen && o.admissionId ? (
+      <Dialog open onOpenChange={(v) => !v && setExtendStayOpen(false)}>
+        <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogTitle className="sr-only">Extend stay — {o.displayName}</DialogTitle>
+          <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+            <div>
+              <p className="font-semibold text-[13.5px]">Extend stay</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
+            </div>
+            <button type="button" onClick={() => setExtendStayOpen(false)}
+              className="flex size-7 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition hover:bg-muted/60">
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="overflow-y-auto p-4">
+            <ExtendStayCard occupant={o} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    ) : null}
+
+    {/* Discharge Workflow — sibling dialog so it gets its own full-screen overlay */}
+    {dischargeOpen && o.admissionId ? (
+      <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
+        <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogTitle className="sr-only">Discharge workflow — {o.displayName}</DialogTitle>
+          <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+            <div>
+              <p className="font-semibold text-[13.5px]">Discharge workflow</p>
+              <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
+            </div>
+            <button type="button" onClick={() => setDischargeOpen(false)}
+              className="flex size-7 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition hover:bg-muted/60">
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="overflow-y-auto p-4">
+            <DischargeWorkflowCard occupant={o} onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    ) : null}
+    </>
   );
 }
 
