@@ -13,13 +13,17 @@ import {
 } from 'react-router-dom';
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Filter,
+  History,
   LayoutGrid,
   List as ListIcon,
   LogOut,
   Plus,
   Search,
+  X,
 } from 'lucide-react';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
@@ -475,6 +479,10 @@ function BoardPage() {
   const [filter, setFilter] = useState<FilterId>('all');
   const [therapistFilter, setTherapistFilter] = useState('all');
   const [view, setView] = useState<'board' | 'list'>('board');
+  const [archiveDateStr, setArchiveDateStr] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const asOf = archiveDateStr ? new Date(archiveDateStr + 'T23:59:59') : null;
 
   const {
     beds: board,
@@ -482,7 +490,7 @@ function BoardPage() {
     refreshing: boardRefreshing,
     error: boardError,
     refresh: refreshBoard,
-  } = useBoardData(authCentre?.id);
+  } = useBoardData(authCentre?.id, asOf);
   // The available bed a "admit here?" confirmation is open for — a separate confirm step, not a
   // straight jump to the admission form, since clicking an empty bed is otherwise a single misclick
   // away from the full admit-a-client flow.
@@ -602,16 +610,104 @@ function BoardPage() {
                 </button>
               ))}
             </div>
+            {!asOf ? (
+              <button
+                type="button"
+                onClick={() => navigate('../admissions')}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
+              >
+                <Plus className="size-4" /> Admit client
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={() => navigate('../admissions')}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
+              title="View board on a past date"
+              onClick={() => setShowDatePicker((v) => !v)}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium transition ${
+                asOf
+                  ? 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                  : 'border-[var(--color-line)] bg-card text-[var(--color-ink)] hover:bg-[var(--color-accent-soft)]'
+              }`}
             >
-              <Plus className="size-4" /> Admit client
+              <History className="size-3.5" /> Archive
             </button>
           </>
         }
       />
+
+      {/* ── Archive date picker ── */}
+      {showDatePicker ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-line)] bg-card px-4 py-3">
+          <History className="size-4 shrink-0 text-[var(--color-ink-muted)]" />
+          <span className="text-[12.5px] font-medium text-[var(--color-ink)]">View board on:</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              title="Previous week"
+              onClick={() => {
+                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
+                d.setDate(d.getDate() - 7);
+                setArchiveDateStr(d.toISOString().slice(0, 10));
+              }}
+              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <input
+              type="date"
+              value={archiveDateStr}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setArchiveDateStr(e.target.value)}
+              className="rounded-lg border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-accent)]"
+            />
+            <button
+              type="button"
+              title="Next week"
+              onClick={() => {
+                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
+                d.setDate(d.getDate() + 7);
+                const today = new Date().toISOString().slice(0, 10);
+                const next = d.toISOString().slice(0, 10);
+                setArchiveDateStr(next > today ? today : next);
+              }}
+              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+          {asOf ? (
+            <button
+              type="button"
+              onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
+              className="ml-auto flex items-center gap-1 rounded-lg border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <X className="size-3.5" /> Back to live
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ── Archive banner ── */}
+      {asOf ? (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+          <History className="size-4 shrink-0" />
+          <span>
+            <span className="font-semibold">Archive view</span>
+            {' — showing the board as it stood on '}
+            <span className="font-semibold">
+              {asOf.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+            . No changes can be made in this view.
+          </span>
+          <button
+            type="button"
+            onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
+            className="ml-auto flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-[11.5px] font-medium hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/40"
+          >
+            <X className="size-3.5" /> Back to live
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
         <span className="flex items-center gap-1.5 pl-1 text-xs font-semibold text-muted-foreground">
@@ -742,6 +838,7 @@ function BoardPage() {
           centreId={authCentre.id}
           onClose={closeBed}
           onChanged={() => refreshBoard()}
+          readOnly={!!asOf}
         />
       ) : null}
     </div>

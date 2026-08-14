@@ -55,6 +55,7 @@ export function DetailPanel({
   onChanged,
   onPrev,
   onNext,
+  readOnly = false,
 }: {
   bed: BoardBed;
   centreId: string;
@@ -67,6 +68,8 @@ export function DetailPanel({
   onChanged?: (() => void) | undefined;
   onPrev?: (() => void) | undefined;
   onNext?: (() => void) | undefined;
+  /** When true the panel is in archive/snapshot mode — all mutation controls are hidden. */
+  readOnly?: boolean;
 }) {
   const { can } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -306,7 +309,7 @@ export function DetailPanel({
                     Open
                   </span>
                 ) : null}
-                {can('risk.record') ? (
+                {can('risk.record') && !readOnly ? (
                   <button
                     type="button"
                     disabled={highRiskBusy}
@@ -378,7 +381,7 @@ export function DetailPanel({
                   <p className={`flex-1 text-[12px] ${o.hasRestrictedAlert ? 'font-medium text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-200'}`}>
                     {o.legacySafeguardingNote}
                   </p>
-                  {can('tasks.complete') && !newConcernMode ? (
+                  {can('tasks.complete') && !newConcernMode && !readOnly ? (
                     <button type="button" title="Edit note"
                       onClick={() => { setNewConcernText(o.legacySafeguardingNote ?? ''); setNewConcernError(null); setNewConcernMode(true); }}
                       className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
@@ -391,7 +394,7 @@ export function DetailPanel({
                   No notes on file.
                 </p>
               )}
-              {can('tasks.complete') && !newConcernMode && (concernRows.length > 0 || !o.legacySafeguardingNote) ? (
+              {can('tasks.complete') && !newConcernMode && !readOnly && (concernRows.length > 0 || !o.legacySafeguardingNote) ? (
                 <button
                   type="button"
                   onClick={() => { setNewConcernText(''); setNewConcernError(null); setNewConcernMode(true); }}
@@ -428,7 +431,7 @@ export function DetailPanel({
             <div className="mt-3 rounded-lg border border-[var(--color-line)] border-l-4 border-l-[var(--color-accent)]/40 px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <p className="text-[10.5px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">Admission notes</p>
-                {can('tasks.complete') && !editNotesMode ? (
+                {can('tasks.complete') && !editNotesMode && !readOnly ? (
                   <button type="button" title="Edit notes"
                     onClick={() => { setNotesText(o.admissionNotes ?? ''); setEditNotesMode(true); setNotesError(null); }}
                     className="ml-auto rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
@@ -512,7 +515,7 @@ export function DetailPanel({
                 <p className="mt-1 text-[var(--color-ink-muted)]">Overdue</p>
               </div>
             </div>
-            {o.admissionId ? (
+            {o.admissionId && !readOnly ? (
               <div className="mt-3.5 flex flex-col gap-2 border-t border-[var(--color-line)] pt-3.5">
                 <button
                   type="button"
@@ -541,6 +544,7 @@ export function DetailPanel({
             admittedAt={o.admittedAt}
             emptyMsg="All clear — nothing overdue or due today."
             onChanged={onChanged}
+            readOnly={readOnly}
           />
           <TaskColumn
             title="Coming Up"
@@ -548,6 +552,7 @@ export function DetailPanel({
             admittedAt={o.admittedAt}
             emptyMsg="No upcoming tasks."
             onChanged={onChanged}
+            readOnly={readOnly}
           />
           <TaskColumn
             title="Done"
@@ -555,6 +560,7 @@ export function DetailPanel({
             admittedAt={o.admittedAt}
             emptyMsg="Nothing completed yet."
             onChanged={onChanged}
+            readOnly={readOnly}
           />
         </div>
 
@@ -722,10 +728,12 @@ function TaskRow({
   task: t,
   admittedAt,
   onChanged,
+  readOnly,
 }: {
   task: BoardTask;
   admittedAt: Date;
   onChanged?: (() => void) | undefined;
+  readOnly?: boolean;
 }) {
   const { can } = useAuth();
   const [mode, setMode] = useState<'idle' | 'note' | 'reopen'>('idle');
@@ -745,9 +753,9 @@ function TaskRow({
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const isReal = t.id !== null;
-  const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
-  const canReopen = isReal && t.isComplete && can('tasks.reopen');
-  const canReschedule = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  const canComplete = !readOnly && isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  const canReopen = !readOnly && isReal && t.isComplete && can('tasks.reopen');
+  const canReschedule = !readOnly && isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const dayNumber = t.dueAt ? calendarDaysBetween(admittedAt, t.dueAt, TZ) + 1 : null;
   // Whole calendar days, the same way treatment days are counted everywhere else in this codebase.
   const daysOverdue = t.isOverdue && t.dueAt ? calendarDaysBetween(t.dueAt, new Date(), TZ) : 0;
@@ -1137,12 +1145,14 @@ function TaskColumn({
   admittedAt,
   emptyMsg,
   onChanged,
+  readOnly,
 }: {
   title: string;
   tasks: BoardTask[];
   admittedAt: Date;
   emptyMsg: string;
   onChanged?: (() => void) | undefined;
+  readOnly?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   return (
@@ -1169,7 +1179,7 @@ function TaskColumn({
             <li className="py-4 text-center text-[12px] text-[var(--color-ink-muted)]">{emptyMsg}</li>
           ) : (
             tasks.map((t) => (
-              <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} />
+              <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} readOnly={readOnly} />
             ))
           )}
         </ul>

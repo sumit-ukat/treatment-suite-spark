@@ -991,6 +991,168 @@ export const roomBoard = {
       photos,
     };
   },
+
+  /**
+   * Historical snapshot of the board at a specific point in time.
+   *
+   * Queries `room_allocations` for beds occupied at `asOf`, then fetches admission
+   * and task data for those admissions. Tasks are returned with their current
+   * `completed_at` timestamps so the caller can reconstruct point-in-time state
+   * (a task completed after `asOf` was still pending at that moment).
+   */
+  async forCentreAtDate(centreId: string, asOf: Date) {
+    const asOfIso = asOf.toISOString();
+
+    // Step 1: find which beds were occupied at asOf (started before, not yet ended).
+    const allocations = await run<RoomAllocationRow[]>(
+      'roomBoard.snapshot.allocations',
+      client()
+        .from('room_allocations')
+        .select('admission_id,bed_id,allocation_reason')
+        .eq('centre_id', centreId)
+        .lte('started_at', asOfIso)
+        .or(`ended_at.is.null,ended_at.gt.${asOfIso}`),
+    );
+
+    const admissionIds = [...new Set(allocations.map((a) => a.admission_id))];
+
+    // No allocations at this point in time → return the same empty shape as forCentre would.
+    if (admissionIds.length === 0) {
+      return {
+        admissions: [] as AdmissionRow[],
+        clients: [] as ClientRow[],
+        allocations: [] as RoomAllocationRow[],
+        staffAssignments: [] as StaffAssignmentRow[],
+        tasks: [] as ClientTaskRow[],
+        substances: await clinicalLookups.substances(),
+        taskTemplates: [] as TaskTemplateRow[],
+        dischargeRequests: [] as DischargeRequestRow[],
+        extensionRequests: [] as ExtensionRequestRow[],
+        taskCompleters: [] as TaskCompleterRow[],
+        taskReopens: [] as TaskReopenRow[],
+        photos: [] as ClientPhotoRow[],
+      };
+    }
+
+    // Step 2: fetch all admission-scoped data in parallel.
+    const [
+      admissions,
+      staffAssignments,
+      clientTasks,
+      substances,
+      taskTemplates,
+      dischargeRequests,
+      extensionRequests,
+      taskCompleters,
+      taskReopens,
+    ] = await Promise.all([
+      run<AdmissionRow[]>(
+        'roomBoard.snapshot.admissions',
+        client()
+          .from('admissions')
+          .select(
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at',
+          )
+          .in('id', admissionIds),
+      ),
+      // Staff assignments: filter by admission only (staff rarely reassigned mid-admission).
+      run<StaffAssignmentRow[]>(
+        'roomBoard.snapshot.staffAssignments',
+        client()
+          .from('staff_assignments')
+          .select('admission_id,role_code,display_label')
+          .in('admission_id', admissionIds)
+          .is('ended_at', null),
+      ),
+      run<ClientTaskRow[]>(
+        'roomBoard.snapshot.tasks',
+        client()
+          .from('client_tasks')
+          .select(
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
+          )
+          .in('admission_id', admissionIds),
+      ),
+      clinicalLookups.substances(),
+      run<TaskTemplateRow[]>(
+        'roomBoard.snapshot.taskTemplates',
+        client().from('task_templates').select('id,requires_completion_note'),
+      ),
+      run<DischargeRequestRow[]>(
+        'roomBoard.snapshot.dischargeRequests',
+        client()
+          .from('discharge_requests')
+          .select('id,admission_id,discharge_type,status,reason,requested_by,approval_notes,transfer_destination,transfer_treatment_type,transfer_duration_days')
+          .in('admission_id', admissionIds)
+          .in('status', ['pending', 'approved']),
+      ),
+      run<ExtensionRequestRow[]>(
+        'roomBoard.snapshot.extensionRequests',
+        client()
+          .from('admission_extensions')
+          .select('id,admission_id,original_discharge_date,additional_days,new_discharge_date,reason,status,requested_by,decision_notes')
+          .in('admission_id', admissionIds)
+          .eq('status', 'approved'),
+      ),
+      run<TaskCompleterRow[]>(
+        'roomBoard.snapshot.taskCompleters',
+        client().rpc('task_completer_names', { p_centre_id: centreId }),
+      ),
+      run<TaskReopenRow[]>(
+        'roomBoard.snapshot.taskReopens',
+        client().rpc('task_reopen_history', { p_centre_id: centreId }),
+      ),
+    ]);
+
+    // Step 3: resolve client identities and photos (same as forCentre).
+    const clientIds = [...new Set(admissions.map((a) => a.client_id))];
+    const clients = clientIds.length
+      ? await run<ClientRow[]>(
+          'roomBoard.snapshot.clients',
+          client().rpc('client_summary', { p_client_ids: clientIds }),
+        )
+      : [];
+    const photoRows = clientIds.length
+      ? await run<Array<Pick<ClientPhotoRow, 'client_id' | 'storage_path'>>>(
+          'roomBoard.snapshot.photos',
+          client()
+            .from('client_photos')
+            .select('client_id,storage_path')
+            .eq('is_active', true)
+            .in('client_id', clientIds),
+        )
+      : [];
+    const signedByPath = new Map<string, string>();
+    if (photoRows.length) {
+      const { data: signed, error: signError } = await client()
+        .storage.from('client-photos')
+        .createSignedUrls(photoRows.map((p) => p.storage_path), 3600);
+      if (signError) console.error('roomBoard.snapshot.photos.sign', signError);
+      for (const s of signed ?? []) {
+        if (s.error) console.error('roomBoard.snapshot.photos.sign', s.path, s.error);
+        if (s.signedUrl) signedByPath.set(s.path ?? '', s.signedUrl);
+      }
+    }
+    const photos: ClientPhotoRow[] = photoRows.map((p) => ({
+      ...p,
+      signed_url: signedByPath.get(p.storage_path) ?? null,
+    }));
+
+    return {
+      admissions,
+      clients,
+      allocations,
+      staffAssignments,
+      tasks: clientTasks,
+      substances,
+      taskTemplates,
+      dischargeRequests,
+      extensionRequests,
+      taskCompleters,
+      taskReopens,
+      photos,
+    };
+  },
 };
 
 export interface UserProfileRow {

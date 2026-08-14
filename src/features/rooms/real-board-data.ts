@@ -111,7 +111,11 @@ function buildRealOccupant(
   const tasks: BoardTask[] = rawTasks.map((t) => {
     const dueAt = t.due_at ? new Date(t.due_at) : null;
     const completedAt = t.completed_at ? new Date(t.completed_at) : null;
-    const isComplete = t.status === 'completed';
+    // For historical snapshots: a task completed AFTER `now` (asOf) was still pending at that moment.
+    // `done_no_date` imports hold no real timestamp, so we treat them as complete regardless of asOf.
+    const isComplete = t.status === 'completed' && (
+      t.source_interpretation === 'done_no_date' || completedAt === null || completedAt <= now
+    );
     const isNotApplicable = t.status === 'not_applicable' || t.status === 'cancelled';
     return {
       // A real row, so this task can actually be completed — see BoardTask.id.
@@ -137,9 +141,12 @@ function buildRealOccupant(
       isComplete,
       isNotApplicable,
       notApplicableReason: isNotApplicable ? (t.not_applicable_reason ?? 'Not applicable.') : null,
-      // Direct reuse of the tested domain function — a real client_task row already has exactly the
-      // shape isOverdue expects.
-      isOverdue: !isNotApplicable && isOverdue({ dueAt, completedAt, status: t.status as never }, now),
+      // Use the adjusted isComplete so historical snapshots correctly show tasks as overdue
+      // when they were incomplete at asOf, even if subsequently completed.
+      isOverdue: !isNotApplicable && isOverdue(
+        { dueAt, completedAt: isComplete ? completedAt : null, status: isComplete ? 'completed' : (t.status as never) },
+        now,
+      ),
       isDueToday: !isComplete && !isNotApplicable && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
       hasDateChanges: t.reschedule_count > 0,
     };
@@ -231,10 +238,15 @@ export async function buildRealBoard(
   centreId: string,
   now: Date = new Date(),
 ): Promise<{ board: readonly BoardBed[]; summary: BoardSummary }> {
+  // When `now` is more than 5 minutes before the current clock it is a deliberate historical
+  // snapshot — switch to the time-filtered query so we only see beds that were actually occupied
+  // at that moment, rather than what is occupied right now.
+  const isHistorical = now.getTime() < Date.now() - 5 * 60 * 1000;
+
   const [rooms, beds, data, openConcernIds] = await Promise.all([
     roomsAndBeds.rooms(centreId),
     roomsAndBeds.beds(centreId),
-    roomBoard.forCentre(centreId),
+    isHistorical ? roomBoard.forCentreAtDate(centreId, now) : roomBoard.forCentre(centreId),
     concerns.openClientIds(centreId).catch(() => new Set<string>()),
   ]);
 

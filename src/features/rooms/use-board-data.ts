@@ -18,8 +18,15 @@ export interface BoardDataState {
  * Supabase tables — there is no separate fetch or local cache per view.
  * Call `refresh()` after any mutation (task completion, discharge, extend
  * stay, etc.) to trigger a silent re-fetch without blanking the UI.
+ *
+ * Pass `asOf` to request a historical snapshot: the board will show who
+ * was in each bed at that moment, with task states as they stood then.
+ * Switching between live and a snapshot always does a full reload.
  */
-export function useBoardData(centreId: string | null | undefined): BoardDataState {
+export function useBoardData(
+  centreId: string | null | undefined,
+  asOf?: Date | null,
+): BoardDataState {
   const [beds, setBeds] = useState<readonly BoardBed[]>([]);
   const [loading, setLoading] = useState(!!centreId);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,6 +34,9 @@ export function useBoardData(centreId: string | null | undefined): BoardDataStat
   const [loadedAt, setLoadedAt] = useState<Date | null>(null);
   const [version, setVersion] = useState(0);
   const hasDataRef = useRef(false);
+
+  // Serialise to a string so the effect dep stays stable across renders.
+  const asOfStr = asOf?.toISOString() ?? null;
 
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
@@ -36,16 +46,20 @@ export function useBoardData(centreId: string | null | undefined): BoardDataStat
       return;
     }
     let cancelled = false;
-    if (hasDataRef.current) {
+    // Switching between live and a snapshot resets the board completely rather than
+    // showing a stale board as "refreshing" — the data source has fundamentally changed.
+    if (hasDataRef.current && !asOfStr) {
       setRefreshing(true);
     } else {
+      hasDataRef.current = false;
       setLoading(true);
     }
-    buildRealBoard(centreId)
+    const now = asOfStr ? new Date(asOfStr) : new Date();
+    buildRealBoard(centreId, now)
       .then(({ board }) => {
         if (!cancelled) {
           setBeds(board);
-          hasDataRef.current = true;
+          hasDataRef.current = !asOfStr; // only cache live board state
           setError(null);
           setLoadedAt(new Date());
         }
@@ -57,7 +71,7 @@ export function useBoardData(centreId: string | null | undefined): BoardDataStat
         if (!cancelled) { setLoading(false); setRefreshing(false); }
       });
     return () => { cancelled = true; };
-  }, [centreId, version]);
+  }, [centreId, version, asOfStr]);
 
   return { beds, loading, refreshing, error, loadedAt, refresh };
 }

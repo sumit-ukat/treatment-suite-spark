@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Printer, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, History, Plus, Printer, Search, X } from 'lucide-react';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
@@ -128,7 +128,15 @@ export function TreatmentBoard({
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
-  const { beds, loading, refreshing, error, loadedAt, refresh } = useBoardData(centreId);
+  // Archive / snapshot date: null = live board.
+  const [archiveDateStr, setArchiveDateStr] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const asOf = archiveDateStr
+    ? new Date(archiveDateStr + 'T23:59:59')
+    : null;
+
+  const { beds, loading, refreshing, error, loadedAt, refresh } = useBoardData(centreId, asOf);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
@@ -214,23 +222,113 @@ export function TreatmentBoard({
                 className="h-9 w-[220px] rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
             </label>
+            {!asOf ? (
+              <button
+                type="button"
+                onClick={() => navigate('../admissions')}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:opacity-90"
+              >
+                <Plus className="size-4" /> Admit client
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={() => navigate('../admissions')}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:opacity-90"
+              title="View board on a past date"
+              onClick={() => setShowDatePicker((v) => !v)}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium transition ${
+                asOf
+                  ? 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                  : 'border-[var(--color-line)] bg-card text-[var(--color-ink)] hover:bg-[var(--color-accent-soft)]'
+              }`}
             >
-              <Plus className="size-4" /> Admit client
+              <History className="size-3.5" /> {asOf ? 'Archive' : 'Archive'}
             </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-3 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
-            >
-              <Printer className="size-3.5" /> Print
-            </button>
+            {!asOf ? (
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-3 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
+              >
+                <Printer className="size-3.5" /> Print
+              </button>
+            ) : null}
           </>
         }
       />
+
+      {/* ── Archive date picker ── */}
+      {showDatePicker ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-line)] bg-card px-4 py-3">
+          <History className="size-4 shrink-0 text-[var(--color-ink-muted)]" />
+          <span className="text-[12.5px] font-medium text-[var(--color-ink)]">View board on:</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              title="Previous week"
+              onClick={() => {
+                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
+                d.setDate(d.getDate() - 7);
+                setArchiveDateStr(d.toISOString().slice(0, 10));
+              }}
+              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <input
+              type="date"
+              value={archiveDateStr}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setArchiveDateStr(e.target.value)}
+              className="rounded-lg border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-accent)]"
+            />
+            <button
+              type="button"
+              title="Next week"
+              onClick={() => {
+                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
+                d.setDate(d.getDate() + 7);
+                const today = new Date().toISOString().slice(0, 10);
+                const next = d.toISOString().slice(0, 10);
+                setArchiveDateStr(next > today ? today : next);
+              }}
+              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+          {asOf ? (
+            <button
+              type="button"
+              onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
+              className="ml-auto flex items-center gap-1 rounded-lg border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              <X className="size-3.5" /> Back to live
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ── Archive banner ── */}
+      {asOf ? (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+          <History className="size-4 shrink-0" />
+          <span>
+            <span className="font-semibold">Archive view</span>
+            {' — showing the board as it stood on '}
+            <span className="font-semibold">
+              {asOf.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+            . No changes can be made in this view.
+          </span>
+          <button
+            type="button"
+            onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
+            className="ml-auto flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-[11.5px] font-medium hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/40"
+          >
+            <X className="size-3.5" /> Back to live
+          </button>
+        </div>
+      ) : null}
 
       {/* ── Summary tiles — StatTile matches GroupDashboard / BoardPage ── */}
       <div className="flex flex-wrap gap-3 print:hidden">
@@ -540,6 +638,7 @@ export function TreatmentBoard({
             onChanged={() => refresh()}
             onPrev={idx > 0 ? () => setOpenBedLabel(occupiedVisible[idx - 1]!.label) : undefined}
             onNext={idx < occupiedVisible.length - 1 ? () => setOpenBedLabel(occupiedVisible[idx + 1]!.label) : undefined}
+            readOnly={!!asOf}
           />
         );
       })() : null}
