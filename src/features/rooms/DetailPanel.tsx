@@ -595,7 +595,7 @@ export function DetailPanel({
             </button>
           </div>
           <div className="overflow-y-auto p-4">
-            <ExtendStayCard occupant={o} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
+            <ExtendStayCard occupant={o} centreId={centreId} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
       </Dialog>

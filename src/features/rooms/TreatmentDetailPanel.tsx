@@ -1274,7 +1274,7 @@ export function TreatmentDetailPanel({
               </button>
             </div>
             <div className="overflow-y-auto p-4">
-              <ExtendStayCard occupant={o} onChanged={onChanged} />
+              <ExtendStayCard occupant={o} centreId={centreId} onChanged={onChanged} />
             </div>
           </DialogContent>
         </Dialog>

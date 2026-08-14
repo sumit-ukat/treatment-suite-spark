@@ -818,12 +818,13 @@ export const discharge = {
 };
 
 export const extension = {
-  /** Applies a stay extension immediately — no second-person approval (migration 0043). */
-  async apply(admissionId: string, additionalDays: number, reason: string): Promise<string> {
+  /** Applies a stay extension immediately — no second-person approval (migration 0043/0044). */
+  async apply(admissionId: string, additionalDays: number, reason: string, newBedId?: string | null): Promise<string> {
     const { data, error } = await client().rpc('apply_stay_extension', {
       p_admission_id: admissionId,
       p_additional_days: additionalDays,
       p_reason: reason,
+      p_new_bed_id: newBedId ?? null,
     });
     if (error) throw new DataAccessError('extension.apply', error);
     return data as string;
