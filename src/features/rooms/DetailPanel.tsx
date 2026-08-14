@@ -730,6 +730,7 @@ function TaskRow({
   const { can } = useAuth();
   const [mode, setMode] = useState<'idle' | 'note' | 'reopen'>('idle');
   const [text, setText] = useState('');
+  const [reopenDate, setReopenDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reopensOpen, setReopensOpen] = useState(false);
@@ -926,9 +927,20 @@ function TaskRow({
             className="mt-1 w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
           />
           {mode === 'reopen' ? (
-            <p className="mt-1 text-[10px] text-[var(--color-ink-muted)]">
-              This removes the completion record. The reason is kept in the audit trail.
-            </p>
+            <>
+              <label className="mt-2.5 block text-[10.5px] text-[var(--color-ink-muted)]">
+                New due date (optional)
+                <input
+                  type="date"
+                  value={reopenDate}
+                  onChange={(e) => setReopenDate(e.target.value)}
+                  className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                />
+              </label>
+              <p className="mt-1 text-[10px] text-[var(--color-ink-muted)]">
+                This removes the completion record. The reason is kept in the audit trail.
+              </p>
+            </>
           ) : null}
           <div className="mt-1.5 flex items-center gap-2">
             <button
@@ -937,7 +949,13 @@ function TaskRow({
               onClick={() =>
                 mode === 'note'
                   ? complete()
-                  : void run(() => taskService.reopen(t.id!, text))
+                  : void run(() =>
+                      taskService.reopen(
+                        t.id!,
+                        text,
+                        reopenDate ? new Date(reopenDate + 'T12:00:00') : undefined,
+                      ),
+                    )
               }
               className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
             >
@@ -949,6 +967,7 @@ function TaskRow({
               onClick={() => {
                 setMode('idle');
                 setText('');
+                setReopenDate('');
                 setError(null);
               }}
               className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"

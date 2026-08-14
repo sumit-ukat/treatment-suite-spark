@@ -533,11 +533,12 @@ export const tasks = {
     if (error) throw new DataAccessError('tasks.complete', error);
   },
 
-  /** Requires `tasks.reopen` and a reason, which the database records in the audit trail. */
-  async reopen(taskId: string, reason: string): Promise<void> {
+  /** Requires `tasks.reopen` and a reason, which the database records in the audit trail. Optionally resets the due date. */
+  async reopen(taskId: string, reason: string, newDueAt?: Date | null): Promise<void> {
     const { error } = await client().rpc('reopen_client_task', {
       p_task_id: taskId,
       p_reason: reason,
+      p_new_due_at: newDueAt ? newDueAt.toISOString() : null,
     });
     if (error) throw new DataAccessError('tasks.reopen', error);
   },
