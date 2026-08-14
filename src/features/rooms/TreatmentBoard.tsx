@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, History, Plus, Printer, Search, X } from 'lucide-react';
+import { History, Plus, Printer, Search, X } from 'lucide-react';
+import { ArchivePicker } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
@@ -258,54 +259,7 @@ export function TreatmentBoard({
 
       {/* ── Archive date picker ── */}
       {showDatePicker ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--color-line)] bg-card px-4 py-3">
-          <History className="size-4 shrink-0 text-[var(--color-ink-muted)]" />
-          <span className="text-[12.5px] font-medium text-[var(--color-ink)]">View board on:</span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              title="Previous week"
-              onClick={() => {
-                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
-                d.setDate(d.getDate() - 7);
-                setArchiveDateStr(d.toISOString().slice(0, 10));
-              }}
-              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <input
-              type="date"
-              value={archiveDateStr}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setArchiveDateStr(e.target.value)}
-              className="rounded-lg border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-accent)]"
-            />
-            <button
-              type="button"
-              title="Next week"
-              onClick={() => {
-                const d = archiveDateStr ? new Date(archiveDateStr + 'T12:00:00') : new Date();
-                d.setDate(d.getDate() + 7);
-                const today = new Date().toISOString().slice(0, 10);
-                const next = d.toISOString().slice(0, 10);
-                setArchiveDateStr(next > today ? today : next);
-              }}
-              className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
-          {asOf ? (
-            <button
-              type="button"
-              onClick={() => { setArchiveDateStr(''); setShowDatePicker(false); }}
-              className="ml-auto flex items-center gap-1 rounded-lg border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--color-ink-muted)] hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              <X className="size-3.5" /> Back to live
-            </button>
-          ) : null}
-        </div>
+        <ArchivePicker value={archiveDateStr} onChange={setArchiveDateStr} />
       ) : null}
 
       {/* ── Archive banner ── */}

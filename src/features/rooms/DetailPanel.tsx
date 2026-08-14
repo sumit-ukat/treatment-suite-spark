@@ -1179,7 +1179,7 @@ function TaskColumn({
             <li className="py-4 text-center text-[12px] text-[var(--color-ink-muted)]">{emptyMsg}</li>
           ) : (
             tasks.map((t) => (
-              <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} readOnly={readOnly} />
+              <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
             ))
           )}
         </ul>
