@@ -256,26 +256,27 @@ export function GroupDashboard({ onOpenCentre }: { onOpenCentre: (slug: string) 
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
-                {(
-                  [
-                    ['occupancy', 'Occupancy'],
-                    ['overdue', 'Risk'],
-                    ['name', 'Name'],
-                  ] as const
-                ).map(([key, label]) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => setSort(key)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
-                      sort === key ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground'
-                    }`}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] font-medium transition hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                   >
-                    {label}
+                    Sort by: {sort === 'occupancy' ? 'Occupancy' : sort === 'overdue' ? 'Risk' : 'Name'}
+                    <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
                   </button>
-                ))}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {([['occupancy', 'Occupancy'], ['overdue', 'Risk'], ['name', 'Name']] as const).map(([key, label]) => (
+                    <DropdownMenuItem key={key} onSelect={() => setSort(key)}>
+                      {label}
+                      {sort === key ? <span className="ml-auto text-[var(--color-accent)]">✓</span> : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
