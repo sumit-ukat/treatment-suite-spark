@@ -80,6 +80,10 @@ export function DetailPanel({
   const [notesText, setNotesText] = useState('');
   const [notesBusy, setNotesBusy] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
+  const [editDetailsMode, setEditDetailsMode] = useState(false);
+  const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false });
+  const [detailsBusy, setDetailsBusy] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [concernEditId, setConcernEditId] = useState<string | null>(null);
   const [concernEditText, setConcernEditText] = useState('');
   const [concernBusy, setConcernBusy] = useState(false);
@@ -121,6 +125,41 @@ export function DetailPanel({
       setNotesError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
       setNotesBusy(false);
+    }
+  }
+
+  function openEditDetails() {
+    setDetailsForm({
+      therapist:  o?.therapist  ?? '',
+      buddy:      o?.buddy      ?? '',
+      keyworker:  o?.keyworker  ?? '',
+      group:      o?.group      ?? '',
+      substance:  o?.substance  ?? '',
+      peep:       o?.peeps      ?? false,
+    });
+    setDetailsError(null);
+    setEditDetailsMode(true);
+  }
+
+  async function saveDetails() {
+    if (!o?.admissionId) return;
+    setDetailsBusy(true);
+    setDetailsError(null);
+    try {
+      await admissions.updateDetails(o.admissionId, {
+        focalTherapistLabel: detailsForm.therapist,
+        buddyLabel:          detailsForm.buddy,
+        keyWorkerLabel:      detailsForm.keyworker,
+        treatmentGroup:      detailsForm.group,
+        substanceName:       detailsForm.substance,
+        peepRequired:        detailsForm.peep,
+      });
+      setEditDetailsMode(false);
+      onChanged?.();
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setDetailsBusy(false);
     }
   }
 
@@ -264,19 +303,137 @@ export function DetailPanel({
 
           {/* Col 2 — Key facts grid + safeguarding status banner */}
           <div className="min-w-0">
-            <dl className="nums grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">
-              <Fact label="Admitted" value={formatDate(o.admittedAt)} />
-              <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
-              <Fact label="Programme" value={`${o.durationDays} days`} />
-              <Fact label="Primary concern" value={o.substance || '—'} />
-              <Fact
-                label="Family meeting"
-                value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
-              />
-              <Fact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
-              <Fact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
-              <Fact label="Buddy" value={o.buddy} />
-            </dl>
+            {/* Key facts header with edit toggle */}
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                Key facts
+              </span>
+              {o.admissionId && can('admissions.edit') && !readOnly ? (
+                editDetailsMode ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditDetailsMode(false)}
+                    className="rounded px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openEditDetails}
+                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    <Pencil className="size-3" />
+                    Edit
+                  </button>
+                )
+              ) : null}
+            </div>
+
+            {editDetailsMode ? (
+              /* ── Edit mode ── */
+              <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Focal therapist
+                    <input
+                      type="text"
+                      value={detailsForm.therapist}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, therapist: e.target.value }))}
+                      placeholder="Name…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Keyworker
+                    <input
+                      type="text"
+                      value={detailsForm.keyworker}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, keyworker: e.target.value }))}
+                      placeholder="Name…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Buddy
+                    <input
+                      type="text"
+                      value={detailsForm.buddy}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, buddy: e.target.value }))}
+                      placeholder="Name…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Treatment group
+                    <input
+                      type="text"
+                      value={detailsForm.group}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, group: e.target.value }))}
+                      placeholder="e.g. A…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Primary concern / substance
+                    <input
+                      type="text"
+                      value={detailsForm.substance}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, substance: e.target.value }))}
+                      placeholder="e.g. Alcohol…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  <div className="flex flex-col justify-end pb-1">
+                    <label className="flex cursor-pointer items-center gap-2 text-[10.5px] text-[var(--color-ink-muted)]">
+                      <input
+                        type="checkbox"
+                        checked={detailsForm.peep}
+                        onChange={(e) => setDetailsForm((f) => ({ ...f, peep: e.target.checked }))}
+                        className="rounded accent-[var(--color-accent)]"
+                      />
+                      PEEP required (personal evacuation plan)
+                    </label>
+                  </div>
+                </div>
+                {detailsError ? (
+                  <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">{detailsError}</p>
+                ) : null}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={detailsBusy}
+                    onClick={() => void saveDetails()}
+                    className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40"
+                  >
+                    {detailsBusy ? 'Saving…' : 'Save changes'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={detailsBusy}
+                    onClick={() => setEditDetailsMode(false)}
+                    className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Read mode ── */
+              <dl className="nums grid grid-cols-2 gap-x-6 gap-y-3.5 text-[12.5px] sm:grid-cols-4">
+                <Fact label="Admitted" value={formatDate(o.admittedAt)} />
+                <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
+                <Fact label="Programme" value={`${o.durationDays} days`} />
+                <Fact label="Primary concern" value={o.substance || '—'} />
+                <Fact
+                  label="Family meeting"
+                  value={o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}
+                />
+                <Fact label="Focal therapist" value={o.therapist ?? 'Not assigned'} />
+                <Fact label="Keyworker" value={o.keyworker ?? 'Not assigned'} />
+                <Fact label="Buddy" value={o.buddy} />
+              </dl>
+            )}
 
             {/* Safeguarding / Risks / Concerns — status only, no concern cards */}
             <div

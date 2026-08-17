@@ -372,6 +372,27 @@ export const admissions = {
     });
     if (error) throw new DataAccessError('admissions.setHighRisk', error);
   },
+
+  /** Edit care-team labels, treatment group, substance and PEEP flag post-admission. */
+  async updateDetails(admissionId: string, details: {
+    focalTherapistLabel: string;
+    buddyLabel: string;
+    keyWorkerLabel: string;
+    treatmentGroup: string;
+    substanceName: string;
+    peepRequired: boolean;
+  }): Promise<void> {
+    const { error } = await client().rpc('update_admission_details', {
+      p_admission_id:          admissionId,
+      p_focal_therapist_label: details.focalTherapistLabel || null,
+      p_buddy_label:           details.buddyLabel || null,
+      p_key_worker_label:      details.keyWorkerLabel || null,
+      p_treatment_group:       details.treatmentGroup || null,
+      p_substance_name:        details.substanceName || null,
+      p_peep_required:         details.peepRequired,
+    });
+    if (error) throw new DataAccessError('admissions.updateDetails', error);
+  },
 };
 
 export interface ClientSearchResult {
