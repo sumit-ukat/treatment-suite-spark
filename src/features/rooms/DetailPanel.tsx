@@ -527,7 +527,7 @@ export function DetailPanel({
                 <button
                   type="button"
                   onClick={() => setDischargeOpen(true)}
-                  className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-700 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
+                  className="w-full rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-[12px] font-semibold text-violet-800 transition hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60"
                 >
                   Discharge
                 </button>
