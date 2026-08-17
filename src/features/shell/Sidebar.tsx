@@ -1,5 +1,6 @@
 import {
   BedDouble,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -46,6 +47,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
   {
     heading: 'Centre',
     items: [
+      { id: 'overview', label: 'Overview', icon: BarChart3, ready: true },
       { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true },
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
