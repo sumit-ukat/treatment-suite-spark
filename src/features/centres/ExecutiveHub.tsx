@@ -443,149 +443,53 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               icon={<TrendingUp className="size-3.5" />}
             />
             <HeroStat
-              label="Centres clear"
-              value={`${clear.length}/${visible.length}`}
-              hint={needAction.length > 0 ? `${needAction.length} need action` : 'none need action'}
+              label="Total issues"
+              value={totals.overdue + totals.pastPlannedDischarge + totals.restrictedAlerts}
+              hint="overdue · past discharge · alerts"
               icon={<ShieldCheck className="size-3.5" />}
             />
           </div>
         </div>
       </section>
 
-      {/* ── Exceptions, then commercial. Two columns because they are two conversations: the left one
-             is a care and compliance question, the right one is a revenue question. ── */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <Panel
-          title="Needs attention"
-          titleExtra={
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-              {watchlist.length}
-            </span>
-          }
-          // Spread rather than a ternary to `undefined`: `Panel`'s `subtitle` is optional but not
-          // nullable, and this project runs `exactOptionalPropertyTypes`.
-          {...(watchlist.length > 0 ? { subtitle: 'Most serious first' } : {})}
-        >
-          {watchlist.length === 0 ? (
-            // The good case gets a real answer, not an empty box. This is the state the page exists to
-            // be able to report, so it should read as a finding rather than as missing content.
-            <div className="flex items-start gap-3 rounded-xl border border-ontrack/40 bg-ontrack-soft px-4 py-5">
-              <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-ontrack" aria-hidden />
-              <div>
-                <p className="font-display text-[14px] font-semibold text-ontrack">Nothing outstanding</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                  Every centre in scope is inside its thresholds — no overdue actions, no resident past a
-                  planned discharge date, and on-time completion at or above {ONTIME_ACT}% everywhere.
+      {/* ── Capacity — full width now that the watchlist and 7-day panels are gone. Those two are
+             replaced by the 6-tile operational health grid directly below. ── */}
+      <div className="mt-4">
+        <Panel title="Capacity" subtitle="Where the empty beds are">
+          <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
+            <div>
+              <div className="flex items-baseline gap-3">
+                <p className="tabular font-display text-[34px] leading-none font-semibold">
+                  {totals.available}
                 </p>
+                <span className="text-[13px] text-muted-foreground">free of {totals.capacity}</span>
+                <span className="ml-auto tabular text-[12px] text-muted-foreground">{avgOccupancy}% avg</span>
               </div>
-            </div>
-          ) : (
-            <ul className="flex flex-col divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)]">
-              {watchlist.map(({ centre, health, reasons }) => {
-                const s = HEALTH_STYLE[health];
-                return (
-                  <li key={centre.slug}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenCentre(centre.slug)}
-                      className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-3.5 py-3 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                    >
-                      <span className={`mt-1.5 size-2 shrink-0 rounded-full ${s.dot}`} aria-hidden />
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="truncate font-semibold">{centre.name}</span>
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${s.soft} ${s.text}`}
-                          >
-                            {s.label}
-                          </span>
-                          <span className="text-[11.5px] text-muted-foreground">{centre.region}</span>
-                        </span>
-                        <span className="mt-1 block text-[12px] leading-relaxed text-muted-foreground">
-                          {reasons.join(' · ')}
-                        </span>
-                      </span>
-                      <span className="tabular mt-0.5 flex shrink-0 items-center gap-2 text-[11.5px] text-muted-foreground">
-                        {centre.occupied}/{centre.capacity}
-                        <ArrowUpRight
-                          className="size-4 text-muted-foreground transition group-hover:text-primary"
-                          aria-hidden
-                        />
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Panel>
-
-        <div className="flex flex-col gap-4">
-          <Panel title="Capacity" subtitle="Where the empty beds are">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="tabular font-display text-[30px] leading-none font-semibold">
-                {totals.available}
-                <span className="ml-1.5 text-[13px] font-normal text-muted-foreground">
-                  free of {totals.capacity}
-                </span>
-              </p>
-              <p className="tabular text-[11.5px] text-muted-foreground">{avgOccupancy}% average</p>
-            </div>
-            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-700"
-                style={{ width: `${totals.occupancyPercent}%` }}
-              />
+              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-700"
+                  style={{ width: `${totals.occupancyPercent}%` }}
+                />
+              </div>
             </div>
 
             {belowAverage.length > 0 ? (
-              <ul className="mt-4 flex flex-col gap-2">
+              <ul className="flex flex-col divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)]">
                 {belowAverage.map((c) => (
-                  <li key={c.slug} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                    <span className="truncate text-[12.5px]">{c.name}</span>
-                    <span className="tabular shrink-0 text-[12px] font-semibold text-muted-foreground">
-                      {c.available} free
-                      <span className="ml-1.5 font-normal">{c.occupancyPercent}%</span>
+                  <li key={c.slug} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-2.5">
+                    <span className="truncate text-[12.5px] font-medium">{c.name}</span>
+                    <span className="tabular text-[12px] text-muted-foreground">{c.available} free</span>
+                    <span className="tabular w-10 text-right text-[12px] font-semibold text-muted-foreground">
+                      {c.occupancyPercent}%
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-4 text-[12px] text-muted-foreground">Every bed in scope is filled.</p>
+              <p className="text-[12px] text-muted-foreground self-center">Every bed in scope is filled.</p>
             )}
-          </Panel>
-
-          <Panel title="Next seven days" subtitle={weekHint}>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <CalendarCheck className="size-3.5" aria-hidden />
-                  <p className="text-[10.5px] font-semibold tracking-[0.08em] uppercase">Discharges</p>
-                </div>
-                <p className="tabular mt-1.5 font-display text-[26px] leading-none font-semibold">
-                  {totals.dischargingThisWeek}
-                </p>
-                <p className="mt-1 text-[11.5px] text-muted-foreground">
-                  beds returning to availability
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Clock className="size-3.5" aria-hidden />
-                  <p className="text-[10.5px] font-semibold tracking-[0.08em] uppercase">Due today</p>
-                </div>
-                <p className="tabular mt-1.5 font-display text-[26px] leading-none font-semibold">
-                  {totals.dueToday}
-                </p>
-                <p className="mt-1 text-[11.5px] text-muted-foreground">actions to complete</p>
-              </div>
-            </div>
-            <p className="mt-4 border-t border-[var(--color-line)] pt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              {totals.dischargingThisWeek + totals.available} beds available by Sunday if every planned
-              discharge lands, against {totals.available} today.
-            </p>
-          </Panel>
-        </div>
+          </div>
+        </Panel>
       </div>
 
       {/* ── Operational health cards. Six focused metrics that answer the two questions a stakeholder
