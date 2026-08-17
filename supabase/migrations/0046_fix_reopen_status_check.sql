@@ -44,7 +44,7 @@ begin
      set status        = 'todo',
          completed_at  = null,
          completed_by  = null,
-         completion_note = null,
+         completion_notes = null,
          due_at        = coalesce(p_new_due_at, due_at),
          updated_by    = auth.uid()
    where id = p_task_id;
