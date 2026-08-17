@@ -20,42 +20,17 @@ function dischargeTimestamp(dateStr: string): Date {
   return noon.getTime() > now.getTime() ? now : noon;
 }
 
-const STEP_LABELS = ['Requested', 'Approved', 'Finalised'] as const;
-
-function StepPills({ active }: { active: 1 | 2 | 3 }) {
+function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' | 'approved' | 'neutral' }) {
+  const colours =
+    variant === 'approved'
+      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+      : variant === 'pending'
+      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      : 'bg-black/[0.06] text-[var(--color-ink-muted)] dark:bg-white/10';
   return (
-    <div className="mb-4 flex items-center">
-      {STEP_LABELS.map((label, i) => {
-        const step = (i + 1) as 1 | 2 | 3;
-        const done = step < active;
-        const current = step === active;
-        return (
-          <div key={step} className="flex min-w-0 flex-1 items-center">
-            <div className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-              done
-                ? 'bg-[var(--color-accent)] text-white'
-                : current
-                ? 'border border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                : 'border border-[var(--color-line)] text-[var(--color-ink-muted)]'
-            }`}>
-              <span className={`grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold ${
-                done
-                  ? 'bg-white/20'
-                  : current
-                  ? 'bg-[var(--color-accent)] text-white'
-                  : 'bg-black/[0.06] dark:bg-white/10'
-              }`}>
-                {done ? '✓' : step}
-              </span>
-              {label}
-            </div>
-            {step < 3 ? (
-              <div className={`mx-1.5 h-px flex-1 ${done ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-line)]'}`} />
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${colours}`}>
+      {label}
+    </span>
   );
 }
 
@@ -89,8 +64,7 @@ export function DischargeWorkflowCard({
   const req = o.dischargeRequest;
   const isOwnRequest = req?.requestedBy != null && req.requestedBy === session?.user.id;
 
-  // Which step is currently active.
-  const activeStep: 1 | 2 | 3 = !req ? 1 : req.status === 'pending' ? 2 : 3;
+  const workflowStage: 'none' | 'pending' | 'approved' = !req ? 'none' : req.status === 'pending' ? 'pending' : 'approved';
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -146,11 +120,10 @@ export function DischargeWorkflowCard({
   );
 
   return (
-    <Panel title="Discharge workflow" subtitle="Three sign-off steps. Each one is written to the audit trail.">
-      <StepPills active={activeStep} />
+    <Panel title="Discharge workflow" subtitle="Each sign-off is written to the audit trail.">
 
-      {/* ── Step 1: Initiate ── */}
-      {activeStep === 1 ? (
+      {/* ── No discharge in progress ── */}
+      {workflowStage === 'none' ? (
         <div>
           {mode === 'idle' ? (
             canInitiate || canFinalise ? (
@@ -165,7 +138,7 @@ export function DischargeWorkflowCard({
               <p className="text-[11px] text-[var(--color-ink-muted)]">No discharge in progress.</p>
             )
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                 Type
                 <select
@@ -179,7 +152,9 @@ export function DischargeWorkflowCard({
                   {canInitiate ? <option value="other">Other</option> : null}
                 </select>
               </label>
+
               {dateField}
+
               <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                 Reason
                 <textarea
@@ -190,6 +165,7 @@ export function DischargeWorkflowCard({
                   className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
+
               {dischargeType === 'transfer' ? (
                 <>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
@@ -212,11 +188,13 @@ export function DischargeWorkflowCard({
                   </label>
                 </>
               ) : null}
+
               {dischargeType !== 'planned' ? (
                 <p className="text-[10px] text-[var(--color-ink-muted)]">
                   This needs sign-off from a different person before it can be finalised.
                 </p>
               ) : null}
+
               <div className="flex items-center gap-2">
                 <button type="button" disabled={busy || !reason.trim()} onClick={submitNewDischarge}
                   className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
@@ -232,15 +210,18 @@ export function DischargeWorkflowCard({
         </div>
       ) : null}
 
-      {/* ── Step 2: Approve ── */}
-      {activeStep === 2 && req ? (
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)]">
-            <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</p>
-            <p className="mt-0.5">{req.reason}</p>
-            {req.dischargeType === 'transfer' && req.transferDestination ? (
-              <p className="mt-0.5">To: {req.transferDestination}{req.transferTreatmentType ? ` · ${req.transferTreatmentType}` : ''}{req.transferDurationDays ? ` · ${req.transferDurationDays}d` : ''}</p>
-            ) : null}
+      {/* ── Pending approval ── */}
+      {workflowStage === 'pending' && req ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)] flex-1">
+              <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</p>
+              <p className="mt-0.5">{req.reason}</p>
+              {req.dischargeType === 'transfer' && req.transferDestination ? (
+                <p className="mt-0.5">To: {req.transferDestination}{req.transferTreatmentType ? ` · ${req.transferTreatmentType}` : ''}{req.transferDurationDays ? ` · ${req.transferDurationDays}d` : ''}</p>
+              ) : null}
+            </div>
+            <WorkflowStatus label="Pending approval" variant="pending" />
           </div>
 
           {mode === 'idle' ? (
@@ -286,12 +267,15 @@ export function DischargeWorkflowCard({
         </div>
       ) : null}
 
-      {/* ── Step 3: Finalise ── */}
-      {activeStep === 3 && req ? (
-        <div className="flex flex-col gap-2">
-          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)]">
-            <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]} — approved</p>
-            <p className="mt-0.5">{req.approvalNotes || req.reason}</p>
+      {/* ── Approved — ready to finalise ── */}
+      {workflowStage === 'approved' && req ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)] flex-1">
+              <p className="font-medium text-[var(--color-ink)]">{DISCHARGE_TYPE_LABEL[req.dischargeType]}</p>
+              <p className="mt-0.5">{req.approvalNotes || req.reason}</p>
+            </div>
+            <WorkflowStatus label="Approved" variant="approved" />
           </div>
 
           {canFinalise && mode === 'idle' ? (
