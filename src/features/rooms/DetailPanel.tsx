@@ -520,14 +520,14 @@ export function DetailPanel({
                 <button
                   type="button"
                   onClick={() => setExtendStayOpen(true)}
-                  className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[12px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                  className="w-full rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-[12px] font-semibold text-teal-800 transition hover:bg-teal-100 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-950/60"
                 >
                   Extend stay
                 </button>
                 <button
                   type="button"
                   onClick={() => setDischargeOpen(true)}
-                  className="w-full rounded-lg border border-[var(--color-line)] px-3 py-2 text-[12px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                  className="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-700 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
                 >
                   Discharge
                 </button>
