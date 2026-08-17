@@ -37,16 +37,18 @@ function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' 
 export function DischargeWorkflowCard({
   occupant: o,
   onChanged,
+  startInFormMode = false,
 }: {
   occupant: Occupant;
   onChanged?: (() => void) | undefined;
+  startInFormMode?: boolean;
 }) {
   const { can, session } = useAuth();
   const canInitiate = can('discharge.initiate');
   const canApprove = can('discharge.approve');
   const canFinalise = can('discharge.finalise');
 
-  const [mode, setMode] = useState<'idle' | 'form' | 'reject'>('idle');
+  const [mode, setMode] = useState<'idle' | 'form' | 'reject'>(startInFormMode ? 'form' : 'idle');
   const [dischargeType, setDischargeType] = useState<DischargeRequestSummary['dischargeType'] | 'planned'>(
     () => (canFinalise ? 'planned' : 'early'),
   );

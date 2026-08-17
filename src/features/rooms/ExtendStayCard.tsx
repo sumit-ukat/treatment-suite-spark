@@ -62,15 +62,17 @@ export function ExtendStayCard({
   occupant: o,
   centreId,
   onChanged,
+  startInFormMode = false,
 }: {
   occupant: Occupant;
   centreId: string;
   onChanged?: (() => void) | undefined;
+  startInFormMode?: boolean;
 }) {
   const { can } = useAuth();
   const canInitiate = can('extension.initiate');
 
-  const [mode, setMode] = useState<'idle' | 'form'>('idle');
+  const [mode, setMode] = useState<'idle' | 'form'>(startInFormMode ? 'form' : 'idle');
   const [reason, setReason] = useState('');
   const [programmeType, setProgrammeType] = useState<'main' | 'secondary'>('main');
   const [additionalDays, setAdditionalDays] = useState('14');

@@ -758,7 +758,7 @@ export function DetailPanel({
             </button>
           </div>
           <div className="overflow-y-auto p-4">
-            <ExtendStayCard occupant={o} centreId={centreId} onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
+            <ExtendStayCard occupant={o} centreId={centreId} startInFormMode onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
       </Dialog>
@@ -780,7 +780,7 @@ export function DetailPanel({
             </button>
           </div>
           <div className="overflow-y-auto p-4">
-            <DischargeWorkflowCard occupant={o} onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
+            <DischargeWorkflowCard occupant={o} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
       </Dialog>

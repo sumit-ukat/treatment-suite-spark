@@ -788,15 +788,22 @@ function BoardPage() {
         only, with detail reachable through the client file by authorised roles.
       </p>
 
-      {selected ? (
-        <DetailPanel
-          bed={selected}
-          centreId={authCentre.id}
-          onClose={closeBed}
-          onChanged={() => refreshBoard()}
-          readOnly={!!asOf}
-        />
-      ) : null}
+      {selected ? (() => {
+        const occupiedVisible = visible.filter((b) => b.occupant !== null);
+        const idx = occupiedVisible.findIndex((b) => b.label === openBedLabel);
+        return (
+          <DetailPanel
+            key={selected.label}
+            bed={selected}
+            centreId={authCentre.id}
+            onClose={closeBed}
+            onChanged={() => refreshBoard()}
+            onPrev={idx > 0 ? () => openBed(occupiedVisible[idx - 1]!.label) : undefined}
+            onNext={idx < occupiedVisible.length - 1 ? () => openBed(occupiedVisible[idx + 1]!.label) : undefined}
+            readOnly={!!asOf}
+          />
+        );
+      })() : null}
     </div>
   );
 }
