@@ -12,6 +12,7 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 import {
+  ArrowUpRight,
   ChevronDown,
   ClipboardList,
   Filter,
@@ -365,6 +366,31 @@ function HubPage() {
       <ProvenanceBanner />
       <HubHeader variant="operations" />
       <main className="min-h-0 flex-1 overflow-y-auto">
+        {/* Executive hub entry point — lives here rather than only in the header switcher so it is
+            visible without scrolling and readable without knowing the switcher exists. */}
+        <div className="mx-auto max-w-[1500px] px-4 pt-4 sm:px-5">
+          <button
+            type="button"
+            onClick={() => navigate('/exec')}
+            className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-primary/25 bg-primary-soft px-5 py-4 text-left shadow-soft transition hover:border-primary/50 hover:bg-primary-soft"
+          >
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-semibold tracking-[0.1em] text-primary uppercase">
+                Executive summary
+              </p>
+              <p className="mt-0.5 truncate font-display text-[15px] font-semibold">
+                Group at a glance — one verdict, no noise
+              </p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Occupancy, exceptions, capacity and weekly discharges across all centres in one screen.
+              </p>
+            </div>
+            <ArrowUpRight
+              className="size-5 shrink-0 text-primary transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              aria-hidden
+            />
+          </button>
+        </div>
         <GroupDashboard onOpenCentre={(slug) => navigate(`/centre/${slug}/treatment-board`)} />
       </main>
     </div>
