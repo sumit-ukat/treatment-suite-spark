@@ -52,6 +52,7 @@ import { AvailableCard, OccupiedCard } from '../rooms/BedCard.tsx';
 import { BedList } from '../rooms/BedList.tsx';
 import { DetailPanel } from '../rooms/DetailPanel.tsx';
 import { GroupDashboard } from '../centres/GroupDashboard.tsx';
+import { ExecutiveHub } from '../centres/ExecutiveHub.tsx';
 import { Administration } from '../administration/Administration.tsx';
 import { AdmitClientForm } from '../admissions/AdmitClientForm.tsx';
 import { ClientDirectory } from '../clients/ClientDirectory.tsx';
@@ -113,6 +114,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/hub" replace />} />
       <Route path="/hub" element={<HubPage />} />
+      {/* A second hub, not a replacement — the executive read of the estate, kept alongside the
+          operational one so the two can be compared before either is committed to. */}
+      <Route path="/exec" element={<ExecHubPage />} />
       <Route path="/centre/:centreSlug" element={<CentreShell />}>
         <Route index element={<Navigate to="treatment-board" replace />} />
         <Route path="board" element={<BoardPage />} />
@@ -289,10 +293,47 @@ function CentreSwitcher({
   );
 }
 
+/**
+ * Two hubs over the same ten centres, so the switch belongs in the chrome rather than as a link
+ * buried in either page — a reader comparing them should be able to flip back and forth without
+ * losing their place, and should never be in doubt about which one they are looking at.
+ *
+ * This is a deliberately temporary control: the point of building the executive hub as a second
+ * destination was to try it before replacing the operational one. When that call is made, one route
+ * goes and this switcher goes with it.
+ */
+function HubSwitcher({ current }: { current: 'operations' | 'executive' }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-0.5">
+      {(
+        [
+          ['executive', 'Executive', '/exec'],
+          ['operations', 'Operations', '/hub'],
+        ] as const
+      ).map(([key, label, path]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => navigate(path)}
+          aria-current={current === key ? 'page' : undefined}
+          className={`rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+            current === key
+              ? 'bg-[var(--color-accent)] text-white'
+              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Header for the hub — a plain sticky light bar, matching the source exactly, not this app's dark
  * chrome treatment used everywhere else. The BrandMark still carries its own gradient-filled icon
  * box, so it reads fine here regardless of the header background around it. */
-function HubHeader() {
+function HubHeader({ variant }: { variant: 'operations' | 'executive' }) {
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)]/85 px-4 backdrop-blur sm:px-6">
       <BrandMark />
@@ -300,10 +341,13 @@ function HubHeader() {
         <div className="truncate font-display text-[15px] leading-tight font-semibold">
           Treatment Operations
         </div>
-        <div className="truncate text-[11px] text-[var(--color-ink-muted)]">Group hub</div>
+        <div className="truncate text-[11px] text-[var(--color-ink-muted)]">
+          {variant === 'executive' ? 'Group hub · executive view' : 'Group hub'}
+        </div>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <HubSwitcher current={variant} />
         <LiveClock className="hidden sm:flex" />
         <ThemeToggle />
         <UserMenu variant="panel" />
@@ -319,9 +363,30 @@ function HubPage() {
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <ProvenanceBanner />
-      <HubHeader />
+      <HubHeader variant="operations" />
       <main className="min-h-0 flex-1 overflow-y-auto">
         <GroupDashboard onOpenCentre={(slug) => navigate(`/centre/${slug}/treatment-board`)} />
+      </main>
+    </div>
+  );
+}
+
+/**
+ * `/exec` — the same ten centres read for a stakeholder rather than an operator: one verdict, the
+ * exceptions named, and the commercial and operational questions kept in separate panels.
+ *
+ * Opening a centre from here lands on its own Overview rather than the treatment board, because the
+ * question that brought a stakeholder in ("why is this one flagged?") is answered by that centre's
+ * summary, not by a grid of beds.
+ */
+function ExecHubPage() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <ProvenanceBanner />
+      <HubHeader variant="executive" />
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <ExecutiveHub onOpenCentre={(slug) => navigate(`/centre/${slug}/overview`)} />
       </main>
     </div>
   );
