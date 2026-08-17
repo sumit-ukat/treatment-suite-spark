@@ -1,16 +1,18 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
+  Activity,
   ArrowUpRight,
   BedDouble,
-  Building2,
   CalendarCheck,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
   Clock,
+  ImageOff,
   ShieldCheck,
   TrendingUp,
   TriangleAlert,
+  UserX,
   Users,
 } from 'lucide-react';
 import { buildCentres, groupTotals, type CentreSummary } from './centres-data.js';
@@ -586,62 +588,167 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
       </div>
 
-      {/* ── Region rollup. Always both regions regardless of scope: the point of this strip is the
-             comparison, and a comparison with one side removed is not one. ── */}
-      {picked.length === 0 && regionRollup.length > 1 ? (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {regionRollup.map(({ region: r, totals: t, count, assessed: ra }) => {
-            const acting = ra.filter((a) => a.health === 'act').length;
-            const isScoped = region === r;
+      {/* ── Operational health cards. Six focused metrics that answer the two questions a stakeholder
+             actually asks: "is anything on fire?" and "is the estate full?". Ordered by urgency —
+             past-discharge and high-risk first, because those are the ones that prompt phone calls. ── */}
+      <div className="mt-4">
+        <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          Operational health
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            {
+              label: 'Past discharge',
+              value: totals.pastPlannedDischarge,
+              hint: 'still resident past planned date',
+              icon: <UserX className="size-4" />,
+              accent: totals.pastPlannedDischarge > 0 ? 'critical' : 'good',
+            },
+            {
+              label: 'High-risk alerts',
+              value: totals.restrictedAlerts,
+              hint: 'restricted alert flags across estate',
+              icon: <CircleAlert className="size-4" />,
+              accent: totals.restrictedAlerts > 2 ? 'critical' : totals.restrictedAlerts > 0 ? 'warn' : 'good',
+            },
+            {
+              label: 'Overdue actions',
+              value: totals.overdue,
+              hint: 'past their due date',
+              icon: <TriangleAlert className="size-4" />,
+              accent: totals.overdue >= OVERDUE_ACT ? 'critical' : totals.overdue > 0 ? 'warn' : 'good',
+            },
+            {
+              label: 'Due today',
+              value: totals.dueToday,
+              hint: 'actions to complete today',
+              icon: <Clock className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Discharges',
+              value: totals.dischargingThisWeek,
+              hint: 'planned this week',
+              icon: <CalendarCheck className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Photos missing',
+              value: totals.photoAttention,
+              hint: 'client photos need attention',
+              icon: <ImageOff className="size-4" />,
+              accent: totals.photoAttention > PHOTO_WATCH ? 'warn' : 'neutral',
+            },
+          ].map(({ label, value, hint, icon, accent }) => {
+            const topBar =
+              accent === 'critical'
+                ? 'bg-overdue'
+                : accent === 'warn'
+                  ? 'bg-attention'
+                  : accent === 'good'
+                    ? 'bg-ontrack'
+                    : 'bg-border';
+            const numColor =
+              accent === 'critical'
+                ? 'text-overdue'
+                : accent === 'warn'
+                  ? 'text-attention'
+                  : 'text-foreground';
             return (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRegion(isScoped ? 'all' : r)}
-                aria-pressed={isScoped}
-                className={`rounded-2xl border bg-card p-5 text-left shadow-soft transition hover:border-primary/50 ${
-                  isScoped ? 'border-primary' : 'border-[var(--color-line)]'
-                }`}
+              <div
+                key={label}
+                className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="size-4 text-muted-foreground" aria-hidden />
-                    <p className="font-display text-[14px] font-semibold">{r}</p>
-                    <span className="text-[11.5px] text-muted-foreground">
-                      {count} centre{count === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  {acting > 0 ? (
-                    <span className="rounded-full bg-overdue-soft px-2 py-0.5 text-[10.5px] font-bold text-overdue uppercase">
-                      {acting} to action
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-ontrack-soft px-2 py-0.5 text-[10.5px] font-bold text-ontrack uppercase">
-                      Clear
-                    </span>
-                  )}
+                <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    {label}
+                  </p>
+                  <span className="text-muted-foreground">{icon}</span>
                 </div>
-                <div className="tabular mt-3.5 grid grid-cols-3 gap-3">
-                  {[
-                    { k: 'Occupancy', v: `${t.occupancyPercent}%`, s: `${t.occupied}/${t.capacity}` },
-                    { k: 'On time', v: `${t.onTimePercent}%`, s: 'to plan' },
-                    { k: 'Overdue', v: String(t.overdue), s: 'actions' },
-                  ].map(({ k, v, s }) => (
-                    <div key={k}>
-                      <p className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-                        {k}
-                      </p>
-                      <p className="mt-1 font-display text-[19px] leading-none font-semibold">{v}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">{s}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3.5">
-                  <MiniBar percent={t.occupancyPercent} />
-                </div>
-              </button>
+                <p className={`tabular mt-3 font-display text-[30px] leading-none font-semibold ${numColor}`}>
+                  {value}
+                </p>
+                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>
+              </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Region comparison — a compact table, not clickable cards. The two regions are there for
+             reference; a stakeholder who wants to drill in uses the scope toggle at the top. ── */}
+      {picked.length === 0 && regionRollup.length > 1 ? (
+        <div className="mt-4">
+          <Panel title="By region">
+            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+              <div className="hidden grid-cols-[minmax(0,1fr)_repeat(5,minmax(0,0.8fr))_auto] gap-3 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2 text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase sm:grid">
+                <span>Region</span>
+                <span className="text-right">Centres</span>
+                <span className="text-right">Occupied</span>
+                <span className="text-right">Overdue</span>
+                <span className="text-right">On time</span>
+                <span className="text-right">Discharges</span>
+                <span className="w-4" />
+              </div>
+              {regionRollup.map(({ region: r, totals: t, count, assessed: ra }) => {
+                const acting = ra.filter((a) => a.health === 'act').length;
+                const watching = ra.filter((a) => a.health === 'watch').length;
+                const isScoped = region === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRegion(isScoped ? 'all' : r)}
+                    aria-pressed={isScoped}
+                    className={`grid w-full grid-cols-1 gap-2 px-4 py-3.5 text-left transition hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_repeat(5,minmax(0,0.8fr))_auto] sm:items-center ${
+                      isScoped ? 'bg-primary-soft' : ''
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="min-w-0">
+                        <span className="block font-display text-[14px] font-semibold">{r}</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          {acting > 0 ? (
+                            <span className="font-semibold text-overdue">{acting} to action</span>
+                          ) : watching > 0 ? (
+                            <span className="font-semibold text-attention">{watching} to watch</span>
+                          ) : (
+                            <span className="text-ontrack">All clear</span>
+                          )}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="tabular text-[13px] sm:text-right">
+                      <span className="sm:hidden text-muted-foreground text-[11px]">Centres </span>
+                      {count}
+                    </span>
+                    <span className="tabular text-[13px] sm:text-right">
+                      <span className="sm:hidden text-muted-foreground text-[11px]">Occupied </span>
+                      {t.occupied}/{t.capacity}
+                      <span className="ml-1 text-[11px] text-muted-foreground">{t.occupancyPercent}%</span>
+                    </span>
+                    <span className={`tabular text-[13px] sm:text-right font-semibold ${t.overdue >= OVERDUE_ACT ? 'text-overdue' : t.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>
+                      <span className="sm:hidden text-muted-foreground text-[11px] font-normal">Overdue </span>
+                      {t.overdue}
+                    </span>
+                    <span className={`tabular text-[13px] sm:text-right ${t.onTimePercent < ONTIME_ACT ? 'font-bold text-overdue' : 'text-muted-foreground'}`}>
+                      <span className="sm:hidden text-muted-foreground text-[11px] font-normal">On time </span>
+                      {t.onTimePercent}%
+                    </span>
+                    <span className="tabular text-[13px] text-muted-foreground sm:text-right">
+                      <span className="sm:hidden text-muted-foreground text-[11px]">Discharges </span>
+                      {t.dischargingThisWeek}
+                    </span>
+                    <Activity
+                      className={`hidden size-4 sm:block ${isScoped ? 'text-primary' : 'text-muted-foreground'}`}
+                      aria-hidden
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </Panel>
         </div>
       ) : null}
 
