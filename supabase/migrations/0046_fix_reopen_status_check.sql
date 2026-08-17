@@ -41,9 +41,9 @@ begin
   perform set_config('app.change_reason', v_reason, true);
 
   update public.client_tasks
-     set status        = 'todo',
-         completed_at  = null,
-         completed_by  = null,
+     set status           = 'not_started',
+         completed_at     = null,
+         completed_by     = null,
          completion_notes = null,
          due_at        = coalesce(p_new_due_at, due_at),
          updated_by    = auth.uid()
