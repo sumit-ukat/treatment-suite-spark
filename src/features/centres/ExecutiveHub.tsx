@@ -486,13 +486,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       : 'good',
               },
               {
-                label: 'Extended stays',
-                value: totals.extendedStays,
-                hint: 'clients on approved extensions',
-                icon: <CalendarCheck className="size-4" />,
-                accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
-              },
-              {
                 label: 'No therapist',
                 value: totals.missingTherapist,
                 hint: 'clients without assigned therapist',
@@ -503,6 +496,13 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                     : totals.missingTherapist > 0
                       ? 'warn'
                       : 'good',
+              },
+              {
+                label: 'Extended stays',
+                value: totals.extendedStays,
+                hint: 'clients on approved extensions',
+                icon: <CalendarCheck className="size-4" />,
+                accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
               },
               {
                 label: 'Discharging',
