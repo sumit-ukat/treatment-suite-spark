@@ -37,6 +37,12 @@ export interface CentreSummary {
   restrictedAlerts: number;
   /** Required actions completed by their due date, as a percentage. Fictional. */
   onTimePercent: number;
+  /** Clients currently on an extended stay (approved extension to original discharge). */
+  extendedStays: number;
+  /** Clients without an assigned focal therapist — compliance and quality risk. */
+  missingTherapist: number;
+  /** Overdue items estimated to be older than 7 days — chronic backlog indicator. */
+  agedOverdue: number;
   /** True only for the centre that is actually configured in the database. */
   isConfigured: boolean;
 }
@@ -92,25 +98,29 @@ function seededValues(seed: string, count: number): number[] {
 }
 
 function fictionalCentre(spec: CentreSpec): CentreSummary {
-  const [r0, r1, r2, r3, r4, r5, r6, r7] = seededValues(spec.slug, 8) as [
-    number, number, number, number, number, number, number, number,
+  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10] = seededValues(spec.slug, 11) as [
+    number, number, number, number, number, number, number, number, number, number, number,
   ];
 
   const occupied = Math.min(spec.capacity, Math.round(spec.capacity * (0.62 + r0 * 0.36)));
   const available = spec.capacity - occupied;
+  const overdue = Math.round(r1 * 14);
 
   return {
     ...spec,
     occupied,
     available,
     occupancyPercent: Math.round((occupied / spec.capacity) * 100),
-    overdue: Math.round(r1 * 14),
+    overdue,
     dueToday: Math.round(r2 * 9),
     dischargingThisWeek: Math.round(r3 * 5),
     pastPlannedDischarge: r4 > 0.78 ? 1 : 0,
     photoAttention: Math.round(r5 * 4),
     restrictedAlerts: Math.round(r6 * 3),
     onTimePercent: Math.round(72 + r7 * 26),
+    extendedStays: Math.round(r8 * occupied * 0.25),
+    missingTherapist: Math.round(r9 * occupied * 0.15),
+    agedOverdue: Math.round(overdue * (0.35 + r10 * 0.30)),
     isConfigured: false,
   };
 }
@@ -119,6 +129,7 @@ function fictionalCentre(spec: CentreSpec): CentreSummary {
 function primroseCentre(spec: CentreSpec): CentreSummary {
   const board = buildBoard(NOW);
   const s = summarise(board);
+  const occupants = board.flatMap((b) => (b.occupant ? [b.occupant] : []));
   const onTime = board
     .flatMap((b) => (b.occupant ? b.occupant.tasks : []))
     .filter((t) => t.isComplete || t.isOverdue);
@@ -138,6 +149,10 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     photoAttention: s.photoAttention,
     restrictedAlerts: s.restrictedAlerts,
     onTimePercent: onTime.length ? Math.round((completedOnTime / onTime.length) * 100) : 100,
+    extendedStays: occupants.filter((o) => o.isExtendedStay).length,
+    missingTherapist: s.missingTherapist,
+    // No per-task age available at this level — use the same seeded estimate as fictional centres.
+    agedOverdue: Math.round(s.overdue * 0.45),
     isConfigured: true,
   };
 }
@@ -161,6 +176,9 @@ export interface GroupTotals {
   photoAttention: number;
   restrictedAlerts: number;
   onTimePercent: number;
+  extendedStays: number;
+  missingTherapist: number;
+  agedOverdue: number;
   capacityUnconfirmed: number;
 }
 
@@ -184,6 +202,9 @@ export function groupTotals(centres: readonly CentreSummary[]): GroupTotals {
     onTimePercent: occupied
       ? Math.round(sum((c) => c.onTimePercent * c.occupied) / occupied)
       : 0,
+    extendedStays: sum((c) => c.extendedStays),
+    missingTherapist: sum((c) => c.missingTherapist),
+    agedOverdue: sum((c) => c.agedOverdue),
     capacityUnconfirmed: centres.filter((c) => !c.capacityConfirmed).length,
   };
 }

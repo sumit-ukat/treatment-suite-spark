@@ -444,16 +444,124 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             />
             <HeroStat
               label="Total issues"
-              value={totals.overdue + totals.pastPlannedDischarge + totals.restrictedAlerts}
-              hint="overdue · past discharge · alerts"
+              value={totals.overdue + totals.pastPlannedDischarge + totals.extendedStays}
+              hint="overdue · past discharge · extended"
               icon={<ShieldCheck className="size-3.5" />}
             />
           </div>
         </div>
       </section>
 
-      {/* ── Capacity — full width now that the watchlist and 7-day panels are gone. Those two are
-             replaced by the 6-tile operational health grid directly below. ── */}
+      {/* ── Business health grid — 2nd on the page because these are the numbers that explain the
+             verdict above. Ordered by urgency: issues first, then pipeline, then efficiency. ── */}
+      <div className="mt-4">
+        <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          Business health
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {(
+            [
+              {
+                label: 'Open issues',
+                value: totals.overdue + totals.pastPlannedDischarge,
+                hint: `${totals.pastPlannedDischarge} past discharge · ${totals.overdue} overdue`,
+                icon: <CircleAlert className="size-4" />,
+                accent:
+                  totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
+                    ? 'critical'
+                    : totals.overdue > 0
+                      ? 'warn'
+                      : 'good',
+              },
+              {
+                label: 'Issues >7 days',
+                value: totals.agedOverdue,
+                hint: 'unresolved for over a week',
+                icon: <Clock className="size-4" />,
+                accent:
+                  totals.agedOverdue > 10
+                    ? 'critical'
+                    : totals.agedOverdue > 0
+                      ? 'warn'
+                      : 'good',
+              },
+              {
+                label: 'Extended stays',
+                value: totals.extendedStays,
+                hint: 'clients on approved extensions',
+                icon: <CalendarCheck className="size-4" />,
+                accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
+              },
+              {
+                label: 'No therapist',
+                value: totals.missingTherapist,
+                hint: 'clients without assigned therapist',
+                icon: <UserX className="size-4" />,
+                accent:
+                  totals.missingTherapist > 5
+                    ? 'critical'
+                    : totals.missingTherapist > 0
+                      ? 'warn'
+                      : 'good',
+              },
+              {
+                label: 'Discharging',
+                value: totals.dischargingThisWeek,
+                hint: 'planned this week',
+                icon: <ArrowUpRight className="size-4" />,
+                accent: 'neutral',
+              },
+              {
+                label: 'On-time rate',
+                value: `${totals.onTimePercent}%`,
+                hint: 'actions completed to plan',
+                icon: <TrendingUp className="size-4" />,
+                accent:
+                  totals.onTimePercent < ONTIME_ACT
+                    ? 'critical'
+                    : totals.onTimePercent < 90
+                      ? 'warn'
+                      : 'good',
+              },
+            ] as const
+          ).map(({ label, value, hint, icon, accent }) => {
+            const topBar =
+              accent === 'critical'
+                ? 'bg-overdue'
+                : accent === 'warn'
+                  ? 'bg-attention'
+                  : accent === 'good'
+                    ? 'bg-ontrack'
+                    : 'bg-border';
+            const numColor =
+              accent === 'critical'
+                ? 'text-overdue'
+                : accent === 'warn'
+                  ? 'text-attention'
+                  : 'text-foreground';
+            return (
+              <div
+                key={label}
+                className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
+              >
+                <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    {label}
+                  </p>
+                  <span className="text-muted-foreground">{icon}</span>
+                </div>
+                <p className={`tabular mt-3 font-display text-[30px] leading-none font-semibold ${numColor}`}>
+                  {value}
+                </p>
+                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Capacity — 3rd, after the business health cards. ── */}
       <div className="mt-4">
         <Panel title="Capacity" subtitle="Where the empty beds are">
           <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
@@ -490,94 +598,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             )}
           </div>
         </Panel>
-      </div>
-
-      {/* ── Operational health cards. Six focused metrics that answer the two questions a stakeholder
-             actually asks: "is anything on fire?" and "is the estate full?". Ordered by urgency —
-             past-discharge and high-risk first, because those are the ones that prompt phone calls. ── */}
-      <div className="mt-4">
-        <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Operational health
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {[
-            {
-              label: 'Past discharge',
-              value: totals.pastPlannedDischarge,
-              hint: 'still resident past planned date',
-              icon: <UserX className="size-4" />,
-              accent: totals.pastPlannedDischarge > 0 ? 'critical' : 'good',
-            },
-            {
-              label: 'High-risk alerts',
-              value: totals.restrictedAlerts,
-              hint: 'restricted alert flags across estate',
-              icon: <CircleAlert className="size-4" />,
-              accent: totals.restrictedAlerts > 2 ? 'critical' : totals.restrictedAlerts > 0 ? 'warn' : 'good',
-            },
-            {
-              label: 'Overdue actions',
-              value: totals.overdue,
-              hint: 'past their due date',
-              icon: <TriangleAlert className="size-4" />,
-              accent: totals.overdue >= OVERDUE_ACT ? 'critical' : totals.overdue > 0 ? 'warn' : 'good',
-            },
-            {
-              label: 'Due today',
-              value: totals.dueToday,
-              hint: 'actions to complete today',
-              icon: <Clock className="size-4" />,
-              accent: 'neutral',
-            },
-            {
-              label: 'Discharges',
-              value: totals.dischargingThisWeek,
-              hint: 'planned this week',
-              icon: <CalendarCheck className="size-4" />,
-              accent: 'neutral',
-            },
-            {
-              label: 'Photos missing',
-              value: totals.photoAttention,
-              hint: 'client photos need attention',
-              icon: <ImageOff className="size-4" />,
-              accent: totals.photoAttention > PHOTO_WATCH ? 'warn' : 'neutral',
-            },
-          ].map(({ label, value, hint, icon, accent }) => {
-            const topBar =
-              accent === 'critical'
-                ? 'bg-overdue'
-                : accent === 'warn'
-                  ? 'bg-attention'
-                  : accent === 'good'
-                    ? 'bg-ontrack'
-                    : 'bg-border';
-            const numColor =
-              accent === 'critical'
-                ? 'text-overdue'
-                : accent === 'warn'
-                  ? 'text-attention'
-                  : 'text-foreground';
-            return (
-              <div
-                key={label}
-                className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
-              >
-                <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    {label}
-                  </p>
-                  <span className="text-muted-foreground">{icon}</span>
-                </div>
-                <p className={`tabular mt-3 font-display text-[30px] leading-none font-semibold ${numColor}`}>
-                  {value}
-                </p>
-                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* ── Region comparison — a compact table, not clickable cards. The two regions are there for

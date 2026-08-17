@@ -251,7 +251,7 @@ export function StakeholderDashboard({
                 </thead>
                 <tbody className="divide-y divide-[var(--color-line)]">
                   {leavingSoon.map(({ bed, o }) => (
-                    <tr key={bed.id} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
+                    <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
                           {o.hasRestrictedAlert ? <span title="High risk" className="size-1.5 shrink-0 rounded-full bg-red-500" /> : null}
@@ -301,7 +301,7 @@ export function StakeholderDashboard({
                 </thead>
                 <tbody className="divide-y divide-[var(--color-line)]">
                   {needsAttention.map(({ bed, o }) => (
-                    <tr key={bed.id} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
+                    <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
                       <td className="px-3 py-2.5 font-medium text-[var(--color-ink)]">{o.displayName}</td>
                       <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
                       <td className="px-3 py-2.5">
