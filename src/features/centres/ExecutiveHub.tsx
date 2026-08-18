@@ -258,7 +258,7 @@ function MetricGrid({ cards }: { cards: readonly MetricCardSpec[] }) {
 
 /* ─────────────────────────── the hub ─────────────────────────── */
 
-type SortKey = 'risk' | 'occupancy' | 'name';
+type SortKey = 'risk' | 'occupancy' | 'name' | 'free-beds';
 
 export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) => void }) {
   const centres = useMemo(() => buildCentres(), []);
@@ -271,7 +271,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const [region, setRegionState] = useState<'all' | 'North' | 'South'>('all');
   const [picked, setPickedState] = useState<readonly string[]>([]);
   const [sort, setSort] = useState<SortKey>('risk');
-  const [capacitySort, setCapacitySort] = useState<'occ-asc' | 'occ-desc' | 'name' | 'region'>('occ-asc');
 
   const setRegion = (r: 'all' | 'North' | 'South') => {
     setRegionState(r);
@@ -357,29 +356,13 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   // Group average is a real benchmark derived from the scoped set — unlike an occupancy "target",
   // which has not been supplied and would be invented if it appeared here.
   const avgOccupancy = totals.occupancyPercent;
-  const capacitySorted = useMemo(
-    () =>
-      [...visible].sort((a, b) => {
-        switch (capacitySort) {
-          case 'occ-asc':  return a.occupancyPercent - b.occupancyPercent;
-          case 'occ-desc': return b.occupancyPercent - a.occupancyPercent;
-          case 'name':     return a.name.localeCompare(b.name);
-          case 'region':
-            return a.region !== b.region
-              ? a.region.localeCompare(b.region)
-              : a.name.localeCompare(b.name);
-        }
-      }),
-    [visible, capacitySort],
-  );
-  const capacityHalf  = Math.ceil(capacitySorted.length / 2);
-  const capacityLeft  = capacitySorted.slice(0, capacityHalf);
-  const capacityRight = capacitySorted.slice(capacityHalf);
 
   const sorted = [...assessed].sort((a, b) => {
     switch (sort) {
       case 'occupancy':
         return b.centre.occupancyPercent - a.centre.occupancyPercent;
+      case 'free-beds':
+        return b.centre.available - a.centre.available;
       case 'name':
         return a.centre.name.localeCompare(b.centre.name);
       case 'risk':
@@ -654,138 +637,8 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         />
       </div>
 
-      {/* ── Capacity — 3rd, after the business health cards. ── */}
-      <div className="mt-4">
-        <Panel
-          title="Capacity"
-          subtitle="Where the empty beds are"
-          titleExtra={
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-2.5 py-1.5 text-[12px] font-medium">
-              Sort:
-              <select
-                value={capacitySort}
-                onChange={(e) => setCapacitySort(e.target.value as 'occ-asc' | 'occ-desc' | 'name' | 'region')}
-                className="cursor-pointer appearance-none bg-transparent text-[12px] font-medium"
-              >
-                <option value="occ-asc">Most free beds</option>
-                <option value="occ-desc">Highest occupancy</option>
-                <option value="name">A–Z by name</option>
-                <option value="region">By region</option>
-              </select>
-              <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
-            </label>
-          }
-        >
-          {/* Summary stats row */}
-          <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
-            <div className="min-w-[180px] flex-1">
-              <div className="flex items-baseline gap-2">
-                <p className="tabular font-display text-[34px] leading-none font-semibold">
-                  {totals.available}
-                </p>
-                <span className="text-[13px] text-muted-foreground">free of {totals.capacity}</span>
-                <span className="ml-auto tabular text-[12px] text-muted-foreground">{avgOccupancy}% avg</span>
-              </div>
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-                <div
-                  className="h-full rounded-full bg-primary transition-[width] duration-700"
-                  style={{ width: `${totals.occupancyPercent}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-8">
-              <div>
-                <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Freeing this week
-                </p>
-                <p className="tabular mt-1 font-display text-[22px] leading-none font-semibold">
-                  {totals.dischargingThisWeek}
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">planned discharges</p>
-              </div>
-              {(['South', 'North'] as const).map((r) => {
-                const rFree = visible.filter((c) => c.region === r).reduce((n, c) => n + c.available, 0);
-                const rCap  = visible.filter((c) => c.region === r).reduce((n, c) => n + c.capacity, 0);
-                return rCap > 0 ? (
-                  <div key={r}>
-                    <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">{r}</p>
-                    <p className="tabular mt-1 font-display text-[22px] leading-none font-semibold">{rFree}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">of {rCap} free</p>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </div>
-
-          {/* Numbered 5 + 5 two-column grid */}
-          {capacitySorted.length > 0 ? (
-            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
-              <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)] sm:grid-cols-2">
-                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 px-3 py-1.5">
-                  <span />
-                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
-                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
-                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
-                </div>
-                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
-                  <span />
-                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
-                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
-                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2">
-                <div className="flex flex-col divide-y divide-[var(--color-line)]">
-                  {capacityLeft.map((c, i) => (
-                    <div
-                      key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
-                    >
-                      <div
-                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
-                        aria-hidden
-                      />
-                      <span className="tabular text-[11px] font-semibold text-muted-foreground">{i + 1}</span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
-                        <span className="block text-[11px] text-muted-foreground">{c.region}</span>
-                      </span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
-                      <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-col divide-y divide-[var(--color-line)] border-t border-[var(--color-line)] sm:border-t-0 sm:border-l">
-                  {capacityRight.map((c, i) => (
-                    <div
-                      key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
-                    >
-                      <div
-                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
-                        aria-hidden
-                      />
-                      <span className="tabular text-[11px] font-semibold text-muted-foreground">{capacityHalf + i + 1}</span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
-                        <span className="block text-[11px] text-muted-foreground">{c.region}</span>
-                      </span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
-                      <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-4 text-[12px] text-muted-foreground">Nothing in scope.</p>
-          )}
-        </Panel>
-      </div>
-
-      {/* ── Region comparison — a compact table, not clickable cards. The two regions are there for
-             reference; a stakeholder who wants to drill in uses the scope toggle at the top. ── */}
+      {/* ── Region comparison — shown before the centre breakdown so the regional picture is visible
+             before stepping through individual centres. ── */}
       {picked.length === 0 && regionRollup.length > 1 ? (
         <div className="mt-4">
           <Panel title="By region">
@@ -860,19 +713,20 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
       ) : null}
 
-      {/* ── The whole estate, one row per centre. Last because a stakeholder who needed only the
-             verdict has already had it; this is for the one who wants to see every centre. ── */}
+      {/* ── All centres — bed availability at a glance, then the full per-centre table. ── */}
       <div className="mt-4">
         <Panel
-          title="Every centre in scope"
+          title="All centres"
+          subtitle="Bed availability and centre-level summary"
           titleExtra={
             <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
               {(
                 [
                   ['risk', 'Risk'],
                   ['occupancy', 'Occupancy'],
+                  ['free-beds', 'Most free'],
                   ['name', 'Name'],
-                ] as const
+                ] as [SortKey, string][]
               ).map(([key, label]) => (
                 <button
                   key={key}
@@ -888,8 +742,53 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </div>
           }
         >
+          {/* Capacity summary */}
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+            <div className="min-w-[180px] flex-1">
+              <div className="flex items-baseline gap-2">
+                <p className="tabular font-display text-[34px] leading-none font-semibold">
+                  {totals.available}
+                </p>
+                <span className="text-[13px] text-muted-foreground">free of {totals.capacity}</span>
+                <span className="ml-auto tabular text-[12px] text-muted-foreground">{avgOccupancy}% avg</span>
+              </div>
+              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-700"
+                  style={{ width: `${totals.occupancyPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-8">
+              <div>
+                <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Freeing this week
+                </p>
+                <p className="tabular mt-1 font-display text-[22px] leading-none font-semibold">
+                  {totals.dischargingThisWeek}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">planned discharges</p>
+              </div>
+              {(['South', 'North'] as const).map((r) => {
+                const rFree = visible.filter((c) => c.region === r).reduce((n, c) => n + c.available, 0);
+                const rCap  = visible.filter((c) => c.region === r).reduce((n, c) => n + c.capacity, 0);
+                return rCap > 0 ? (
+                  <div key={r}>
+                    <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">{r}</p>
+                    <p className="tabular mt-1 font-display text-[22px] leading-none font-semibold">{rFree}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">of {rCap} free</p>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-[var(--color-line)]" />
+
+          {/* Per-centre table */}
           {sorted.length === 0 ? (
-            <div className="rounded-xl border border-[var(--color-line)] px-4 py-6 text-center">
+            <div className="mt-4 rounded-xl border border-[var(--color-line)] px-4 py-6 text-center">
               <p className="text-[12.5px] text-muted-foreground">
                 No centre matches the current selection.
               </p>
@@ -902,7 +801,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               </button>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+            <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
               <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))_auto] gap-3 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2 text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase md:grid">
                 <span>Centre</span>
                 <span>Occupancy</span>
