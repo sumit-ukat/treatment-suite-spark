@@ -307,25 +307,23 @@ export function DetailPanel({
 
             <div className="flex flex-col items-center gap-1.5">
               {editNameMode ? (
-                <div className="flex flex-col items-center gap-2 w-full max-w-[260px]">
-                  <div className="flex gap-1.5 w-full">
-                    <input
-                      type="text"
-                      value={nameForm.firstName}
-                      onChange={e => setNameForm(f => ({ ...f, firstName: e.target.value }))}
-                      placeholder="First name"
-                      className="flex-1 min-w-0 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
-                    />
-                    <input
-                      type="text"
-                      value={nameForm.lastName}
-                      onChange={e => setNameForm(f => ({ ...f, lastName: e.target.value }))}
-                      placeholder="Last name"
-                      className="flex-1 min-w-0 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
-                    />
-                  </div>
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <input
+                    type="text"
+                    value={nameForm.firstName}
+                    onChange={e => setNameForm(f => ({ ...f, firstName: e.target.value }))}
+                    placeholder="First name"
+                    className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+                  />
+                  <input
+                    type="text"
+                    value={nameForm.lastName}
+                    onChange={e => setNameForm(f => ({ ...f, lastName: e.target.value }))}
+                    placeholder="Last name"
+                    className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+                  />
                   {nameError && <p className="text-[11px] text-red-600 dark:text-red-400">{nameError}</p>}
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 mt-0.5">
                     <button
                       type="button"
                       disabled={nameBusy || !nameForm.firstName.trim()}
