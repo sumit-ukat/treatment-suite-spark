@@ -16,6 +16,7 @@ import {
   UserMinus,
   UserX,
   Users,
+  X,
 } from 'lucide-react';
 import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
@@ -428,40 +429,56 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             ))}
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2">
+            {picked.length > 0 && (
               <button
                 type="button"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-2.5 text-[12.5px] font-medium transition hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                onClick={() => setPickedState([])}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] px-3 text-[12.5px] font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               >
-                {picked.length > 0 ? `${picked.length} picked` : 'Pick centres'}
-                <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+                <X className="size-3.5" aria-hidden />
+                Clear selection
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-80 w-60 overflow-auto">
-              <DropdownMenuLabel>Compare specific centres</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {[...centres]
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((c) => (
-                  <DropdownMenuCheckboxItem
-                    key={c.slug}
-                    checked={picked.includes(c.slug)}
-                    onSelect={(e) => e.preventDefault()}
-                    onCheckedChange={() => togglePick(c.slug)}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{c.region}</span>
-                  </DropdownMenuCheckboxItem>
-                ))}
-              {picked.length > 0 ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setPickedState([])}>Clear selection</DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+                    picked.length > 0
+                      ? 'border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20'
+                      : 'border-[var(--color-line)] bg-card hover:bg-muted/60'
+                  }`}
+                >
+                  {picked.length > 0 ? `${picked.length} picked` : 'Pick centres'}
+                  <ChevronDown className="size-3.5 opacity-60" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-80 w-60 overflow-auto">
+                <DropdownMenuLabel>Compare specific centres</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[...centres]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((c) => (
+                    <DropdownMenuCheckboxItem
+                      key={c.slug}
+                      checked={picked.includes(c.slug)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={() => togglePick(c.slug)}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                      <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{c.region}</span>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                {picked.length > 0 ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setPickedState([])}>Clear selection</DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
