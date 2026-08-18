@@ -392,6 +392,8 @@ export function TreatmentBoard({
                   </th>
                 );
               })}
+              {/* Spacer — absorbs remaining width so no blank strip appears on the right */}
+              <th className="border-b border-[var(--color-line)] bg-card" />
             </tr>
 
             {/* Row 2 — individual column headers */}
@@ -420,6 +422,7 @@ export function TreatmentBoard({
                   </th>
                 ));
               })}
+              <th className="border-b border-[var(--color-line)] bg-card" />
             </tr>
           </thead>
 
@@ -457,6 +460,7 @@ export function TreatmentBoard({
                         <td key={col.code} className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>—</td>
                       ));
                     })}
+                    <td className={cb} />
                   </tr>
                 );
               }
@@ -600,6 +604,7 @@ export function TreatmentBoard({
                       <TaskCell key={col.code} bed={bed} code={col.code} />
                     ));
                   })}
+                  <td className={cb} />
                 </tr>
               );
             })}
