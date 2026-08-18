@@ -719,14 +719,18 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                   {capacityLeft.map((c, i) => (
                     <div
                       key={c.slug}
-                      className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 px-3 py-2.5"
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
                     >
+                      <div
+                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
+                        aria-hidden
+                      />
                       <span className="tabular text-[11px] font-semibold text-muted-foreground">{i + 1}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available} free</span>
+                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </div>
                   ))}
@@ -735,14 +739,18 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                   {capacityRight.map((c, i) => (
                     <div
                       key={c.slug}
-                      className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 px-3 py-2.5"
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
                     >
+                      <div
+                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
+                        aria-hidden
+                      />
                       <span className="tabular text-[11px] font-semibold text-muted-foreground">{capacityHalf + i + 1}</span>
                       <span className="min-w-0">
                         <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available} free</span>
+                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </div>
                   ))}
