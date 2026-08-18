@@ -412,6 +412,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Region toggle */}
           <div className="flex rounded-lg border border-[var(--color-line)] bg-card p-0.5">
             {(['all', 'South', 'North'] as const).map((r) => (
               <button
@@ -429,56 +430,65 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
-            {picked.length > 0 && (
+          {/* Selected centre chips — one per pick, each individually removable */}
+          {picked.map((slug) => {
+            const c = centres.find((x) => x.slug === slug);
+            if (!c) return null;
+            return (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => togglePick(slug)}
+                title={`Remove ${c.name}`}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[var(--color-accent)]/35 bg-[var(--color-accent-soft)] pl-3 pr-2 text-[12px] font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent)]/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+              >
+                {c.name}
+                <X className="size-3 opacity-70" aria-hidden />
+              </button>
+            );
+          })}
+
+          {/* Clear all — only when something is picked */}
+          {picked.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setPickedState([])}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-red-200 bg-red-50 pl-2.5 pr-2.5 text-[12px] font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+            >
+              <X className="size-3" aria-hidden />
+              Clear all
+            </button>
+          )}
+
+          {/* Pick / add centres dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                onClick={() => setPickedState([])}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] px-3 text-[12.5px] font-semibold text-[var(--color-accent)] transition hover:bg-[var(--color-accent)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-dashed border-[var(--color-line)] bg-card px-3 text-[12px] font-medium text-muted-foreground transition hover:border-[var(--color-accent)]/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               >
-                <X className="size-3.5" aria-hidden />
-                Clear selection
+                {picked.length > 0 ? '+ Add centre' : '+ Pick centres'}
+                <ChevronDown className="size-3.5 opacity-60" aria-hidden />
               </button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
-                    picked.length > 0
-                      ? 'border-[var(--color-accent)]/40 bg-[var(--color-accent-soft)] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20'
-                      : 'border-[var(--color-line)] bg-card hover:bg-muted/60'
-                  }`}
-                >
-                  {picked.length > 0 ? `${picked.length} picked` : 'Pick centres'}
-                  <ChevronDown className="size-3.5 opacity-60" aria-hidden />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-80 w-60 overflow-auto">
-                <DropdownMenuLabel>Compare specific centres</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {[...centres]
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((c) => (
-                    <DropdownMenuCheckboxItem
-                      key={c.slug}
-                      checked={picked.includes(c.slug)}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={() => togglePick(c.slug)}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                      <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{c.region}</span>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                {picked.length > 0 ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setPickedState([])}>Clear selection</DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-80 w-60 overflow-auto">
+              <DropdownMenuLabel>Compare specific centres</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {[...centres]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c.slug}
+                    checked={picked.includes(c.slug)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => togglePick(c.slug)}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{c.region}</span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
