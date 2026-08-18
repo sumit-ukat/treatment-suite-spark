@@ -360,14 +360,6 @@ export function DetailPanel({
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <StatusBadge status={overallStatus} />
-                {o.hasRestrictedAlert ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
-                    &#9888; High risk
-                  </span>
-                ) : null}
-              </div>
               <div className="nums text-[11px] text-[var(--color-ink-muted)]">
                 Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
               </div>
