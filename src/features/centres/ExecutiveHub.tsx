@@ -8,8 +8,9 @@ import {
   ChevronDown,
   CircleAlert,
   Clock,
+  FileWarning,
+  LogOut,
   Percent,
-  ShieldAlert,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
@@ -541,16 +542,11 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               accent: 'neutral',
             },
             {
-              label: 'On-time rate',
-              value: `${totals.onTimePercent}%`,
-              hint: 'actions completed to plan',
-              icon: <TrendingUp className="size-4" />,
-              accent:
-                totals.onTimePercent < ONTIME_ACT
-                  ? 'critical'
-                  : totals.onTimePercent < 90
-                    ? 'warn'
-                    : 'good',
+              label: 'Unplanned exits',
+              value: totals.unplannedExits,
+              hint: 'early or AMA departures',
+              icon: <LogOut className="size-4" />,
+              accent: totals.unplannedExits > 3 ? 'critical' : totals.unplannedExits > 0 ? 'warn' : 'good',
             },
           ]}
         />
@@ -614,11 +610,11 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                     : 'good',
             },
             {
-              label: 'High-risk alerts',
-              value: totals.restrictedAlerts,
-              hint: 'restricted alert flags across estate',
-              icon: <ShieldAlert className="size-4" />,
-              accent: totals.restrictedAlerts > 2 ? 'critical' : totals.restrictedAlerts > 0 ? 'warn' : 'good',
+              label: 'Incident reports',
+              value: totals.incidentReports7Days,
+              hint: 'reported in the last 7 days',
+              icon: <FileWarning className="size-4" />,
+              accent: totals.incidentReports7Days > 5 ? 'critical' : totals.incidentReports7Days > 0 ? 'warn' : 'good',
             },
             {
               label: 'On-time rate',

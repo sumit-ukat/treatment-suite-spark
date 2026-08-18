@@ -45,6 +45,11 @@ export interface CentreSummary {
   agedOverdue: number;
   /** Clients without an assigned peer buddy. */
   missingBuddy: number;
+  /** Clients who left before their planned discharge date — AMA, voluntary early exit, or treatment
+   * declined partway through. PLACEHOLDER for all centres until a real discharge-outcome field exists. */
+  unplannedExits: number;
+  /** Incident reports logged in the last 7 days. PLACEHOLDER for all centres. */
+  incidentReports7Days: number;
   /** Average occupancy over the trailing 3 months. PLACEHOLDER for every centre, Primrose Lodge
    * included — nothing in this system tracks occupancy history yet (see ExecutiveHub's no-trend-data
    * note). Swap in real figures per centre, and flip occupancyTrendConfirmed, once that exists. */
@@ -119,8 +124,9 @@ function placeholderOccupancyTrend(slug: string, currentPercent: number): number
 function fictionalCentre(spec: CentreSpec): CentreSummary {
   // Index 11 is generated but no longer consumed — kept in the sequence so index 12 (missingBuddy)
   // keeps drawing the same seeded value it always has.
-  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, , r12] = seededValues(spec.slug, 13) as [
-    number, number, number, number, number, number, number, number, number, number, number, number, number,
+  // Index 11 is generated but no longer consumed — kept so index 12+ keep the same seeded values.
+  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, , r12, r13, r14] = seededValues(spec.slug, 15) as [
+    number, number, number, number, number, number, number, number, number, number, number, number, number, number, number,
   ];
 
   const occupied = Math.min(spec.capacity, Math.round(spec.capacity * (0.62 + r0 * 0.36)));
@@ -144,6 +150,8 @@ function fictionalCentre(spec: CentreSpec): CentreSummary {
     missingTherapist: Math.round(r9 * occupied * 0.15),
     agedOverdue: Math.round(overdue * (0.35 + r10 * 0.30)),
     missingBuddy: Math.round(r12 * occupied * 0.08),
+    incidentReports7Days: Math.round(r13 * 5),
+    unplannedExits: r14 > 0.85 ? 1 : 0,
     avgOccupancy3MonthPercent: placeholderOccupancyTrend(spec.slug, occupancyPercent),
     occupancyTrendConfirmed: false,
     isConfigured: false,
@@ -180,6 +188,8 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     // No per-task age available at this level — use the same seeded estimate as fictional centres.
     agedOverdue: Math.round(s.overdue * 0.45),
     missingBuddy: occupants.filter((o) => o.buddy === '—').length,
+    incidentReports7Days: Math.round((seededValues(`${spec.slug}:incidents7d`, 1)[0] ?? 0) * 3),
+    unplannedExits: (seededValues(`${spec.slug}:unplanned`, 1)[0] ?? 0) > 0.85 ? 1 : 0,
     avgOccupancy3MonthPercent: placeholderOccupancyTrend(spec.slug, occupancyPercent),
     occupancyTrendConfirmed: false,
     isConfigured: true,
@@ -209,6 +219,8 @@ export interface GroupTotals {
   missingTherapist: number;
   agedOverdue: number;
   missingBuddy: number;
+  unplannedExits: number;
+  incidentReports7Days: number;
   capacityUnconfirmed: number;
 }
 
@@ -236,6 +248,8 @@ export function groupTotals(centres: readonly CentreSummary[]): GroupTotals {
     missingTherapist: sum((c) => c.missingTherapist),
     agedOverdue: sum((c) => c.agedOverdue),
     missingBuddy: sum((c) => c.missingBuddy),
+    unplannedExits: sum((c) => c.unplannedExits),
+    incidentReports7Days: sum((c) => c.incidentReports7Days),
     capacityUnconfirmed: centres.filter((c) => !c.capacityConfirmed).length,
   };
 }
