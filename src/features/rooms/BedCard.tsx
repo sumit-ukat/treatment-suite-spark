@@ -207,7 +207,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         </div>
       </div>
 
-      <dl className="nums grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11.5px]">
+      <dl className="nums grid grid-cols-3 gap-x-2 text-[11.5px]">
         <div>
           <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Day</dt>
           <dd className="font-medium">
@@ -231,36 +231,24 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Therapist</dt>
           <dd className="truncate font-medium">
             {o.therapist ?? (
-              <span className="text-amber-600 dark:text-amber-400">Not assigned</span>
+              <span className="text-amber-600 dark:text-amber-400">None</span>
             )}
           </dd>
         </div>
-        <div className="min-w-0">
-          <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Buddy</dt>
-          <dd className="truncate font-medium">{o.buddy}</dd>
-        </div>
       </dl>
 
-      <div>
+      <div
+        className="h-[3px] overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12"
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${progress}% of required actions completed`}
+      >
         <div
-          className="h-[3px] overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12"
-          role="progressbar"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Required actions completed"
-        >
-          <div
-            className="h-full rounded-full bg-[var(--color-accent)] transition-[width] duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="nums mt-1 flex items-center justify-between text-[10.5px] text-[var(--color-ink-muted)]">
-          <span>
-            {o.completedCount}/{o.totalCount} actions
-          </span>
-          <span>{progress}%</span>
-        </div>
+          className="h-full rounded-full bg-[var(--color-accent)] transition-[width] duration-300"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       <div className="flex flex-wrap gap-1">
@@ -272,31 +260,8 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         {o.dueTodayCount > 0 ? (
           <StatusBadge status="attention" label={`${o.dueTodayCount} due today`} size="sm" />
         ) : null}
-        {/* Recorded as X: the programme does not reach that week, so there is nothing to do. */}
-        {o.notApplicableCount > 0 ? (
-          <Chip
-            icon="&#8212;"
-            label={`${o.notApplicableCount} n/a`}
-            title="Not applicable - the planned programme ends before these fall due."
-          />
-        ) : null}
-        {!dischargePassed && !dischargeToday && o.overdueCount === 0 && o.dueTodayCount === 0 ? (
-          <StatusBadge status="ontrack" label="Nothing due" size="sm" />
-        ) : null}
         {o.isExtendedStay ? (
-          <Chip
-            icon="↗"
-            label={`+${o.extensionDays ?? '?'}d extended`}
-            tone="good"
-            title="Stay has been extended"
-          />
-        ) : null}
-        {!o.familyMeetingEligibleNow ? (
-          <Chip
-            icon="&#9719;"
-            label={`Family mtg ${formatDate(o.familyMeetingEligibleFrom)}`}
-            title="Family meetings are not permitted until one week in treatment is complete"
-          />
+          <Chip icon="↗" label={`+${o.extensionDays ?? '?'}d`} tone="good" title="Stay extended" />
         ) : null}
       </div>
     </button>
