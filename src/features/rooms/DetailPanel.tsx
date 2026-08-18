@@ -7,7 +7,7 @@ import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
-import { admissions, clientPhotos, concerns, tasks as taskService, type ConcernRow, type TaskDateChangeRow } from '../../services/data-access.js';
+import { admissions, clients, clientPhotos, concerns, tasks as taskService, type ConcernRow, type TaskDateChangeRow } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { calendarDaysBetween } from '../../domain/zoned-time.js';
@@ -84,6 +84,11 @@ export function DetailPanel({
   const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false });
   const [detailsBusy, setDetailsBusy] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [editNameMode, setEditNameMode] = useState(false);
+  const [nameForm, setNameForm] = useState({ firstName: '', lastName: '' });
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [localDisplayName, setLocalDisplayName] = useState<string | null>(null);
   const [concernEditId, setConcernEditId] = useState<string | null>(null);
   const [concernEditText, setConcernEditText] = useState('');
   const [concernBusy, setConcernBusy] = useState(false);
@@ -139,6 +144,30 @@ export function DetailPanel({
     });
     setDetailsError(null);
     setEditDetailsMode(true);
+  }
+
+  function openEditName() {
+    const parts = (localDisplayName ?? o.displayName).split(' ');
+    setNameForm({ firstName: parts.slice(0, -1).join(' ') || parts[0], lastName: parts.length > 1 ? parts[parts.length - 1] : '' });
+    setNameError(null);
+    setEditNameMode(true);
+  }
+
+  async function saveName() {
+    if (!o?.clientId) return;
+    setNameBusy(true);
+    setNameError(null);
+    try {
+      await clients.updateIdentity(o.clientId, nameForm.firstName.trim(), nameForm.lastName.trim());
+      const full = `${nameForm.firstName.trim()} ${nameForm.lastName.trim()}`.trim();
+      setLocalDisplayName(full);
+      setEditNameMode(false);
+      onChanged?.();
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setNameBusy(false);
+    }
   }
 
   async function saveDetails() {
@@ -277,7 +306,58 @@ export function DetailPanel({
             )}
 
             <div className="flex flex-col items-center gap-1.5">
-              <h2 className="font-display text-[17px] font-semibold leading-snug">{o.displayName}</h2>
+              {editNameMode ? (
+                <div className="flex flex-col items-center gap-2 w-full max-w-[260px]">
+                  <div className="flex gap-1.5 w-full">
+                    <input
+                      type="text"
+                      value={nameForm.firstName}
+                      onChange={e => setNameForm(f => ({ ...f, firstName: e.target.value }))}
+                      placeholder="First name"
+                      className="flex-1 min-w-0 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+                    />
+                    <input
+                      type="text"
+                      value={nameForm.lastName}
+                      onChange={e => setNameForm(f => ({ ...f, lastName: e.target.value }))}
+                      placeholder="Last name"
+                      className="flex-1 min-w-0 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+                    />
+                  </div>
+                  {nameError && <p className="text-[11px] text-red-600 dark:text-red-400">{nameError}</p>}
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      disabled={nameBusy || !nameForm.firstName.trim()}
+                      onClick={saveName}
+                      className="rounded-lg bg-[var(--color-accent)] px-3 py-1 text-[12px] font-semibold text-white disabled:opacity-50 transition hover:opacity-90"
+                    >
+                      {nameBusy ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditNameMode(false)}
+                      className="rounded-lg border border-[var(--color-line)] px-3 py-1 text-[12px] font-semibold transition hover:bg-[var(--color-accent-soft)]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <h2 className="font-display text-[17px] font-semibold leading-snug">{localDisplayName ?? o.displayName}</h2>
+                  {can('clients.edit_identity') && !readOnly && (
+                    <button
+                      type="button"
+                      onClick={openEditName}
+                      title="Edit client name"
+                      className="rounded p-0.5 text-[var(--color-ink-muted)] transition hover:text-[var(--color-ink)] hover:bg-[var(--color-accent-soft)]"
+                    >
+                      <Pencil className="size-3.5" aria-hidden />
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="flex flex-wrap items-center justify-center gap-1.5">
                 <StatusBadge status={overallStatus} />
                 {o.hasRestrictedAlert ? (

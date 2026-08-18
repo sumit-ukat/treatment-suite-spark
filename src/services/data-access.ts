@@ -431,6 +431,13 @@ export const clients = {
       client().rpc('client_admission_history', { p_client_id: clientId, p_centre_id: centreId }),
     );
   },
+
+  updateIdentity(clientId: string, firstName: string, lastName: string): Promise<void> {
+    return run(
+      'clients.updateIdentity',
+      client().rpc('update_client_name', { p_client_id: clientId, p_first_name: firstName, p_last_name: lastName }),
+    );
+  },
 };
 
 export interface ClientAdmissionHistoryRow {

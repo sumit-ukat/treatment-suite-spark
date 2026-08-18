@@ -32,7 +32,7 @@ import { useBoardData } from '../rooms/use-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { BrandMark } from '../../components/brand.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
-import { ThemeToggle } from '../../components/theme-toggle.tsx';
+
 import { LiveClock } from '../../components/live-clock.tsx';
 import {
   DropdownMenu,
@@ -350,7 +350,6 @@ function HubHeader({ variant }: { variant: 'operations' | 'executive' }) {
       <div className="ml-auto flex items-center gap-2">
         <HubSwitcher current={variant} />
         <LiveClock className="hidden sm:flex" />
-        <ThemeToggle />
         <UserMenu variant="panel" />
       </div>
     </header>
@@ -530,7 +529,6 @@ function CentreShell() {
                 </kbd>
               </label>
               <LiveClock className="hidden lg:flex" />
-              <ThemeToggle />
               <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
             </div>
           </header>
