@@ -800,15 +800,17 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
           {capacitySorted.length > 0 ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
               <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)] sm:grid-cols-2">
-                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 px-3 py-1.5">
+                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] gap-2 px-3 py-1.5">
                   <span />
                   <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="text-center text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Issues</span>
                   <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
                   <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
                 </div>
-                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
+                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
                   <span />
                   <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="text-center text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Issues</span>
                   <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
                   <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
                 </div>
@@ -818,7 +820,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                   {capacityLeft.map((c, i) => (
                     <div
                       key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
@@ -829,6 +831,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                         <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
+                      <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
                       <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </div>
@@ -838,7 +841,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                   {capacityRight.map((c, i) => (
                     <div
                       key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
@@ -849,6 +852,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                         <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
+                      <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
                       <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </div>
