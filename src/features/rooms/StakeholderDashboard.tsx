@@ -172,7 +172,6 @@ export function StakeholderDashboard({
             icon={AlertTriangle}
             value={stats.restrictedAlerts}
             label="High risk clients"
-            sub={openConcerns > 0 ? `+ ${openConcerns} open concern${openConcerns !== 1 ? 's' : ''}` : 'No open concerns'}
             accent={stats.restrictedAlerts > 0 ? 'red' : 'green'}
           />
           <KpiTile
