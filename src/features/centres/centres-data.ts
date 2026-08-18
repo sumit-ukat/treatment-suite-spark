@@ -43,6 +43,11 @@ export interface CentreSummary {
   missingTherapist: number;
   /** Overdue items estimated to be older than 7 days — chronic backlog indicator. */
   agedOverdue: number;
+  /** Average days the recorded discharge date differs from the policy-calculated one, across
+   * occupied beds. Positive = stays running longer than policy on average; negative = shorter. */
+  avgStayVarianceDays: number;
+  /** Clients without an assigned peer buddy. */
+  missingBuddy: number;
   /** True only for the centre that is actually configured in the database. */
   isConfigured: boolean;
 }
@@ -98,8 +103,8 @@ function seededValues(seed: string, count: number): number[] {
 }
 
 function fictionalCentre(spec: CentreSpec): CentreSummary {
-  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10] = seededValues(spec.slug, 11) as [
-    number, number, number, number, number, number, number, number, number, number, number,
+  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = seededValues(spec.slug, 13) as [
+    number, number, number, number, number, number, number, number, number, number, number, number, number,
   ];
 
   const occupied = Math.min(spec.capacity, Math.round(spec.capacity * (0.62 + r0 * 0.36)));
@@ -121,6 +126,8 @@ function fictionalCentre(spec: CentreSpec): CentreSummary {
     extendedStays: Math.round(r8 * occupied * 0.25),
     missingTherapist: Math.round(r9 * occupied * 0.15),
     agedOverdue: Math.round(overdue * (0.35 + r10 * 0.30)),
+    avgStayVarianceDays: Math.round((r11 - 0.5) * 12),
+    missingBuddy: Math.round(r12 * occupied * 0.08),
     isConfigured: false,
   };
 }
@@ -153,6 +160,10 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     missingTherapist: s.missingTherapist,
     // No per-task age available at this level — use the same seeded estimate as fictional centres.
     agedOverdue: Math.round(s.overdue * 0.45),
+    avgStayVarianceDays: occupants.length
+      ? Math.round(occupants.reduce((n, o) => n + o.dischargeMismatchDays, 0) / occupants.length)
+      : 0,
+    missingBuddy: occupants.filter((o) => o.buddy === '—').length,
     isConfigured: true,
   };
 }
@@ -179,6 +190,8 @@ export interface GroupTotals {
   extendedStays: number;
   missingTherapist: number;
   agedOverdue: number;
+  avgStayVarianceDays: number;
+  missingBuddy: number;
   capacityUnconfirmed: number;
 }
 
@@ -205,6 +218,11 @@ export function groupTotals(centres: readonly CentreSummary[]): GroupTotals {
     extendedStays: sum((c) => c.extendedStays),
     missingTherapist: sum((c) => c.missingTherapist),
     agedOverdue: sum((c) => c.agedOverdue),
+    // Weighted by occupancy, same reasoning as onTimePercent above.
+    avgStayVarianceDays: occupied
+      ? Math.round(sum((c) => c.avgStayVarianceDays * c.occupied) / occupied)
+      : 0,
+    missingBuddy: sum((c) => c.missingBuddy),
     capacityUnconfirmed: centres.filter((c) => !c.capacityConfirmed).length,
   };
 }

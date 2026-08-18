@@ -4,14 +4,17 @@ import {
   ArrowUpRight,
   BedDouble,
   CalendarCheck,
+  CalendarClock,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
   Clock,
-  ImageOff,
+  Percent,
+  ShieldAlert,
   ShieldCheck,
   TrendingUp,
   TriangleAlert,
+  UserMinus,
   UserX,
   Users,
 } from 'lucide-react';
@@ -198,6 +201,58 @@ function MiniBar({ percent }: { percent: number }) {
         className="h-full rounded-full bg-primary transition-[width] duration-500"
         style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
       />
+    </div>
+  );
+}
+
+type MetricAccent = 'critical' | 'warn' | 'good' | 'neutral';
+
+interface MetricCardSpec {
+  label: string;
+  value: string | number;
+  hint: string;
+  icon: ReactNode;
+  accent: MetricAccent;
+}
+
+/** Shared rendering for the business and ops card rows — same visual language, different data. */
+function MetricGrid({ cards }: { cards: readonly MetricCardSpec[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {cards.map(({ label, value, hint, icon, accent }) => {
+        const topBar =
+          accent === 'critical'
+            ? 'bg-overdue'
+            : accent === 'warn'
+              ? 'bg-attention'
+              : accent === 'good'
+                ? 'bg-ontrack'
+                : 'bg-border';
+        const numColor =
+          accent === 'critical'
+            ? 'text-overdue'
+            : accent === 'warn'
+              ? 'text-attention'
+              : 'text-foreground';
+        return (
+          <div
+            key={label}
+            className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
+          >
+            <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                {label}
+              </p>
+              <span className="text-muted-foreground">{icon}</span>
+            </div>
+            <p className={`tabular mt-3 font-display text-[30px] leading-none font-semibold ${numColor}`}>
+              {value}
+            </p>
+            <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -452,113 +507,139 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
       </section>
 
-      {/* ── Business health grid — 2nd on the page because these are the numbers that explain the
-             verdict above. Ordered by urgency: issues first, then pipeline, then efficiency. ── */}
+      {/* ── Business health — the commercial picture: census, capacity, pipeline. Kept apart from
+             ops so a reader can ask "are we full and running well commercially" without the clinical
+             risk numbers competing for attention in the same row. ── */}
       <div className="mt-4">
         <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
           Business health
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {(
-            [
-              {
-                label: 'Open issues',
-                value: totals.overdue + totals.pastPlannedDischarge,
-                hint: `${totals.pastPlannedDischarge} past discharge · ${totals.overdue} overdue`,
-                icon: <CircleAlert className="size-4" />,
-                accent:
-                  totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
-                    ? 'critical'
-                    : totals.overdue > 0
-                      ? 'warn'
-                      : 'good',
-              },
-              {
-                label: 'Issues >7 days',
-                value: totals.agedOverdue,
-                hint: 'unresolved for over a week',
-                icon: <Clock className="size-4" />,
-                accent:
-                  totals.agedOverdue > 10
-                    ? 'critical'
-                    : totals.agedOverdue > 0
-                      ? 'warn'
-                      : 'good',
-              },
-              {
-                label: 'No therapist',
-                value: totals.missingTherapist,
-                hint: 'clients without assigned therapist',
-                icon: <UserX className="size-4" />,
-                accent:
-                  totals.missingTherapist > 5
-                    ? 'critical'
-                    : totals.missingTherapist > 0
-                      ? 'warn'
-                      : 'good',
-              },
-              {
-                label: 'Extended stays',
-                value: totals.extendedStays,
-                hint: 'clients on approved extensions',
-                icon: <CalendarCheck className="size-4" />,
-                accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
-              },
-              {
-                label: 'Discharging',
-                value: totals.dischargingThisWeek,
-                hint: 'planned this week',
-                icon: <ArrowUpRight className="size-4" />,
-                accent: 'neutral',
-              },
-              {
-                label: 'On-time rate',
-                value: `${totals.onTimePercent}%`,
-                hint: 'actions completed to plan',
-                icon: <TrendingUp className="size-4" />,
-                accent:
-                  totals.onTimePercent < ONTIME_ACT
-                    ? 'critical'
-                    : totals.onTimePercent < 90
-                      ? 'warn'
-                      : 'good',
-              },
-            ] as const
-          ).map(({ label, value, hint, icon, accent }) => {
-            const topBar =
-              accent === 'critical'
-                ? 'bg-overdue'
-                : accent === 'warn'
-                  ? 'bg-attention'
-                  : accent === 'good'
-                    ? 'bg-ontrack'
-                    : 'bg-border';
-            const numColor =
-              accent === 'critical'
-                ? 'text-overdue'
-                : accent === 'warn'
-                  ? 'text-attention'
-                  : 'text-foreground';
-            return (
-              <div
-                key={label}
-                className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
-              >
-                <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    {label}
-                  </p>
-                  <span className="text-muted-foreground">{icon}</span>
-                </div>
-                <p className={`tabular mt-3 font-display text-[30px] leading-none font-semibold ${numColor}`}>
-                  {value}
-                </p>
-                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{hint}</p>
-              </div>
-            );
-          })}
-        </div>
+        <MetricGrid
+          cards={[
+            {
+              label: 'In treatment',
+              value: totals.occupied,
+              hint: `across ${visible.length} centre${visible.length === 1 ? '' : 's'}`,
+              icon: <Users className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Free beds',
+              value: totals.available,
+              hint: `of ${totals.capacity} total`,
+              icon: <BedDouble className="size-4" />,
+              accent: totals.available < 5 ? 'warn' : 'neutral',
+            },
+            {
+              label: 'Bed utilisation',
+              value: `${totals.occupancyPercent}%`,
+              hint: 'average across scope',
+              icon: <Percent className="size-4" />,
+              accent: totals.occupancyPercent >= 85 ? 'good' : 'neutral',
+            },
+            {
+              label: 'Extended stays',
+              value: totals.extendedStays,
+              hint: 'clients on approved extensions',
+              icon: <CalendarCheck className="size-4" />,
+              accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
+            },
+            {
+              label: 'Discharging',
+              value: totals.dischargingThisWeek,
+              hint: 'planned this week',
+              icon: <ArrowUpRight className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Stay vs plan',
+              value: totals.avgStayVarianceDays > 0 ? `+${totals.avgStayVarianceDays}d` : `${totals.avgStayVarianceDays}d`,
+              hint: 'average vs policy calculation',
+              icon: <CalendarClock className="size-4" />,
+              accent: Math.abs(totals.avgStayVarianceDays) > 5 ? 'warn' : 'neutral',
+            },
+          ]}
+        />
+      </div>
+
+      {/* ── Ops health — the clinical and compliance risk picture. Ordered by urgency: issues first,
+             then chronic backlog, then the two staffing-coverage gaps, then the two counts that need
+             the least immediate reaction. ── */}
+      <div className="mt-4">
+        <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          Ops health
+        </h2>
+        <MetricGrid
+          cards={[
+            {
+              label: 'Open issues',
+              value: totals.overdue + totals.pastPlannedDischarge,
+              hint: `${totals.pastPlannedDischarge} past discharge · ${totals.overdue} overdue`,
+              icon: <CircleAlert className="size-4" />,
+              accent:
+                totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
+                  ? 'critical'
+                  : totals.overdue > 0
+                    ? 'warn'
+                    : 'good',
+            },
+            {
+              label: 'Issues >7 days',
+              value: totals.agedOverdue,
+              hint: 'unresolved for over a week',
+              icon: <Clock className="size-4" />,
+              accent:
+                totals.agedOverdue > 10
+                  ? 'critical'
+                  : totals.agedOverdue > 0
+                    ? 'warn'
+                    : 'good',
+            },
+            {
+              label: 'No therapist',
+              value: totals.missingTherapist,
+              hint: 'clients without assigned therapist',
+              icon: <UserX className="size-4" />,
+              accent:
+                totals.missingTherapist > 5
+                  ? 'critical'
+                  : totals.missingTherapist > 0
+                    ? 'warn'
+                    : 'good',
+            },
+            {
+              label: 'No buddy',
+              value: totals.missingBuddy,
+              hint: 'clients without assigned buddy',
+              icon: <UserMinus className="size-4" />,
+              accent:
+                totals.missingBuddy > 5
+                  ? 'critical'
+                  : totals.missingBuddy > 0
+                    ? 'warn'
+                    : 'good',
+            },
+            {
+              label: 'High-risk alerts',
+              value: totals.restrictedAlerts,
+              hint: 'restricted alert flags across estate',
+              icon: <ShieldAlert className="size-4" />,
+              accent: totals.restrictedAlerts > 2 ? 'critical' : totals.restrictedAlerts > 0 ? 'warn' : 'good',
+            },
+            {
+              label: 'On-time rate',
+              value: `${totals.onTimePercent}%`,
+              hint: 'actions completed to plan',
+              icon: <TrendingUp className="size-4" />,
+              accent:
+                totals.onTimePercent < ONTIME_ACT
+                  ? 'critical'
+                  : totals.onTimePercent < 90
+                    ? 'warn'
+                    : 'good',
+            },
+          ]}
+        />
       </div>
 
       {/* ── Capacity — 3rd, after the business health cards. ── */}
@@ -808,8 +889,8 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             {ONTIME_ACT}%. <strong className="font-semibold text-foreground">Watch</strong> — any overdue
             action at all, or more than {PHOTO_WATCH} client photos missing.{' '}
             <strong className="font-semibold text-foreground">Clear</strong> — none of the above. No
-            clinical detail appears at this level; restricted alerts are counts only and are not shown
-            here at all.
+            individual clinical detail appears at this level; restricted alerts and other risk figures
+            show as group totals only — nothing here identifies which client.
           </p>
         </div>
 
