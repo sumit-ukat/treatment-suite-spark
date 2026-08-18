@@ -226,28 +226,28 @@ export function StakeholderDashboard({
         </div>
       </div>
 
-      {/* ── Detail sections — side by side, each sizes to own content ── */}
-      <div className="flex items-start gap-6">
+      {/* ── Detail sections — unified card, two columns with shared border ── */}
+      <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+        <div className="flex divide-x divide-[var(--color-line)]">
 
-        {/* Graduating within 7 days */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-              Graduating within 7 days
-            </h2>
-            {leavingSoon.length > 0 && (
-              <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                {leavingSoon.length}
-              </span>
-            )}
-          </div>
-          {leavingSoon.length === 0 ? (
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
-              <CheckCircle2 className="size-4 text-emerald-500" />
-              No graduates expected in the next 7 days.
+          {/* Graduating within 7 days */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex items-center gap-2 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5">
+              <h2 className="text-[10.5px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+                Graduating within 7 days
+              </h2>
+              {leavingSoon.length > 0 && (
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                  {leavingSoon.length}
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+            {leavingSoon.length === 0 ? (
+              <div className="flex flex-1 items-center gap-2 px-4 py-6 text-[12px] text-[var(--color-ink-muted)]">
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                No graduates expected in the next 7 days.
+              </div>
+            ) : (
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -284,29 +284,27 @@ export function StakeholderDashboard({
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
-
-        {/* Needs attention */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-              Needs attention
-            </h2>
-            {needsAttention.length > 0 && (
-              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                {needsAttention.length}
-              </span>
             )}
           </div>
-          {needsAttention.length === 0 ? (
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
-              <CheckCircle2 className="size-4 text-emerald-500" />
-              No clients with high-risk flags or overdue tasks.
+
+          {/* Needs attention */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex items-center gap-2 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5">
+              <h2 className="text-[10.5px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+                Needs attention
+              </h2>
+              {needsAttention.length > 0 && (
+                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                  {needsAttention.length}
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+            {needsAttention.length === 0 ? (
+              <div className="flex flex-1 items-center gap-2 px-4 py-6 text-[12px] text-[var(--color-ink-muted)]">
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                No clients with high-risk flags or overdue tasks.
+              </div>
+            ) : (
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -348,29 +346,9 @@ export function StakeholderDashboard({
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ── Occupancy bar ── */}
-      <div>
-        <SectionTitle>Bed occupancy</SectionTitle>
-        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
-          <div className="mb-3 flex items-center justify-between text-[12px]">
-            <span className="font-medium">{stats.bedsOccupied} occupied</span>
-            <span className="text-[var(--color-ink-muted)]">{stats.bedsAvailable} available</span>
+            )}
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <div
-              className="brand-gradient h-full rounded-full transition-all"
-              style={{ width: `${stats.occupancyPercent}%` }}
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-[var(--color-ink-muted)]">
-            {stats.occupancyPercent}% of {stats.bedsTotal} beds — {stats.bedsAvailable} bed{stats.bedsAvailable !== 1 ? 's' : ''} available for new admissions
-          </p>
+
         </div>
       </div>
 
