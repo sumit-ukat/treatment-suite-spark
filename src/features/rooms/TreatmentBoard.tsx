@@ -31,11 +31,11 @@ const COLUMNS = [
 ] as const;
 
 const COL_GROUPS = [
-  { key: 'contact',  label: 'Contact/Comms',           count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { key: 'survey',   label: '7-Day Survey',             count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { key: 'medical',  label: 'Medical',                  count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { key: 'lifestep', label: 'Life Story & Step Works',  count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { key: 'careplan', label: 'Care Plan',                count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
+  { key: 'contact',  label: 'Contact/Comms',           count: 4, pinned: false, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
+  { key: 'survey',   label: '7-Day Survey',             count: 1, pinned: true,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { key: 'medical',  label: 'Medical',                  count: 1, pinned: true,  cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
+  { key: 'lifestep', label: 'Life Story & Step Works',  count: 5, pinned: false, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { key: 'careplan', label: 'Care Plan',                count: 5, pinned: false, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -377,19 +377,21 @@ export function TreatmentBoard({
                 Client &amp; Placement
               </th>
               {COL_GROUPS.map((g) => {
-                const isOpen = expandedGroup === g.key;
+                const isOpen = g.pinned || expandedGroup === g.key;
                 return (
                   <th
                     key={g.key}
                     colSpan={isOpen ? g.count : 1}
-                    className={`cursor-pointer select-none border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap transition-colors hover:brightness-95 ${g.cls}`}
-                    onClick={() => toggleGroup(g.key)}
-                    title={isOpen ? `Collapse ${g.label}` : `Expand ${g.label}`}
+                    className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.pinned ? '' : 'cursor-pointer select-none transition-colors hover:brightness-95'} ${g.cls}`}
+                    onClick={g.pinned ? undefined : () => toggleGroup(g.key)}
+                    title={g.pinned ? undefined : isOpen ? `Collapse ${g.label}` : `Expand ${g.label}`}
                   >
-                    <span className="flex items-center justify-center gap-1">
-                      <span aria-hidden>{isOpen ? '▾' : '▸'}</span>
-                      {isOpen ? g.label : g.label.split(' ')[0]}
-                    </span>
+                    {g.pinned ? g.label : (
+                      <span className="flex items-center justify-center gap-1">
+                        <span aria-hidden>{isOpen ? '▾' : '▸'}</span>
+                        {isOpen ? g.label : g.label.split(' ')[0]}
+                      </span>
+                    )}
                   </th>
                 );
               })}
@@ -408,19 +410,19 @@ export function TreatmentBoard({
               <th className={th}>Discharge</th>
               <th className={th}>Group</th>
               <th className={th}>Therapist</th>
-              {COL_GROUPS.flatMap((g) =>
-                expandedGroup === g.key
-                  ? COLUMNS.filter((c) => c.group === g.key).map((col) => (
-                      <th
-                        key={col.code}
-                        title={col.full}
-                        className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
-                      >
-                        {col.label}
-                      </th>
-                    ))
-                  : [<th key={g.key} className="w-4 border-b border-[var(--color-line)] bg-card" />]
-              )}
+              {COL_GROUPS.flatMap((g) => {
+                const isOpen = g.pinned || expandedGroup === g.key;
+                const cols = COLUMNS.filter((c) => c.group === g.key);
+                return (isOpen ? cols : cols.slice(0, 1)).map((col) => (
+                  <th
+                    key={col.code}
+                    title={col.full}
+                    className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
+                  >
+                    {col.label}
+                  </th>
+                ));
+              })}
             </tr>
           </thead>
 
@@ -451,13 +453,13 @@ export function TreatmentBoard({
                     {Array.from({ length: 6 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
-                    {COL_GROUPS.flatMap((g) =>
-                      expandedGroup === g.key
-                        ? COLUMNS.filter((c) => c.group === g.key).map((col) => (
-                            <td key={col.code} className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>—</td>
-                          ))
-                        : [<td key={g.key} className={`${cb} w-4 px-1 text-center text-[var(--color-ink-muted)]`}>—</td>]
-                    )}
+                    {COL_GROUPS.flatMap((g) => {
+                      const isOpen = g.pinned || expandedGroup === g.key;
+                      const cols = COLUMNS.filter((c) => c.group === g.key);
+                      return (isOpen ? cols : cols.slice(0, 1)).map((col) => (
+                        <td key={col.code} className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>—</td>
+                      ));
+                    })}
                   </tr>
                 );
               }
@@ -593,27 +595,13 @@ export function TreatmentBoard({
                     )}
                   </td>
 
-                  {/* Task cells — accordion: expanded group shows full columns, collapsed shows one summary cell */}
+                  {/* Task cells — pinned groups always full; collapsible groups show 1st col when collapsed */}
                   {COL_GROUPS.flatMap((g) => {
-                    if (expandedGroup === g.key) {
-                      return COLUMNS.filter((c) => c.group === g.key).map((col) => (
-                        <TaskCell key={col.code} bed={bed} code={col.code} />
-                      ));
-                    }
-                    const groupCodes = new Set(COLUMNS.filter((c) => c.group === g.key).map((c) => c.code as string));
-                    const hasOverdue = o.tasks.some((t) => groupCodes.has(t.code) && t.isOverdue);
-                    const hasToday   = !hasOverdue && o.tasks.some((t) => groupCodes.has(t.code) && t.isDueToday);
-                    return [
-                      <td key={g.key} className={`${cb} w-4 px-1 py-2.5 text-center`}>
-                        {hasOverdue ? (
-                          <span className="text-[11px] font-bold text-red-500" title="Overdue in this section">▲</span>
-                        ) : hasToday ? (
-                          <span className="text-[11px] font-bold text-amber-500" title="Due today in this section">●</span>
-                        ) : (
-                          <span className="text-[11px] text-[var(--color-ink-muted)]">·</span>
-                        )}
-                      </td>,
-                    ];
+                    const isOpen = g.pinned || expandedGroup === g.key;
+                    const cols = COLUMNS.filter((c) => c.group === g.key);
+                    return (isOpen ? cols : cols.slice(0, 1)).map((col) => (
+                      <TaskCell key={col.code} bed={bed} code={col.code} />
+                    ));
                   })}
                 </tr>
               );
