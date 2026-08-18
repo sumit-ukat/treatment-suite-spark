@@ -566,7 +566,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             {
               label: 'Unplanned exits',
               value: totals.unplannedExits,
-              hint: 'early or AMA departures',
+              hint: 'left before planned discharge',
               icon: <LogOut className="size-4" />,
               accent: totals.unplannedExits > 3 ? 'critical' : totals.unplannedExits > 0 ? 'warn' : 'good',
             },
@@ -721,6 +721,20 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
           {/* Numbered 5 + 5 two-column grid */}
           {capacitySorted.length > 0 ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
+              <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)] sm:grid-cols-2">
+                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 px-3 py-1.5">
+                  <span />
+                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
+                </div>
+                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
+                  <span />
+                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
+                </div>
+              </div>
               <div className="grid sm:grid-cols-2">
                 <div className="flex flex-col divide-y divide-[var(--color-line)]">
                   {capacityLeft.map((c, i) => (
