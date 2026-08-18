@@ -12,30 +12,45 @@ import { DetailPanel } from './DetailPanel.tsx';
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMNS = [
-  { code: 'family_contact_24h',          label: '24hr',           full: '24-hour family contact',                 group: 'contact'  },
-  { code: 'family_contact_week_1',        label: '1st Week',       full: 'Week 1 family contact',                  group: 'contact'  },
-  { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
-  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
-  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
-  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',           group: 'medical'  },
-  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
-  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
-  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
-  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',             group: 'lifestep' },
-  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',            group: 'lifestep' },
-  { code: 'session_intro',                label: 'Intro CP/121',   full: 'Introductory counselling session',        group: 'careplan' },
-  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 CP/121 counselling session',       group: 'careplan' },
+  // Admin (10 cols)
+  { code: 'focal_therapist',             label: 'Focal Therapist', full: 'Focal therapist assigned',                group: 'admin'    },
+  { code: 'substance',                   label: 'Substance',       full: 'Primary substance recorded',              group: 'admin'    },
+  { code: 'gp_summary',                  label: 'GP Summary',      full: 'GP summary letter sent to GP',            group: 'admin'    },
+  { code: 'treatment_duration',          label: 'Duration',        full: 'Treatment duration confirmed',            group: 'admin'    },
+  { code: 'discharge_date',              label: 'Discharge',       full: 'Discharge date set',                      group: 'admin'    },
+  { code: 'detox_ends',                  label: 'Detox ends',      full: 'Detox end date recorded',                 group: 'admin'    },
+  { code: 'group_therapy',               label: 'Group',           full: 'Group therapy assigned',                  group: 'admin'    },
+  { code: 'doctor',                      label: 'Doctor',          full: 'Doctor assigned',                         group: 'admin'    },
+  { code: 'buddy',                       label: 'Buddy',           full: 'Buddy assigned',                          group: 'admin'    },
+  { code: 'peeps',                       label: 'Peeps',           full: 'PEEPs plan recorded',                     group: 'admin'    },
+  // Contact/Comms (4 cols)
+  { code: 'family_contact_24h',          label: '24hr',            full: '24-hour family contact',                  group: 'contact'  },
+  { code: 'family_contact_week_1',       label: '1st Week',        full: 'Week 1 family contact',                   group: 'contact'  },
+  { code: 'family_contact_week_2',       label: '2nd Week',        full: 'Week 2 family contact',                   group: 'contact'  },
+  { code: 'family_contact_pre_discharge',label: 'Pre-Discharge',   full: 'Family contact 24 hrs before discharge',  group: 'contact'  },
+  // Survey (1 col)
+  { code: 'satisfaction_survey_7day',    label: '7-Day Survey',    full: '7-day satisfaction survey',               group: 'survey'   },
+  // Life Story & Step Works (6 cols)
+  { code: 'life_story',                  label: 'Life Story',      full: 'Life story / surrender',                  group: 'lifestep' },
+  { code: 'step_1',                      label: 'Step 1',          full: '12-Step programme — Step 1',              group: 'lifestep' },
+  { code: 'step_2',                      label: 'Step 2',          full: '12-Step programme — Step 2',              group: 'lifestep' },
+  { code: 'step_3',                      label: 'Step 3',          full: '12-Step programme — Step 3',              group: 'lifestep' },
+  { code: 'side_assignment',             label: 'Side Assign.',    full: 'Side assignment',                         group: 'lifestep' },
+  { code: 'ccp',                         label: 'CCP',             full: 'Care & Continuing Plan (CCP)',             group: 'lifestep' },
+  // Care Plan (5 cols)
+  { code: 'session_intro',               label: 'Intro CP/121',    full: 'Introductory counselling session',         group: 'careplan' },
+  { code: 'session_week_1',              label: 'Week 1',          full: 'Week 1 CP/121 counselling session',        group: 'careplan' },
+  { code: 'session_week_2',              label: 'Week 2',          full: 'Week 2 CP/121 counselling session',        group: 'careplan' },
+  { code: 'session_week_3',             label: 'Week 3',          full: 'Week 3 CP/121 counselling session',        group: 'careplan' },
+  { code: 'session_week_4',             label: 'Week 4',          full: 'Week 4 CP/121 counselling session',        group: 'careplan' },
 ] as const;
 
 const COL_GROUPS = [
-  { key: 'contact',  label: 'Contact/Comms',           count: 4, pinned: false, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { key: 'survey',   label: 'Survey',                   count: 1, pinned: true,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { key: 'medical',  label: 'Medical',                  count: 1, pinned: true,  cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { key: 'lifestep', label: 'Life Story & Step Works',  count: 5, pinned: false, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { key: 'careplan', label: 'Care Plan',                count: 5, pinned: false, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
+  { key: 'admin',    label: 'Admin',                  count: 10, pinned: false, cls: 'bg-slate-50  text-slate-800  dark:bg-slate-950/50  dark:text-slate-300'  },
+  { key: 'contact',  label: 'Contact/Comms',          count: 4,  pinned: false, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
+  { key: 'survey',   label: 'Survey',                 count: 1,  pinned: true,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { key: 'lifestep', label: 'Life Story & Step Works',count: 6,  pinned: false, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { key: 'careplan', label: 'Care Plan',              count: 5,  pinned: false, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -141,7 +156,7 @@ export function TreatmentBoard({
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>('contact');
+  const [expandedGroup, setExpandedGroup] = useState<string | null>('admin');
   const toggleGroup = (key: string) => setExpandedGroup((prev) => (prev === key ? null : key));
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
@@ -363,10 +378,10 @@ export function TreatmentBoard({
             {/* Row 1 — category group spans */}
             <tr>
               <th
-                colSpan={8}
+                colSpan={5}
                 className="border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
               >
-                Client &amp; Placement
+                Client
               </th>
               {COL_GROUPS.map((g) => {
                 const isOpen = g.pinned || expandedGroup === g.key;
@@ -406,9 +421,6 @@ export function TreatmentBoard({
               <th className={th}>Status</th>
               <th className={th}>Day</th>
               <th className={th}>Admitted</th>
-              <th className={th}>Discharge</th>
-              <th className={th}>Group</th>
-              <th className={th}>Therapist</th>
               {COL_GROUPS.flatMap((g) => {
                 const isOpen = g.pinned || expandedGroup === g.key;
                 const cols = COLUMNS.filter((c) => c.group === g.key);
@@ -450,7 +462,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 6 }).map((_, i) => (
+                    {Array.from({ length: 2 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                     {COL_GROUPS.flatMap((g) => {
@@ -569,31 +581,6 @@ export function TreatmentBoard({
                   {/* Admitted */}
                   <td className={`${cb} px-3 py-3 whitespace-nowrap text-[var(--color-ink-muted)]`}>
                     {fmt(o.admittedAt)}
-                  </td>
-
-                  {/* Planned discharge */}
-                  <td
-                    className={`${cb} nums px-3 py-3 whitespace-nowrap text-[12.5px] ${
-                      urgentDischarge
-                        ? 'font-semibold text-red-600 dark:text-red-400'
-                        : 'text-[var(--color-ink-muted)]'
-                    }`}
-                  >
-                    {fmtStr(o.plannedDischargeDate)}
-                  </td>
-
-                  {/* Group */}
-                  <td className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>
-                    {o.group || '—'}
-                  </td>
-
-                  {/* Therapist — plain amber text matches BedList */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
-                    {o.therapist ? (
-                      <span className="text-[12.5px]">{o.therapist}</span>
-                    ) : (
-                      <span className="text-[12.5px] text-amber-600 dark:text-amber-400">Not assigned</span>
-                    )}
                   </td>
 
                   {/* Task cells — pinned groups always full; collapsible groups show 1st col when collapsed */}
