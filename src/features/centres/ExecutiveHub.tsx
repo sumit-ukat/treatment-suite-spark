@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowUpRight,
   BedDouble,
+  Building2,
   CalendarCheck,
   CheckCircle2,
   ChevronDown,
@@ -297,6 +298,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const totals = useMemo(() => groupTotals(visible), [visible]);
   const assessed = useMemo(() => visible.map(assess), [visible]);
   const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
+  const nearFullCentres = useMemo(() => visible.filter((c) => c.occupancyPercent >= 90), [visible]);
 
   const needAction = assessed.filter((a) => a.health === 'act');
   const watching = assessed.filter((a) => a.health === 'watch');
@@ -493,7 +495,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
+          <div className="grid grid-cols-3 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
             <HeroStat
               label="Highest occupied (3-mo avg)"
               value={extremes ? extremes.highest.avgOccupancy3MonthPercent : '—'}
@@ -507,6 +509,18 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               {...(extremes ? { suffix: '%' } : {})}
               hint={extremes ? extremes.lowest.name : 'Nothing in scope'}
               icon={<TrendingDown className="size-3.5" />}
+            />
+            <HeroStat
+              label="Centres near full (≥90%)"
+              value={nearFullCentres.length}
+              hint={
+                nearFullCentres.length === 0
+                  ? 'all centres under 90%'
+                  : nearFullCentres.length <= 2
+                    ? nearFullCentres.map((c) => c.name).join(' · ')
+                    : `${nearFullCentres[0]!.name} + ${nearFullCentres.length - 1} more`
+              }
+              icon={<Building2 className="size-3.5" />}
             />
           </div>
         </div>
