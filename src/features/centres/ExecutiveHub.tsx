@@ -559,9 +559,9 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
             },
             {
-              label: 'Discharging',
+              label: 'Upcoming Availability',
               value: totals.dischargingThisWeek,
-              hint: 'planned this week',
+              hint: 'graduating this week',
               icon: <ArrowUpRight className="size-4" />,
               accent: 'neutral',
             },
@@ -588,7 +588,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             {
               label: 'Open issues',
               value: totals.overdue + totals.pastPlannedDischarge,
-              hint: `${totals.pastPlannedDischarge} past discharge · ${totals.overdue} overdue`,
+              hint: `${totals.overdue} overdue`,
               icon: <CircleAlert className="size-4" />,
               accent:
                 totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
@@ -775,12 +775,12 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             <div className="flex gap-8">
               <div>
                 <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  Freeing this week
+                  Upcoming Availability
                 </p>
                 <p className="tabular mt-1 font-display text-[22px] leading-none font-semibold">
                   {totals.dischargingThisWeek}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">planned discharges</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">graduating this week</p>
               </div>
               {(['South', 'North'] as const).map((r) => {
                 const rFree = visible.filter((c) => c.region === r).reduce((n, c) => n + c.available, 0);
