@@ -512,10 +512,17 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             />
             <HeroStat
               label="Centres near full (≥90%)"
-              value={nearFullCentres.length}
+              value={
+                nearFullCentres.length > 0
+                  ? nearFullCentres.length
+                  : (extremes?.highest.occupancyPercent ?? '—')
+              }
+              {...(nearFullCentres.length === 0 && extremes ? { suffix: '%' } : {})}
               hint={
                 nearFullCentres.length === 0
-                  ? 'all centres under 90%'
+                  ? extremes
+                    ? `${extremes.highest.name} — highest in scope`
+                    : 'Nothing in scope'
                   : nearFullCentres.length <= 2
                     ? nearFullCentres.map((c) => c.name).join(' · ')
                     : `${nearFullCentres[0]!.name} + ${nearFullCentres.length - 1} more`
