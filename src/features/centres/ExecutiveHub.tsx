@@ -818,9 +818,11 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               <div className="grid sm:grid-cols-2">
                 <div className="flex flex-col divide-y divide-[var(--color-line)]">
                   {capacityLeft.map((c, i) => (
-                    <div
+                    <button
                       key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
+                      type="button"
+                      onClick={() => onOpenCentre(c.slug)}
+                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
@@ -834,14 +836,16 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
                       <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
                 <div className="flex flex-col divide-y divide-[var(--color-line)] border-t border-[var(--color-line)] sm:border-t-0 sm:border-l">
                   {capacityRight.map((c, i) => (
-                    <div
+                    <button
                       key={c.slug}
-                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
+                      type="button"
+                      onClick={() => onOpenCentre(c.slug)}
+                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
@@ -855,7 +859,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
                       <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
