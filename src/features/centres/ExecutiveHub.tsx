@@ -271,6 +271,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const [region, setRegionState] = useState<'all' | 'North' | 'South'>('all');
   const [picked, setPickedState] = useState<readonly string[]>([]);
   const [sort, setSort] = useState<SortKey>('risk');
+  const [capacitySort, setCapacitySort] = useState<'occ-asc' | 'occ-desc' | 'name' | 'region'>('occ-asc');
 
   const setRegion = (r: 'all' | 'North' | 'South') => {
     setRegionState(r);
@@ -356,6 +357,24 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   // Group average is a real benchmark derived from the scoped set — unlike an occupancy "target",
   // which has not been supplied and would be invented if it appeared here.
   const avgOccupancy = totals.occupancyPercent;
+  const capacitySorted = useMemo(
+    () =>
+      [...visible].sort((a, b) => {
+        switch (capacitySort) {
+          case 'occ-asc':  return a.occupancyPercent - b.occupancyPercent;
+          case 'occ-desc': return b.occupancyPercent - a.occupancyPercent;
+          case 'name':     return a.name.localeCompare(b.name);
+          case 'region':
+            return a.region !== b.region
+              ? a.region.localeCompare(b.region)
+              : a.name.localeCompare(b.name);
+        }
+      }),
+    [visible, capacitySort],
+  );
+  const capacityHalf  = Math.ceil(capacitySorted.length / 2);
+  const capacityLeft  = capacitySorted.slice(0, capacityHalf);
+  const capacityRight = capacitySorted.slice(capacityHalf);
 
   const sorted = [...assessed].sort((a, b) => {
     switch (sort) {
@@ -719,27 +738,20 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
           title="All centres"
           subtitle="Bed availability and centre-level summary"
           titleExtra={
-            <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
-              {(
-                [
-                  ['risk', 'Risk'],
-                  ['occupancy', 'Occupancy'],
-                  ['free-beds', 'Most free'],
-                  ['name', 'Name'],
-                ] as [SortKey, string][]
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setSort(key)}
-                  className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-                    sort === key ? 'bg-[var(--color-accent)] text-white' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-2.5 py-1.5 text-[12px] font-medium">
+              Sort:
+              <select
+                value={capacitySort}
+                onChange={(e) => setCapacitySort(e.target.value as 'occ-asc' | 'occ-desc' | 'name' | 'region')}
+                className="cursor-pointer appearance-none bg-transparent text-[12px] font-medium"
+              >
+                <option value="occ-asc">Most free beds</option>
+                <option value="occ-desc">Highest occupancy</option>
+                <option value="name">A–Z by name</option>
+                <option value="region">By region</option>
+              </select>
+              <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+            </label>
           }
         >
           {/* Capacity summary */}
@@ -784,96 +796,68 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </div>
           </div>
 
-          <div className="mt-5 border-t border-[var(--color-line)]" />
-
-          {/* Per-centre table */}
-          {sorted.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-[var(--color-line)] px-4 py-6 text-center">
-              <p className="text-[12.5px] text-muted-foreground">
-                No centre matches the current selection.
-              </p>
-              <button
-                type="button"
-                onClick={() => setRegion('all')}
-                className="mt-2 text-[12.5px] font-semibold text-primary underline-offset-2 hover:underline"
-              >
-                Show the whole group
-              </button>
-            </div>
-          ) : (
+          {/* Numbered 5 + 5 two-column grid */}
+          {capacitySorted.length > 0 ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
-              <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))_auto] gap-3 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2 text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase md:grid">
-                <span>Centre</span>
-                <span>Occupancy</span>
-                <span className="text-right">Overdue</span>
-                <span className="text-right">On time</span>
-                <span className="text-right">Discharges</span>
-                <span className="w-4" />
+              <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)] sm:grid-cols-2">
+                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 px-3 py-1.5">
+                  <span />
+                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
+                </div>
+                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
+                  <span />
+                  <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
+                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
+                </div>
               </div>
-              <div className="flex flex-col divide-y divide-[var(--color-line)]">
-                {sorted.map(({ centre: c, health }) => {
-                  const s = HEALTH_STYLE[health];
-                  return (
-                    <button
+              <div className="grid sm:grid-cols-2">
+                <div className="flex flex-col divide-y divide-[var(--color-line)]">
+                  {capacityLeft.map((c, i) => (
+                    <div
                       key={c.slug}
-                      type="button"
-                      onClick={() => onOpenCentre(c.slug)}
-                      className="group grid grid-cols-1 gap-x-3 gap-y-2 px-3.5 py-3 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.4fr)_repeat(3,minmax(0,0.7fr))_auto] md:items-center"
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
                     >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className={`size-2 shrink-0 rounded-full ${s.dot}`} aria-hidden />
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13px] font-semibold">{c.name}</span>
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {c.county} · {c.region}
-                            {c.isConfigured ? '' : ' · no data'}
-                          </span>
-                        </span>
-                      </span>
-
-                      <span className="flex items-center gap-2.5">
-                        <MiniBar percent={c.occupancyPercent} />
-                        <span className="tabular w-16 shrink-0 text-right text-[11.5px] font-semibold text-muted-foreground">
-                          {c.occupied}/{c.capacity}
-                        </span>
-                      </span>
-
-                      <span
-                        className={`tabular text-[12px] md:text-right ${
-                          c.overdue >= OVERDUE_ACT
-                            ? 'font-bold text-overdue'
-                            : c.overdue > 0
-                              ? 'font-semibold text-attention'
-                              : 'text-muted-foreground'
-                        }`}
-                      >
-                        <span className="md:hidden">Overdue </span>
-                        {c.overdue}
-                      </span>
-
-                      <span
-                        className={`tabular text-[12px] md:text-right ${
-                          c.onTimePercent < ONTIME_ACT ? 'font-bold text-overdue' : 'text-muted-foreground'
-                        }`}
-                      >
-                        <span className="md:hidden">On time </span>
-                        {c.onTimePercent}%
-                      </span>
-
-                      <span className="tabular text-[12px] text-muted-foreground md:text-right">
-                        <span className="md:hidden">Discharges </span>
-                        {c.dischargingThisWeek}
-                      </span>
-
-                      <ArrowUpRight
-                        className="hidden size-4 text-muted-foreground transition group-hover:text-primary md:block"
+                      <div
+                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
                         aria-hidden
                       />
-                    </button>
-                  );
-                })}
+                      <span className="tabular text-[11px] font-semibold text-muted-foreground">{i + 1}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
+                        <span className="block text-[11px] text-muted-foreground">{c.region}</span>
+                      </span>
+                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
+                      <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col divide-y divide-[var(--color-line)] border-t border-[var(--color-line)] sm:border-t-0 sm:border-l">
+                  {capacityRight.map((c, i) => (
+                    <div
+                      key={c.slug}
+                      className="relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5"
+                    >
+                      <div
+                        className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
+                        aria-hidden
+                      />
+                      <span className="tabular text-[11px] font-semibold text-muted-foreground">{capacityHalf + i + 1}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
+                        <span className="block text-[11px] text-muted-foreground">{c.region}</span>
+                      </span>
+                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
+                      <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+          ) : (
+            <p className="mt-4 text-[12px] text-muted-foreground">Nothing in scope.</p>
           )}
         </Panel>
       </div>
