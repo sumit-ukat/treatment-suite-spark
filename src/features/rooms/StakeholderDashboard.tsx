@@ -360,25 +360,6 @@ export function StakeholderDashboard({
         )}
       </div>
 
-      {/* ── Bed occupancy ── */}
-      <div>
-        <SectionTitle>Bed occupancy</SectionTitle>
-        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
-          <div className="mb-3 flex items-center justify-between text-[12px]">
-            <span className="font-medium">{stats.bedsOccupied} occupied</span>
-            <span className="text-[var(--color-ink-muted)]">{stats.bedsAvailable} available</span>
-          </div>
-          <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <div
-              className="brand-gradient h-full rounded-full transition-all"
-              style={{ width: `${stats.occupancyPercent}%` }}
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-[var(--color-ink-muted)]">
-            {stats.occupancyPercent}% of {stats.bedsTotal} beds — {stats.bedsAvailable} bed{stats.bedsAvailable !== 1 ? 's' : ''} available for new admissions
-          </p>
-        </div>
-      </div>
 
     </div>
   );
