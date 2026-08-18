@@ -226,85 +226,29 @@ export function StakeholderDashboard({
         </div>
       </div>
 
-      {/* ── Detail sections — unified card, two columns with shared border ── */}
-      <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
-        <div className="flex divide-x divide-[var(--color-line)]">
-
-          {/* Graduating within 7 days */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5">
-              <h2 className="text-[10.5px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-                Graduating within 7 days
-              </h2>
-              {leavingSoon.length > 0 && (
-                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                  {leavingSoon.length}
-                </span>
-              )}
-            </div>
-            {leavingSoon.length === 0 ? (
-              <div className="flex flex-1 items-center gap-2 px-4 py-6 text-[12px] text-[var(--color-ink-muted)]">
-                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-                No graduates expected in the next 7 days.
-              </div>
-            ) : (
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Bed</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Date</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Therapist</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-line)]">
-                  {leavingSoon.map(({ bed, o }) => (
-                    <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-2">
-                          {o.hasRestrictedAlert ? <span title="High risk" className="size-1.5 shrink-0 rounded-full bg-red-500" /> : null}
-                          <span className="font-medium text-[var(--color-ink)]">{o.displayName}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${urgencyColour(o.daysUntilDischarge)}`}>
-                            {dayLabel(o.daysUntilDischarge)}
-                          </span>
-                          <span className="text-[10.5px] text-[var(--color-ink-muted)]">
-                            {formatDate(new Date(o.plannedDischargeDate + 'T12:00:00Z'))}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">
-                        {o.therapist ?? <span className="italic text-amber-600 dark:text-amber-400">Not assigned</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+      {/* ── Needs attention ── */}
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+            Needs attention
+          </h2>
+          {needsAttention.length > 0 && (
+            <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+              {needsAttention.length}
+            </span>
+          )}
+        </div>
+        {needsAttention.length === 0 ? (
+          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+            No clients with high-risk flags or overdue tasks.
           </div>
-
-          {/* Needs attention */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5">
-              <h2 className="text-[10.5px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-                Needs attention
-              </h2>
-              {needsAttention.length > 0 && (
-                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                  {needsAttention.length}
-                </span>
-              )}
-            </div>
-            {needsAttention.length === 0 ? (
-              <div className="flex flex-1 items-center gap-2 px-4 py-6 text-[12px] text-[var(--color-ink-muted)]">
-                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-                No clients with high-risk flags or overdue tasks.
-              </div>
-            ) : (
+        ) : (() => {
+          const mid = Math.ceil(needsAttention.length / 2);
+          const leftCol  = needsAttention.slice(0, mid);
+          const rightCol = needsAttention.slice(mid);
+          const AttentionTable = ({ rows }: { rows: typeof needsAttention }) => (
+            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -315,7 +259,7 @@ export function StakeholderDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-line)]">
-                  {needsAttention.map(({ bed, o }) => (
+                  {rows.map(({ bed, o }) => (
                     <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
                       <td className="px-3 py-2.5 font-medium text-[var(--color-ink)]">{o.displayName}</td>
                       <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
@@ -346,9 +290,93 @@ export function StakeholderDashboard({
                   ))}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          );
+          return (
+            <div className={`grid gap-4 ${rightCol.length > 0 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+              <AttentionTable rows={leftCol} />
+              {rightCol.length > 0 && <AttentionTable rows={rightCol} />}
+            </div>
+          );
+        })()}
+      </div>
 
+      {/* ── Graduating within 7 days ── */}
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+            Graduating within 7 days
+          </h2>
+          {leavingSoon.length > 0 && (
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              {leavingSoon.length}
+            </span>
+          )}
+        </div>
+        {leavingSoon.length === 0 ? (
+          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+            No graduates expected in the next 7 days.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Bed</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Date</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Therapist</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-line)]">
+                {leavingSoon.map(({ bed, o }) => (
+                  <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {o.hasRestrictedAlert ? <span title="High risk" className="size-1.5 shrink-0 rounded-full bg-red-500" /> : null}
+                        <span className="font-medium text-[var(--color-ink)]">{o.displayName}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${urgencyColour(o.daysUntilDischarge)}`}>
+                          {dayLabel(o.daysUntilDischarge)}
+                        </span>
+                        <span className="text-[10.5px] text-[var(--color-ink-muted)]">
+                          {formatDate(new Date(o.plannedDischargeDate + 'T12:00:00Z'))}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">
+                      {o.therapist ?? <span className="italic text-amber-600 dark:text-amber-400">Not assigned</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Bed occupancy ── */}
+      <div>
+        <SectionTitle>Bed occupancy</SectionTitle>
+        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
+          <div className="mb-3 flex items-center justify-between text-[12px]">
+            <span className="font-medium">{stats.bedsOccupied} occupied</span>
+            <span className="text-[var(--color-ink-muted)]">{stats.bedsAvailable} available</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div
+              className="brand-gradient h-full rounded-full transition-all"
+              style={{ width: `${stats.occupancyPercent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--color-ink-muted)]">
+            {stats.occupancyPercent}% of {stats.bedsTotal} beds — {stats.bedsAvailable} bed{stats.bedsAvailable !== 1 ? 's' : ''} available for new admissions
+          </p>
         </div>
       </div>
 
