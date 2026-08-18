@@ -524,7 +524,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
              risk numbers competing for attention in the same row. ── */}
       <div className="mt-4">
         <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Business health
+          Business overview
         </h2>
         <MetricGrid
           cards={[
@@ -579,7 +579,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
              the least immediate reaction. ── */}
       <div className="mt-4">
         <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Ops health
+          Operations overview
         </h2>
         <MetricGrid
           cards={[
