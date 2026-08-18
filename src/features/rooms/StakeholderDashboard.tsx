@@ -1,13 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  AlertTriangle,
   BedDouble,
   CalendarClock,
   CheckCircle2,
+  CircleAlert,
   ClipboardList,
   RefreshCw,
   TrendingUp,
-  UserCheck,
   UserX,
   Repeat2,
   type LucideIcon,
@@ -31,7 +30,7 @@ function urgencyColour(days: number): string {
 }
 
 function dayLabel(days: number): string {
-  if (days < 0) return `${Math.abs(days)}d overdue`;
+  if (days < 0) return `${Math.abs(days)}d past date`;
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
   return `In ${days}d`;
@@ -118,6 +117,8 @@ export function StakeholderDashboard({
     [beds],
   );
 
+  const [activeTab, setActiveTab] = useState<'graduating' | 'attention'>('attention');
+
   const totalTasks   = occupants.reduce((s, o) => s + o.totalCount, 0);
   const totalNA      = occupants.reduce((s, o) => s + o.notApplicableCount, 0);
   const totalDone    = occupants.reduce((s, o) => s + o.completedCount, 0);
@@ -160,20 +161,13 @@ export function StakeholderDashboard({
       {/* ── Primary KPIs ── */}
       <div>
         <SectionTitle>At a glance</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           <KpiTile
             icon={BedDouble}
             value={`${stats.bedsOccupied}/${stats.bedsTotal}`}
             label="Beds occupied"
             sub={`${stats.occupancyPercent}% occupancy · ${stats.bedsAvailable} available`}
             accent={stats.occupancyPercent >= 85 ? 'green' : stats.occupancyPercent >= 60 ? 'amber' : 'red'}
-          />
-          <KpiTile
-            icon={AlertTriangle}
-            value={stats.restrictedAlerts}
-            label="High risk clients"
-            sub={openConcerns > 0 ? `+ ${openConcerns} open concern${openConcerns !== 1 ? 's' : ''}` : 'No open concerns'}
-            accent={stats.restrictedAlerts > 0 ? 'red' : 'green'}
           />
           <KpiTile
             icon={ClipboardList}
@@ -185,8 +179,8 @@ export function StakeholderDashboard({
           <KpiTile
             icon={CalendarClock}
             value={leavingSoon.length}
-            label="Discharging in 7 days"
-            sub={pendingD > 0 ? `${pendingD} discharge request${pendingD !== 1 ? 's' : ''} pending` : 'No pending requests'}
+            label="Graduating in 7 days"
+            sub={pendingD > 0 ? `${pendingD} pending request${pendingD !== 1 ? 's' : ''}` : 'No pending requests'}
             accent={leavingSoon.length > 0 ? 'amber' : 'neutral'}
           />
         </div>
@@ -218,25 +212,59 @@ export function StakeholderDashboard({
             accent={stats.missingTherapist > 0 ? 'amber' : 'green'}
           />
           <KpiTile
-            icon={UserCheck}
-            value={stats.pastPlannedDischarge}
-            label="Past planned discharge"
-            sub="Still active beyond their date"
-            accent={stats.pastPlannedDischarge > 0 ? 'red' : 'green'}
+            icon={CircleAlert}
+            value={openConcerns}
+            label="Open concerns"
+            sub={openConcerns > 0 ? 'Clients with flagged concerns' : 'No open concerns'}
+            accent={openConcerns > 0 ? 'amber' : 'green'}
           />
         </div>
       </div>
 
       {/* ── Detail sections ── */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div>
+        {/* Tab bar */}
+        <div className="mb-4 flex border-b border-[var(--color-line)]">
+          <button
+            type="button"
+            onClick={() => setActiveTab('graduating')}
+            className={`flex items-center gap-2 border-b-2 px-4 pb-2.5 pt-1 text-[12.5px] font-medium transition ${
+              activeTab === 'graduating'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+            }`}
+          >
+            Graduating within 7 days
+            {leavingSoon.length > 0 && (
+              <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                {leavingSoon.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('attention')}
+            className={`flex items-center gap-2 border-b-2 px-4 pb-2.5 pt-1 text-[12.5px] font-medium transition ${
+              activeTab === 'attention'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+            }`}
+          >
+            Needs attention
+            {needsAttention.length > 0 && (
+              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                {needsAttention.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-        {/* Leaving soon */}
-        <div>
-          <SectionTitle>Discharging within 7 days</SectionTitle>
-          {leavingSoon.length === 0 ? (
+        {/* Tab content */}
+        {activeTab === 'graduating' ? (
+          leavingSoon.length === 0 ? (
             <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
               <CheckCircle2 className="size-4 text-emerald-500" />
-              No discharges expected in the next 7 days.
+              No graduates expected in the next 7 days.
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
@@ -245,7 +273,7 @@ export function StakeholderDashboard({
                   <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
                     <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
                     <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Bed</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Discharge</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Date</th>
                     <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Therapist</th>
                   </tr>
                 </thead>
@@ -277,13 +305,9 @@ export function StakeholderDashboard({
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-
-        {/* Needs attention */}
-        <div>
-          <SectionTitle>Needs attention</SectionTitle>
-          {needsAttention.length === 0 ? (
+          )
+        ) : (
+          needsAttention.length === 0 ? (
             <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
               <CheckCircle2 className="size-4 text-emerald-500" />
               No clients with high-risk flags or overdue tasks.
@@ -332,8 +356,8 @@ export function StakeholderDashboard({
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          )
+        )}
       </div>
 
       {/* ── Occupancy bar ── */}
