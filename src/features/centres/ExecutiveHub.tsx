@@ -581,7 +581,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
              the least immediate reaction. ── */}
       <div className="mt-4">
         <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Operations overview
+          Ops overview
         </h2>
         <MetricGrid
           cards={[
