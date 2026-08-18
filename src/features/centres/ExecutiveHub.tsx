@@ -5,7 +5,6 @@ import {
   BedDouble,
   Building2,
   CalendarCheck,
-  CheckCircle2,
   ChevronDown,
   CircleAlert,
   Clock,
@@ -14,7 +13,6 @@ import {
   Percent,
   TrendingDown,
   TrendingUp,
-  TriangleAlert,
   UserMinus,
   UserX,
   Users,
@@ -474,19 +472,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
           <div className="flex items-center gap-5">
             <OccupancyRing percent={totals.occupancyPercent} />
             <div className="min-w-0">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${vStyle.line} ${vStyle.soft} ${vStyle.text}`}
-              >
-                {verdict.tier === 'clear' ? (
-                  <CheckCircle2 className="size-3.5" aria-hidden />
-                ) : verdict.tier === 'watch' ? (
-                  <TriangleAlert className="size-3.5" aria-hidden />
-                ) : (
-                  <CircleAlert className="size-3.5" aria-hidden />
-                )}
-                {HEALTH_STYLE[verdict.tier].label}
-              </span>
-              <h2 className="mt-2 font-display text-[23px] leading-tight font-semibold sm:text-[26px]">
+              <h2 className="font-display text-[23px] leading-tight font-semibold sm:text-[26px]">
                 {verdict.headline}
               </h2>
               <p className="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-muted-foreground">
