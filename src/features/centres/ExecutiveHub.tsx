@@ -272,6 +272,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const [region, setRegionState] = useState<'all' | 'North' | 'South'>('all');
   const [picked, setPickedState] = useState<readonly string[]>([]);
   const [sort, setSort] = useState<SortKey>('risk');
+  const [capacitySort, setCapacitySort] = useState<'occ-asc' | 'occ-desc' | 'name' | 'region'>('occ-asc');
 
   const setRegion = (r: 'all' | 'North' | 'South') => {
     setRegionState(r);
@@ -356,10 +357,21 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   // Group average is a real benchmark derived from the scoped set — unlike an occupancy "target",
   // which has not been supplied and would be invented if it appeared here.
   const avgOccupancy = totals.occupancyPercent;
-  const belowAverage = [...visible]
-    .filter((c) => c.available > 0)
-    .sort((a, b) => b.available - a.available)
-    .slice(0, 4);
+  const capacitySorted = useMemo(
+    () =>
+      [...visible].sort((a, b) => {
+        switch (capacitySort) {
+          case 'occ-asc':  return a.occupancyPercent - b.occupancyPercent;
+          case 'occ-desc': return b.occupancyPercent - a.occupancyPercent;
+          case 'name':     return a.name.localeCompare(b.name);
+          case 'region':
+            return a.region !== b.region
+              ? a.region.localeCompare(b.region)
+              : a.name.localeCompare(b.name);
+        }
+      }),
+    [visible, capacitySort],
+  );
 
   const sorted = [...assessed].sort((a, b) => {
     switch (sort) {
@@ -634,7 +646,35 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
 
       {/* ── Capacity — 3rd, after the business health cards. ── */}
       <div className="mt-4">
-        <Panel title="Capacity" subtitle="Where the empty beds are">
+        <Panel
+          title="Capacity"
+          subtitle="Where the empty beds are"
+          titleExtra={
+            <div className="flex rounded-lg border border-[var(--color-line)] p-0.5">
+              {(
+                [
+                  ['occ-asc',  'Most free'],
+                  ['occ-desc', 'Highest occ.'],
+                  ['name',     'Name'],
+                  ['region',   'Region'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCapacitySort(key)}
+                  className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
+                    capacitySort === key
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          }
+        >
           <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
             <div>
               <div className="flex items-baseline gap-3">
@@ -652,11 +692,14 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               </div>
             </div>
 
-            {belowAverage.length > 0 ? (
-              <ul className="flex flex-col divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)]">
-                {belowAverage.map((c) => (
-                  <li key={c.slug} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-2.5">
-                    <span className="truncate text-[12.5px] font-medium">{c.name}</span>
+            {capacitySorted.length > 0 ? (
+              <ul className="flex max-h-64 flex-col divide-y divide-[var(--color-line)] overflow-y-auto overflow-hidden rounded-xl border border-[var(--color-line)]">
+                {capacitySorted.map((c) => (
+                  <li key={c.slug} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12.5px] font-medium">{c.name}</span>
+                      <span className="block text-[11px] text-muted-foreground">{c.region}</span>
+                    </span>
                     <span className="tabular text-[12px] text-muted-foreground">{c.available} free</span>
                     <span className="tabular w-10 text-right text-[12px] font-semibold text-muted-foreground">
                       {c.occupancyPercent}%
@@ -665,7 +708,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                 ))}
               </ul>
             ) : (
-              <p className="text-[12px] text-muted-foreground self-center">Every bed in scope is filled.</p>
+              <p className="text-[12px] text-muted-foreground self-center">Nothing in scope.</p>
             )}
           </div>
         </Panel>
