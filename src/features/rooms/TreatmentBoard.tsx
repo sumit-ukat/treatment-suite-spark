@@ -357,7 +357,7 @@ export function TreatmentBoard({
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
       >
-        <table className="min-w-max border-separate border-spacing-0 text-[12.5px]">
+        <table className="w-full min-w-max border-separate border-spacing-0 text-[12.5px]">
 
           <thead className="sticky top-0 z-20">
             {/* Row 1 — category group spans */}
