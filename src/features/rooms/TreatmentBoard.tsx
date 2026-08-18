@@ -141,7 +141,7 @@ export function TreatmentBoard({
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>('contact');
   const toggleGroup = (key: string) => setExpandedGroup((prev) => (prev === key ? null : key));
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
@@ -384,7 +384,7 @@ export function TreatmentBoard({
                           ? <ChevronDown className="size-3 shrink-0" aria-hidden />
                           : <ChevronRight className="size-3 shrink-0" aria-hidden />
                         }
-                        <span className="max-w-[64px] truncate">
+                        <span className={isOpen ? '' : 'max-w-[52px] truncate'}>
                           {isOpen ? g.label : g.label.split(' ')[0]}
                         </span>
                       </span>
