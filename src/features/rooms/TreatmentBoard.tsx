@@ -12,30 +12,30 @@ import { DetailPanel } from './DetailPanel.tsx';
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMNS = [
-  { code: 'family_contact_24h',          label: '24-Hour',        full: '24-hour family contact',              group: 'family'    },
-  { code: 'family_contact_week_1',        label: 'Week 1',         full: 'Week 1 family contact',               group: 'family'    },
-  { code: 'family_contact_week_2',        label: 'Week 2',         full: 'Week 2 family contact',               group: 'family'    },
-  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'family'  },
-  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',           group: 'survey'    },
-  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',        group: 'medical'   },
-  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',              group: 'milestone' },
-  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',          group: 'milestone' },
-  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',          group: 'milestone' },
-  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',          group: 'milestone' },
-  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',         group: 'milestone' },
-  { code: 'session_intro',                label: 'Intro',          full: 'Introductory counselling session',    group: 'session'   },
-  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 counselling session',          group: 'session'   },
-  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 counselling session',          group: 'session'   },
-  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 counselling session',          group: 'session'   },
-  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 counselling session',          group: 'session'   },
+  { code: 'family_contact_24h',          label: '24hr',           full: '24-hour family contact',                 group: 'contact'  },
+  { code: 'family_contact_week_1',        label: '1st Week',       full: 'Week 1 family contact',                  group: 'contact'  },
+  { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
+  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
+  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
+  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',           group: 'medical'  },
+  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
+  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
+  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
+  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',             group: 'lifestep' },
+  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',            group: 'lifestep' },
+  { code: 'session_intro',                label: 'Intro CP/121',   full: 'Introductory counselling session',        group: 'careplan' },
+  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 CP/121 counselling session',       group: 'careplan' },
+  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 CP/121 counselling session',       group: 'careplan' },
+  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 CP/121 counselling session',       group: 'careplan' },
+  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 CP/121 counselling session',       group: 'careplan' },
 ] as const;
 
 const COL_GROUPS = [
-  { label: 'Family contact', count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { label: 'Survey',         count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { label: 'Medical',        count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { label: 'Care Plan',      count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { label: 'Milestone',      count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
+  { label: 'Contact/Comms',           count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
+  { label: '7-Day Survey',            count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { label: 'Medical',                 count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
+  { label: 'Life Story & Step Works', count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { label: 'Care Plan',               count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
