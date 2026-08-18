@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Plus, Printer, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, History, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
@@ -32,7 +32,7 @@ const COLUMNS = [
 
 const COL_GROUPS = [
   { key: 'contact',  label: 'Contact/Comms',           count: 4, pinned: false, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { key: 'survey',   label: '7-Day Survey',             count: 1, pinned: true,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { key: 'survey',   label: 'Survey',                   count: 1, pinned: true,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
   { key: 'medical',  label: 'Medical',                  count: 1, pinned: true,  cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
   { key: 'lifestep', label: 'Life Story & Step Works',  count: 5, pinned: false, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
   { key: 'careplan', label: 'Care Plan',                count: 5, pinned: false, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
@@ -335,14 +335,6 @@ export function TreatmentBoard({
           active={activeFilter === 'no_therapist'}
           onClick={() => toggle('no_therapist')}
         />
-        <StatTile
-          label="Open concerns"
-          value={counts.openConcerns}
-          icon="⚑"
-          tone="warn"
-          active={activeFilter === 'open_concerns'}
-          onClick={() => toggle('open_concerns')}
-        />
       </div>
 
       {/* ── Table ── */}
@@ -382,14 +374,19 @@ export function TreatmentBoard({
                   <th
                     key={g.key}
                     colSpan={isOpen ? g.count : 1}
-                    className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.pinned ? '' : 'cursor-pointer select-none transition-colors hover:brightness-95'} ${g.cls}`}
+                    className={`border-b border-[var(--color-line)] px-1.5 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.pinned ? '' : 'cursor-pointer select-none transition-colors hover:brightness-95 active:brightness-90'} ${g.cls}`}
                     onClick={g.pinned ? undefined : () => toggleGroup(g.key)}
-                    title={g.pinned ? undefined : isOpen ? `Collapse ${g.label}` : `Expand ${g.label}`}
+                    title={g.pinned ? undefined : isOpen ? `Click to collapse ${g.label}` : `Click to expand ${g.label}`}
                   >
                     {g.pinned ? g.label : (
-                      <span className="flex items-center justify-center gap-1">
-                        <span aria-hidden>{isOpen ? '▾' : '▸'}</span>
-                        {isOpen ? g.label : g.label.split(' ')[0]}
+                      <span className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-0.5 ${isOpen ? 'border-current/40 bg-white/50 dark:bg-black/20' : 'border-current/50 bg-white/70 shadow-sm dark:bg-black/30'}`}>
+                        {isOpen
+                          ? <ChevronDown className="size-3 shrink-0" aria-hidden />
+                          : <ChevronRight className="size-3 shrink-0" aria-hidden />
+                        }
+                        <span className="max-w-[64px] truncate">
+                          {isOpen ? g.label : g.label.split(' ')[0]}
+                        </span>
                       </span>
                     )}
                   </th>
