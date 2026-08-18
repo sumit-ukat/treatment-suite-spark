@@ -43,11 +43,14 @@ export interface CentreSummary {
   missingTherapist: number;
   /** Overdue items estimated to be older than 7 days — chronic backlog indicator. */
   agedOverdue: number;
-  /** Average days the recorded discharge date differs from the policy-calculated one, across
-   * occupied beds. Positive = stays running longer than policy on average; negative = shorter. */
-  avgStayVarianceDays: number;
   /** Clients without an assigned peer buddy. */
   missingBuddy: number;
+  /** Average occupancy over the trailing 3 months. PLACEHOLDER for every centre, Primrose Lodge
+   * included — nothing in this system tracks occupancy history yet (see ExecutiveHub's no-trend-data
+   * note). Swap in real figures per centre, and flip occupancyTrendConfirmed, once that exists. */
+  avgOccupancy3MonthPercent: number;
+  /** True once avgOccupancy3MonthPercent reflects tracked history rather than a placeholder. */
+  occupancyTrendConfirmed: boolean;
   /** True only for the centre that is actually configured in the database. */
   isConfigured: boolean;
 }
@@ -102,20 +105,34 @@ function seededValues(seed: string, count: number): number[] {
   return out;
 }
 
+/**
+ * Placeholder 3-month occupancy average, deterministic per centre like everything else here. Every
+ * centre gets `occupancyTrendConfirmed: false` until real historical figures are supplied — isolating
+ * the placeholder behind one function means swapping in the real calculation later touches one place,
+ * not every call site.
+ */
+function placeholderOccupancyTrend(slug: string, currentPercent: number): number {
+  const [jitter] = seededValues(`${slug}:trend3mo`, 1) as [number];
+  return Math.max(0, Math.min(100, currentPercent + Math.round((jitter - 0.5) * 16)));
+}
+
 function fictionalCentre(spec: CentreSpec): CentreSummary {
-  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = seededValues(spec.slug, 13) as [
+  // Index 11 is generated but no longer consumed — kept in the sequence so index 12 (missingBuddy)
+  // keeps drawing the same seeded value it always has.
+  const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, , r12] = seededValues(spec.slug, 13) as [
     number, number, number, number, number, number, number, number, number, number, number, number, number,
   ];
 
   const occupied = Math.min(spec.capacity, Math.round(spec.capacity * (0.62 + r0 * 0.36)));
   const available = spec.capacity - occupied;
   const overdue = Math.round(r1 * 14);
+  const occupancyPercent = Math.round((occupied / spec.capacity) * 100);
 
   return {
     ...spec,
     occupied,
     available,
-    occupancyPercent: Math.round((occupied / spec.capacity) * 100),
+    occupancyPercent,
     overdue,
     dueToday: Math.round(r2 * 9),
     dischargingThisWeek: Math.round(r3 * 5),
@@ -126,8 +143,9 @@ function fictionalCentre(spec: CentreSpec): CentreSummary {
     extendedStays: Math.round(r8 * occupied * 0.25),
     missingTherapist: Math.round(r9 * occupied * 0.15),
     agedOverdue: Math.round(overdue * (0.35 + r10 * 0.30)),
-    avgStayVarianceDays: Math.round((r11 - 0.5) * 12),
     missingBuddy: Math.round(r12 * occupied * 0.08),
+    avgOccupancy3MonthPercent: placeholderOccupancyTrend(spec.slug, occupancyPercent),
+    occupancyTrendConfirmed: false,
     isConfigured: false,
   };
 }
@@ -141,6 +159,7 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     .flatMap((b) => (b.occupant ? b.occupant.tasks : []))
     .filter((t) => t.isComplete || t.isOverdue);
   const completedOnTime = onTime.filter((t) => t.isComplete).length;
+  const occupancyPercent = Math.round((s.bedsOccupied / spec.capacity) * 100);
 
   return {
     ...spec,
@@ -148,7 +167,7 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     // Against confirmed capacity, not the board's 18 — so the missing bed shows up as availability
     // the board cannot offer.
     available: spec.capacity - s.bedsOccupied,
-    occupancyPercent: Math.round((s.bedsOccupied / spec.capacity) * 100),
+    occupancyPercent,
     overdue: s.overdue,
     dueToday: s.dueToday,
     dischargingThisWeek: s.dischargingThisWeek,
@@ -160,10 +179,9 @@ function primroseCentre(spec: CentreSpec): CentreSummary {
     missingTherapist: s.missingTherapist,
     // No per-task age available at this level — use the same seeded estimate as fictional centres.
     agedOverdue: Math.round(s.overdue * 0.45),
-    avgStayVarianceDays: occupants.length
-      ? Math.round(occupants.reduce((n, o) => n + o.dischargeMismatchDays, 0) / occupants.length)
-      : 0,
     missingBuddy: occupants.filter((o) => o.buddy === '—').length,
+    avgOccupancy3MonthPercent: placeholderOccupancyTrend(spec.slug, occupancyPercent),
+    occupancyTrendConfirmed: false,
     isConfigured: true,
   };
 }
@@ -190,7 +208,6 @@ export interface GroupTotals {
   extendedStays: number;
   missingTherapist: number;
   agedOverdue: number;
-  avgStayVarianceDays: number;
   missingBuddy: number;
   capacityUnconfirmed: number;
 }
@@ -218,11 +235,23 @@ export function groupTotals(centres: readonly CentreSummary[]): GroupTotals {
     extendedStays: sum((c) => c.extendedStays),
     missingTherapist: sum((c) => c.missingTherapist),
     agedOverdue: sum((c) => c.agedOverdue),
-    // Weighted by occupancy, same reasoning as onTimePercent above.
-    avgStayVarianceDays: occupied
-      ? Math.round(sum((c) => c.avgStayVarianceDays * c.occupied) / occupied)
-      : 0,
     missingBuddy: sum((c) => c.missingBuddy),
     capacityUnconfirmed: centres.filter((c) => !c.capacityConfirmed).length,
   };
+}
+
+export interface OccupancyExtremes {
+  highest: CentreSummary;
+  lowest: CentreSummary;
+}
+
+/**
+ * The most- and least-occupied centres by trailing 3-month average. Null only when the scope is
+ * empty. A single centre in scope is both its own highest and lowest — that is correct, not a bug:
+ * there is nothing to contrast it against.
+ */
+export function occupancyExtremes(centres: readonly CentreSummary[]): OccupancyExtremes | null {
+  if (centres.length === 0) return null;
+  const sorted = [...centres].sort((a, b) => b.avgOccupancy3MonthPercent - a.avgOccupancy3MonthPercent);
+  return { highest: sorted[0]!, lowest: sorted[sorted.length - 1]! };
 }

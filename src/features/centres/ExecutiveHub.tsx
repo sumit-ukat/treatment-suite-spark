@@ -4,21 +4,20 @@ import {
   ArrowUpRight,
   BedDouble,
   CalendarCheck,
-  CalendarClock,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
   Clock,
   Percent,
   ShieldAlert,
-  ShieldCheck,
+  TrendingDown,
   TrendingUp,
   TriangleAlert,
   UserMinus,
   UserX,
   Users,
 } from 'lucide-react';
-import { buildCentres, groupTotals, type CentreSummary } from './centres-data.js';
+import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
@@ -295,6 +294,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
 
   const totals = useMemo(() => groupTotals(visible), [visible]);
   const assessed = useMemo(() => visible.map(assess), [visible]);
+  const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
 
   const needAction = assessed.filter((a) => a.health === 'act');
   const watching = assessed.filter((a) => a.health === 'watch');
@@ -477,31 +477,20 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 sm:grid-cols-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
             <HeroStat
-              label="In treatment"
-              value={totals.occupied}
-              hint={`across ${visible.length} centre${visible.length === 1 ? '' : 's'}`}
-              icon={<Users className="size-3.5" />}
-            />
-            <HeroStat
-              label="Beds free"
-              value={totals.available}
-              hint={`of ${totals.capacity} total`}
-              icon={<BedDouble className="size-3.5" />}
-            />
-            <HeroStat
-              label="On time"
-              value={totals.onTimePercent}
-              suffix="%"
-              hint="actions done to plan"
+              label="Highest occupied (3-mo avg)"
+              value={extremes ? extremes.highest.avgOccupancy3MonthPercent : '—'}
+              {...(extremes ? { suffix: '%' } : {})}
+              hint={extremes ? extremes.highest.name : 'Nothing in scope'}
               icon={<TrendingUp className="size-3.5" />}
             />
             <HeroStat
-              label="Total issues"
-              value={totals.overdue + totals.pastPlannedDischarge + totals.extendedStays}
-              hint="overdue · past discharge · extended"
-              icon={<ShieldCheck className="size-3.5" />}
+              label="Lowest occupied (3-mo avg)"
+              value={extremes ? extremes.lowest.avgOccupancy3MonthPercent : '—'}
+              {...(extremes ? { suffix: '%' } : {})}
+              hint={extremes ? extremes.lowest.name : 'Nothing in scope'}
+              icon={<TrendingDown className="size-3.5" />}
             />
           </div>
         </div>
@@ -552,11 +541,16 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               accent: 'neutral',
             },
             {
-              label: 'Stay vs plan',
-              value: totals.avgStayVarianceDays > 0 ? `+${totals.avgStayVarianceDays}d` : `${totals.avgStayVarianceDays}d`,
-              hint: 'average vs policy calculation',
-              icon: <CalendarClock className="size-4" />,
-              accent: Math.abs(totals.avgStayVarianceDays) > 5 ? 'warn' : 'neutral',
+              label: 'On-time rate',
+              value: `${totals.onTimePercent}%`,
+              hint: 'actions completed to plan',
+              icon: <TrendingUp className="size-4" />,
+              accent:
+                totals.onTimePercent < ONTIME_ACT
+                  ? 'critical'
+                  : totals.onTimePercent < 90
+                    ? 'warn'
+                    : 'good',
             },
           ]}
         />
@@ -899,13 +893,15 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             What is real on this page
           </p>
           <p className="mt-2 text-[11.5px] leading-relaxed text-amber-900 dark:text-amber-200">
-            Centre names, counties and Primrose Lodge&rsquo;s figures are real — the latter from the same
-            admissions and required actions that drive its room board. Every other centre&rsquo;s
-            occupancy, overdue count and on-time rate is <strong className="font-semibold">fictional</strong>
-            , {totals.capacityUnconfirmed} of the {visible.length || centres.length} bed capacities above
-            are placeholders, and the region grouping is a placeholder. No trend or comparison against a
-            previous period appears anywhere here because none is stored yet — an arrow would have to be
-            invented.
+            Centre names, counties and Primrose Lodge&rsquo;s current-day figures are real — the latter
+            from the same admissions and required actions that drive its room board. Every other
+            centre&rsquo;s occupancy, overdue count and on-time rate is{' '}
+            <strong className="font-semibold">fictional</strong>, {totals.capacityUnconfirmed} of the{' '}
+            {visible.length || centres.length} bed capacities above are placeholders, and the region
+            grouping is a placeholder. The highest/lowest-occupied figures above are a{' '}
+            <strong className="font-semibold">placeholder 3-month average for every centre, Primrose
+            Lodge included</strong> — no centre&rsquo;s occupancy history is tracked yet, so there is
+            nothing real to average until that exists.
           </p>
         </div>
       </div>
