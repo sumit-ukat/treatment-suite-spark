@@ -113,8 +113,8 @@ export default function App() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/hub" replace />} />
-      <Route path="/hub" element={<HubPage />} />
+      <Route path="/" element={<Navigate to="/exec" replace />} />
+      <Route path="/hub" element={<Navigate to="/exec" replace />} />
       {/* A second hub, not a replacement — the executive read of the estate, kept alongside the
           operational one so the two can be compared before either is committed to. */}
       <Route path="/exec" element={<ExecHubPage />} />
@@ -132,7 +132,7 @@ function AppRoutes() {
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/hub" replace />} />
+      <Route path="*" element={<Navigate to="/exec" replace />} />
     </Routes>
   );
 }
@@ -348,7 +348,6 @@ function HubHeader({ variant }: { variant: 'operations' | 'executive' }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <HubSwitcher current={variant} />
         <LiveClock className="hidden sm:flex" />
         <UserMenu variant="panel" />
       </div>
@@ -482,7 +481,7 @@ function CentreShell() {
           onToggle={() => setCollapsed((c) => !c)}
           centreName={centre.name}
           centreSlug={centreSlug}
-          onLeaveCentre={() => navigate('/hub')}
+          onLeaveCentre={() => navigate('/exec')}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
