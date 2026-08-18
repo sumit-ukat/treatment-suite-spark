@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import {
+  AlertTriangle,
   BedDouble,
   CalendarClock,
   CheckCircle2,
@@ -159,13 +160,20 @@ export function StakeholderDashboard({
       {/* ── Primary KPIs ── */}
       <div>
         <SectionTitle>At a glance</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KpiTile
             icon={BedDouble}
             value={`${stats.bedsOccupied}/${stats.bedsTotal}`}
             label="Beds occupied"
             sub={`${stats.occupancyPercent}% occupancy · ${stats.bedsAvailable} available`}
             accent={stats.occupancyPercent >= 85 ? 'green' : stats.occupancyPercent >= 60 ? 'amber' : 'red'}
+          />
+          <KpiTile
+            icon={AlertTriangle}
+            value={stats.restrictedAlerts}
+            label="High risk clients"
+            sub={openConcerns > 0 ? `+ ${openConcerns} open concern${openConcerns !== 1 ? 's' : ''}` : 'No open concerns'}
+            accent={stats.restrictedAlerts > 0 ? 'red' : 'green'}
           />
           <KpiTile
             icon={ClipboardList}
