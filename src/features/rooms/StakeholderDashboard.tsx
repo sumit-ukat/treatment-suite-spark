@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   BedDouble,
   CalendarClock,
@@ -117,8 +117,6 @@ export function StakeholderDashboard({
     [beds],
   );
 
-  const [activeTab, setActiveTab] = useState<'graduating' | 'attention'>('attention');
-
   const totalTasks   = occupants.reduce((s, o) => s + o.totalCount, 0);
   const totalNA      = occupants.reduce((s, o) => s + o.notApplicableCount, 0);
   const totalDone    = occupants.reduce((s, o) => s + o.completedCount, 0);
@@ -221,47 +219,22 @@ export function StakeholderDashboard({
         </div>
       </div>
 
-      {/* ── Detail sections ── */}
-      <div>
-        {/* Tab bar */}
-        <div className="mb-4 flex border-b border-[var(--color-line)]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('graduating')}
-            className={`flex items-center gap-2 border-b-2 px-4 pb-2.5 pt-1 text-[12.5px] font-medium transition ${
-              activeTab === 'graduating'
-                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
-            }`}
-          >
-            Graduating within 7 days
+      {/* ── Detail sections — side by side, each sizes to own content ── */}
+      <div className="flex items-start gap-6">
+
+        {/* Graduating within 7 days */}
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+              Graduating within 7 days
+            </h2>
             {leavingSoon.length > 0 && (
               <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                 {leavingSoon.length}
               </span>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('attention')}
-            className={`flex items-center gap-2 border-b-2 px-4 pb-2.5 pt-1 text-[12.5px] font-medium transition ${
-              activeTab === 'attention'
-                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
-            }`}
-          >
-            Needs attention
-            {needsAttention.length > 0 && (
-              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                {needsAttention.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Tab content */}
-        {activeTab === 'graduating' ? (
-          leavingSoon.length === 0 ? (
+          </div>
+          {leavingSoon.length === 0 ? (
             <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
               <CheckCircle2 className="size-4 text-emerald-500" />
               No graduates expected in the next 7 days.
@@ -305,9 +278,22 @@ export function StakeholderDashboard({
                 </tbody>
               </table>
             </div>
-          )
-        ) : (
-          needsAttention.length === 0 ? (
+          )}
+        </div>
+
+        {/* Needs attention */}
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
+              Needs attention
+            </h2>
+            {needsAttention.length > 0 && (
+              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                {needsAttention.length}
+              </span>
+            )}
+          </div>
+          {needsAttention.length === 0 ? (
             <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
               <CheckCircle2 className="size-4 text-emerald-500" />
               No clients with high-risk flags or overdue tasks.
@@ -356,8 +342,9 @@ export function StakeholderDashboard({
                 </tbody>
               </table>
             </div>
-          )
-        )}
+          )}
+        </div>
+
       </div>
 
       {/* ── Occupancy bar ── */}
