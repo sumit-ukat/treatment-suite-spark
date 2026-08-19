@@ -830,6 +830,13 @@ export const discharge = {
    * database transaction. For `dischargeType !== 'planned'`, the server requires a matching approved
    * request and consumes it — this call does not create one.
    */
+  /** Count of non-planned discharges (early / transfer / other) for a centre — the "Discharge" tile. */
+  async earlyDischargeCount(centreId: string): Promise<number> {
+    const { data, error } = await client().rpc('early_discharge_count', { p_centre_id: centreId });
+    if (error) throw new DataAccessError('discharge.earlyDischargeCount', error);
+    return (data as number) ?? 0;
+  },
+
   async finalise(
     admissionId: string,
     dischargeType: 'planned' | 'early' | 'transfer' | 'other',

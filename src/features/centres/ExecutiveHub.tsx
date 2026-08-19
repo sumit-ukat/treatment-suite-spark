@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Activity,
   ArrowUpRight,
@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
+import { discharge as dischargeService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
@@ -261,8 +262,25 @@ function MetricGrid({ cards }: { cards: readonly MetricCardSpec[] }) {
 
 type SortKey = 'risk' | 'occupancy' | 'name' | 'free-beds';
 
+// Primrose Lodge is the only centre with a real database; its centre_id is fixed.
+const PRIMROSE_CENTRE_ID = '00000000-0000-0000-0000-000000000201';
+
 export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) => void }) {
-  const centres = useMemo(() => buildCentres(), []);
+  const baseCentres = useMemo(() => buildCentres(), []);
+  const [primroseDischargeCount, setPrimroseDischargeCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    dischargeService.earlyDischargeCount(PRIMROSE_CENTRE_ID)
+      .then(setPrimroseDischargeCount)
+      .catch(() => {}); // fall back to seeded value silently
+  }, []);
+
+  const centres = useMemo<readonly CentreSummary[]>(() => {
+    if (primroseDischargeCount === null) return baseCentres;
+    return baseCentres.map((c) =>
+      c.slug === 'primrose-lodge' ? { ...c, unplannedExits: primroseDischargeCount } : c,
+    );
+  }, [baseCentres, primroseDischargeCount]);
 
   /**
    * Two ways to narrow, deliberately mutually exclusive: picking a region clears the manual picks and
@@ -593,9 +611,9 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               accent: 'neutral',
             },
             {
-              label: 'Unplanned exits',
+              label: 'Discharge',
               value: totals.unplannedExits,
-              hint: 'left before planned discharge',
+              hint: 'early, transfer or other exits',
               icon: <LogOut className="size-4" />,
               accent: totals.unplannedExits > 3 ? 'critical' : totals.unplannedExits > 0 ? 'warn' : 'good',
             },
