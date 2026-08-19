@@ -133,10 +133,10 @@ export function IncidentReportSection({ centreId, beds, onSubmitted, defaultOpen
         form.severity as IncidentSeverity,
         form.description.trim(),
         {
-          clientId:   form.clientId || undefined,
-          clientName: selectedClient?.name || undefined,
-          location:   form.location.trim() || undefined,
-          incidentAt: form.incidentAt || undefined,
+          ...(form.clientId       ? { clientId:   form.clientId }            : {}),
+          ...(selectedClient?.name ? { clientName: selectedClient.name }      : {}),
+          ...(form.location.trim() ? { location:   form.location.trim() }     : {}),
+          ...(form.incidentAt      ? { incidentAt: form.incidentAt }          : {}),
         },
       );
       setSubmitted(true);
@@ -235,7 +235,7 @@ export function IncidentReportSection({ centreId, beds, onSubmitted, defaultOpen
                     <select value={form.clientId} onChange={(e) => set('clientId', e.target.value)} className={inputCls}>
                       <option value="">— Select client —</option>
                       {activeClients.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name} · Bed {c.bed}</option>
+                        <option key={c.id ?? c.name} value={c.id ?? ''}>{c.name} · Bed {c.bed}</option>
                       ))}
                     </select>
                   </div>
