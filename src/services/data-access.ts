@@ -871,13 +871,13 @@ export interface IncidentReportRow {
 
 export const incidents = {
   /** Recent incident reports for a centre, newest first. */
-  async list(centreId: string, opts?: { days?: number }): Promise<IncidentReportRow[]> {
+  async list(centreId: string, opts?: { days?: number; limit?: number }): Promise<IncidentReportRow[]> {
     let q = client()
       .from('incident_reports')
       .select('id, centre_id, incident_type, severity, description, client_id, client_name, location, incident_at, created_at')
       .eq('centre_id', centreId)
       .order('incident_at', { ascending: false })
-      .limit(200);
+      .limit(opts?.limit ?? 200);
 
     if (opts?.days != null) {
       const since = new Date(Date.now() - opts.days * 86_400_000).toISOString();
@@ -922,6 +922,7 @@ export const incidents = {
     if (error) throw new DataAccessError('incidents.countAll7d', error);
     return (data as number) ?? 0;
   },
+
 };
 
 export const extension = {

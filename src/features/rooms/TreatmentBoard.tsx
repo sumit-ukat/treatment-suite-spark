@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Plus, Printer, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, History, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
@@ -142,6 +142,7 @@ export function TreatmentBoard({
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
+  const [adminExpanded, setAdminExpanded] = useState(false);
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
@@ -387,15 +388,35 @@ export function TreatmentBoard({
               >
                 Client &amp; Placement
               </th>
-              {COL_GROUPS.map((g) => (
-                <th
-                  key={g.label}
-                  colSpan={g.count}
-                  className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls}`}
-                >
-                  {g.label}
-                </th>
-              ))}
+              {COL_GROUPS.map((g) =>
+                g.label === 'Admin' ? (
+                  <th
+                    key="Admin"
+                    colSpan={adminExpanded ? 10 : 1}
+                    onClick={() => setAdminExpanded((v) => !v)}
+                    title={adminExpanded ? 'Click to collapse Admin columns' : 'Click to expand Admin columns'}
+                    className="cursor-pointer select-none border-b border-x-2 border-amber-400/60 bg-amber-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-amber-800 transition hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {adminExpanded
+                        ? <ChevronDown className="size-3" />
+                        : <ChevronRight className="size-3" />}
+                      Admin
+                      {!adminExpanded && (
+                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+9 cols</span>
+                      )}
+                    </span>
+                  </th>
+                ) : (
+                  <th
+                    key={g.label}
+                    colSpan={g.count}
+                    className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls}`}
+                  >
+                    {g.label}
+                  </th>
+                )
+              )}
             </tr>
 
             {/* Row 2 — individual column headers */}
@@ -407,17 +428,32 @@ export function TreatmentBoard({
               </th>
               <th className={th}>Admitted</th>
               <th className={th}>Status</th>
-              {/* Admin columns */}
-              <th className={th}>Focal Therapist</th>
-              <th className={th}>Substance</th>
-              <th title="GP summary letter sent to GP" className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]">GP Summary</th>
-              <th className={th}>Treatment Duration</th>
-              <th className={th}>Discharge Date</th>
-              <th className={th}>Detox ends</th>
-              <th className={th}>Group</th>
-              <th className={th}>Doctor</th>
-              <th className={th}>Buddy</th>
-              <th className={th}>Peeps</th>
+              {/* Admin: Focal Therapist — always visible, clicking toggles the section */}
+              <th
+                onClick={() => setAdminExpanded((v) => !v)}
+                title={adminExpanded ? 'Collapse Admin' : 'Expand Admin'}
+                className={`cursor-pointer select-none border-b border-[var(--color-line)] border-l-2 border-l-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap transition hover:bg-amber-100/60 dark:border-l-amber-500/50 dark:bg-amber-950/25 dark:hover:bg-amber-900/20 ${!adminExpanded ? 'border-r-2 border-r-amber-400/70 dark:border-r-amber-500/50' : ''}`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {adminExpanded
+                    ? <ChevronDown className="size-3 shrink-0 text-amber-500" />
+                    : <ChevronRight className="size-3 shrink-0 text-amber-500" />}
+                  Focal Therapist
+                </span>
+              </th>
+              {adminExpanded && (
+                <>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Substance</th>
+                  <th title="GP summary letter sent to GP" className="w-[58px] border-b border-[var(--color-line)] bg-amber-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-amber-950/25">GP Summary</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Treatment Duration</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Discharge Date</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Detox ends</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Group</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Doctor</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Buddy</th>
+                  <th className="border-b border-[var(--color-line)] border-r-2 border-r-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-amber-500/50 dark:bg-amber-950/25">Peeps</th>
+                </>
+              )}
               {COLUMNS.map((col) => (
                 <th
                   key={col.code}
@@ -454,7 +490,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 1 + 10 + COLUMNS.length }).map((_, i) => (
+                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + COLUMNS.length }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -552,8 +588,8 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Admin: Focal Therapist */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
+                  {/* Admin: Focal Therapist — always visible */}
+                  <td className={`${cb} border-l-2 border-l-amber-300/60 bg-amber-50/30 px-3 py-3 whitespace-nowrap dark:border-l-amber-600/30 dark:bg-amber-950/10 ${!adminExpanded ? 'border-r-2 border-r-amber-300/60 dark:border-r-amber-600/30' : ''}`}>
                     {o.therapist ? (
                       <span className="text-[12.5px]">{o.therapist}</span>
                     ) : (
@@ -561,53 +597,57 @@ export function TreatmentBoard({
                     )}
                   </td>
 
-                  {/* Admin: Substance */}
-                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                  {adminExpanded && (
+                    <>
+                      {/* Admin: Substance */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
 
-                  {/* Admin: GP Summary */}
-                  <TaskCell bed={bed} code="gp_summary" />
+                      {/* Admin: GP Summary */}
+                      <TaskCell bed={bed} code="gp_summary" />
 
-                  {/* Admin: Treatment Duration */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
-                    <span className="nums text-[12.5px]">
-                      {o.treatmentDay}
-                      <span className="text-[var(--color-ink-muted)]"> / {o.durationDays}</span>
-                    </span>
-                    <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
-                      <div
-                        className="h-full rounded-full bg-[var(--color-accent)]"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </td>
+                      {/* Admin: Treatment Duration */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 whitespace-nowrap dark:bg-amber-950/10`}>
+                        <span className="nums text-[12.5px]">
+                          {o.treatmentDay}
+                          <span className="text-[var(--color-ink-muted)]"> / {o.durationDays}</span>
+                        </span>
+                        <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
+                          <div
+                            className="h-full rounded-full bg-[var(--color-accent)]"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </td>
 
-                  {/* Admin: Discharge Date */}
-                  <td
-                    className={`${cb} nums px-3 py-3 whitespace-nowrap text-[12.5px] ${
-                      urgentDischarge
-                        ? 'font-semibold text-red-600 dark:text-red-400'
-                        : 'text-[var(--color-ink-muted)]'
-                    }`}
-                  >
-                    {fmtStr(o.plannedDischargeDate)}
-                  </td>
+                      {/* Admin: Discharge Date */}
+                      <td
+                        className={`${cb} nums bg-amber-50/30 px-3 py-3 whitespace-nowrap text-[12.5px] dark:bg-amber-950/10 ${
+                          urgentDischarge
+                            ? 'font-semibold text-red-600 dark:text-red-400'
+                            : 'text-[var(--color-ink-muted)]'
+                        }`}
+                      >
+                        {fmtStr(o.plannedDischargeDate)}
+                      </td>
 
-                  {/* Admin: Detox ends */}
-                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                      {/* Admin: Detox ends */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
 
-                  {/* Admin: Group */}
-                  <td className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>
-                    {o.group || '—'}
-                  </td>
+                      {/* Admin: Group */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-center text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>
+                        {o.group || '—'}
+                      </td>
 
-                  {/* Admin: Doctor */}
-                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                      {/* Admin: Doctor */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
 
-                  {/* Admin: Buddy */}
-                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                      {/* Admin: Buddy */}
+                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
 
-                  {/* Admin: Peeps */}
-                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                      {/* Admin: Peeps */}
+                      <td className={`${cb} border-r-2 border-r-amber-300/60 bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:border-r-amber-600/30 dark:bg-amber-950/10`}>—</td>
+                    </>
+                  )}
 
                   {/* Task cells */}
                   {COLUMNS.map((col) => (
