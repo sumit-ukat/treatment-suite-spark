@@ -13,26 +13,24 @@ import {
 } from '../../components/ui/dialog.tsx';
 import { formatDateWithDay } from '../../lib/format.js';
 
-/** Friendly nouns for every record_type actually seen in production (checked directly against
- * audit_events, not guessed from table names) — everything else falls back to the raw value rather
- * than a made-up label for a table nobody has written to yet. */
 const RECORD_NOUN: Record<string, string> = {
-  admissions: 'admission',
-  beds: 'bed',
-  client_photos: 'client photo',
-  client_tasks: 'required action',
-  clients: 'client record',
-  detox_records: 'detox record',
-  discharge_requests: 'discharge request',
-  family_meetings: 'family meeting',
-  medical_review_requests: 'medical review request',
-  risk_records: 'risk record',
-  room_allocations: 'room allocation',
-  safeguarding_records: 'safeguarding record',
-  staff_assignments: 'staff assignment',
-  task_templates: 'task template',
-  user_access_assignments: 'access assignment',
-  user_profiles: 'user profile',
+  admissions:               'Admission',
+  beds:                     'Bed',
+  client_photos:            'Client photo',
+  client_tasks:             'Required action',
+  clients:                  'Client record',
+  detox_records:            'Detox record',
+  discharge_requests:       'Discharge request',
+  family_meetings:          'Family meeting',
+  medical_review_requests:  'Medical review request',
+  risk_records:             'Risk record',
+  room_allocations:         'Room allocation',
+  safeguarding_records:     'Safeguarding record',
+  staff_assignments:        'Staff assignment',
+  task_templates:           'Task template',
+  user_access_assignments:  'Access assignment',
+  user_profiles:            'User profile',
+  incident_reports:         'Incident report',
 };
 
 const ACTION_VERB: Record<string, string> = {
@@ -41,29 +39,114 @@ const ACTION_VERB: Record<string, string> = {
   delete: 'Deleted',
 };
 
-/** "Created required action", not "insert · client_tasks" — a plain-English phrase built only from
- * the two real fields every event already has, not a guess at *why* (this table has no join to a
- * client's or staff member's name, and no record of which specific status change happened). */
+/** Human-readable labels for database column names shown in the diff view. */
+const FIELD_LABELS: Record<string, string> = {
+  first_name:    'First name',
+  last_name:     'Last name',
+  date_of_birth: 'Date of birth',
+  email:         'Email',
+  phone:         'Phone',
+  status:        'Status',
+  discharge_type:'Discharge type',
+  risk_level:    'Risk level',
+  notes:         'Notes',
+  start_date:    'Start date',
+  end_date:      'End date',
+  due_date:      'Due date',
+  completed_at:  'Completed',
+  title:         'Title',
+  description:   'Description',
+  type:          'Type',
+  severity:      'Severity',
+  reason:        'Reason',
+  role:          'Role',
+  incident_type: 'Incident type',
+  incident_at:   'When it happened',
+  location:      'Location',
+  room_id:       'Room',
+  bed_id:        'Bed',
+  client_id:     'Client',
+  therapist_id:  'Therapist',
+};
+
+/** Fields that add no user-facing value in a diff (timestamps, internal IDs, etc.) */
+const SKIP_FIELDS = new Set([
+  'id', 'created_at', 'updated_at', 'updated_by', 'reported_by',
+  'actor_id', 'organisation_id', 'centre_id',
+]);
+
 function actionPhrase(e: AuditEventRow): string {
   const verb = ACTION_VERB[e.action] ?? e.action;
   const noun = RECORD_NOUN[e.record_type] ?? e.record_type;
-  return `${verb} ${noun}`;
+  return `${verb} ${noun.toLowerCase()}`;
 }
 
-/**
- * Audit history — the first screen to show `audit_events`, which every write in this system has been
- * recording since migration 0009. Every "verified with SQL" claim across this whole build checked
- * this table directly; this is the same data, just readable without a database console.
- *
- * Read-only by construction, not by convention: `audit_events` has no write grant at all for
- * `authenticated` (only `app.audit_row`'s trigger, running SECURITY DEFINER, ever inserts), and the
- * existing `audit_read` policy (migration 0009) already does the permission and centre-access
- * filtering — this screen adds no new server-side logic, just a way to look at what already exists.
- *
- * A browsing window, not an export: capped at 300 rows, most recent first, filtered client-side. A
- * proper export or a wider time range is a distinct, larger feature (`reports.export` already exists
- * as a separate permission for exactly that reason) — not something to half-build here.
- */
+/** Render a single value as readable text — UUIDs are shortened, nulls become "(empty)". */
+function formatValue(val: unknown): string {
+  if (val === null || val === undefined || val === '') return '(empty)';
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+  const str = String(val);
+  // UUID-shaped strings: shorten for readability
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+    return `#${str.slice(0, 8)}`;
+  }
+  return str;
+}
+
+/** Changed-field rows for an update event, skipping internal/system fields. */
+function ChangedFields({ event }: { event: AuditEventRow }) {
+  const fields = (event.changed_fields ?? []).filter((f) => !SKIP_FIELDS.has(f));
+  const prev = (event.previous_value ?? {}) as Record<string, unknown>;
+  const next = (event.new_value ?? {}) as Record<string, unknown>;
+
+  if (fields.length === 0) {
+    // Insert or delete — show key fields from new_value or previous_value
+    const obj = (event.action === 'delete' ? prev : next) as Record<string, unknown>;
+    const visibleFields = Object.keys(obj).filter((k) => !SKIP_FIELDS.has(k));
+    if (visibleFields.length === 0) {
+      return <p className="text-[13px] text-[var(--color-ink-muted)]">No details available.</p>;
+    }
+    return (
+      <div className="space-y-2">
+        {visibleFields.slice(0, 12).map((field) => (
+          <div key={field} className="grid grid-cols-[140px_1fr] gap-2 text-[12.5px]">
+            <span className="font-medium text-[var(--color-ink-muted)]">
+              {FIELD_LABELS[field] ?? field.replace(/_/g, ' ')}
+            </span>
+            <span className="text-[var(--color-ink)]">{formatValue(obj[field])}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {fields.map((field) => {
+        const label = FIELD_LABELS[field] ?? field.replace(/_/g, ' ');
+        const before = formatValue(prev[field]);
+        const after = formatValue(next[field]);
+        return (
+          <div key={field}>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-ink-muted)]">
+              {label}
+            </p>
+            <div className="flex items-start gap-2 text-[12.5px]">
+              <span className="min-w-0 flex-1 rounded-md bg-red-50 px-2.5 py-1.5 text-red-800 line-through dark:bg-red-950/40 dark:text-red-300">
+                {before}
+              </span>
+              <span className="mt-1 shrink-0 text-[var(--color-ink-muted)]">→</span>
+              <span className="min-w-0 flex-1 rounded-md bg-emerald-50 px-2.5 py-1.5 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                {after}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AuditHistory() {
   const { can } = useAuth();
   const canView = can('audit.view');
@@ -78,28 +161,22 @@ export function AuditHistory() {
   const [selected, setSelected] = useState<AuditEventRow | null>(null);
 
   useEffect(() => {
-    if (!canView) {
-      setLoading(false);
-      return;
-    }
+    if (!canView) { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     Promise.all([auditEvents.list(), centresService.listAccessible()])
       .then(([e, c]) => {
         if (cancelled) return;
-        setEvents(e);
+        // Only show events made by a real logged-in user (exclude system/trigger events)
+        setEvents(e.filter((ev) => ev.actor_email !== null));
         setCentres(c);
         setLoadError(null);
       })
       .catch((err: unknown) => {
         if (!cancelled) setLoadError(err instanceof Error ? err.message : String(err));
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [canView]);
 
   const centresById = useMemo(() => new Map(centres.map((c) => [c.id, c])), [centres]);
@@ -115,12 +192,7 @@ export function AuditHistory() {
     return events.filter((e) => {
       if (recordType !== 'all' && e.record_type !== recordType) return false;
       if (action !== 'all' && e.action !== action) return false;
-      if (
-        q &&
-        !`${e.actor_email ?? ''} ${e.record_type} ${e.action} ${e.reason ?? ''}`
-          .toLowerCase()
-          .includes(q)
-      )
+      if (q && !`${e.actor_email ?? ''} ${RECORD_NOUN[e.record_type] ?? e.record_type} ${ACTION_VERB[e.action] ?? e.action} ${e.reason ?? ''}`.toLowerCase().includes(q))
         return false;
       return true;
     });
@@ -130,14 +202,14 @@ export function AuditHistory() {
     return (
       <div className="mx-auto max-w-[480px] px-5 py-16 text-center">
         <p className="text-[13px] text-[var(--color-ink-muted)]">
-          You do not have permission to view the audit history.
+          You do not have permission to view the activity log.
         </p>
       </div>
     );
   }
 
   if (loading) {
-    return <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading audit history…</div>;
+    return <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading activity log…</div>;
   }
 
   if (loadError) {
@@ -151,8 +223,8 @@ export function AuditHistory() {
   return (
     <div className="mx-auto max-w-[960px] px-5 py-8">
       <PageHeader
-        title="Audit history"
-        description={`Every recorded change, most recent first — the most recent ${events.length}. Scoped to what your access already lets you see; this screen adds no permission of its own.`}
+        title="Activity log"
+        description={`Every change made by your team, most recent first — showing the latest ${events.length} user actions.`}
       />
 
       <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-soft">
@@ -164,7 +236,7 @@ export function AuditHistory() {
           <option value="all">All record types</option>
           {recordTypes.map((t) => (
             <option key={t} value={t}>
-              {t}
+              {RECORD_NOUN[t] ?? t}
             </option>
           ))}
         </select>
@@ -176,7 +248,7 @@ export function AuditHistory() {
           <option value="all">All actions</option>
           {actions.map((a) => (
             <option key={a} value={a}>
-              {a}
+              {ACTION_VERB[a] ?? a}
             </option>
           ))}
         </select>
@@ -216,40 +288,14 @@ export function AuditHistory() {
           {selected ? (
             <>
               <DialogHeader>
-                <DialogTitle>{actionPhrase(selected)}</DialogTitle>
+                <DialogTitle className="capitalize">{actionPhrase(selected)}</DialogTitle>
                 <DialogDescription>
-                  {selected.record_type} #{selected.record_id.slice(0, 8)} &middot;{' '}
-                  {formatDateWithDay(new Date(selected.occurred_at))}
+                  {selected.actor_email} &middot; {formatDateWithDay(new Date(selected.occurred_at))}
                 </DialogDescription>
               </DialogHeader>
-              {selected.changed_fields && selected.changed_fields.length > 0 ? (
-                <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-                  Changed:{' '}
-                  <span className="font-medium text-[var(--color-ink)]">
-                    {selected.changed_fields.join(', ')}
-                  </span>
-                </p>
-              ) : null}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                    Before
-                  </div>
-                  <pre className="mt-1 max-h-[280px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[11px] dark:bg-white/[0.06]">
-                    {selected.previous_value ? JSON.stringify(selected.previous_value, null, 2) : '—'}
-                  </pre>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                    After
-                  </div>
-                  <pre className="mt-1 max-h-[280px] overflow-auto rounded-md bg-black/[0.04] p-2 text-[11px] dark:bg-white/[0.06]">
-                    {selected.new_value ? JSON.stringify(selected.new_value, null, 2) : '—'}
-                  </pre>
-                </div>
-              </div>
+              <ChangedFields event={selected} />
               {selected.reason ? (
-                <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                <p className="border-t border-[var(--color-line)] pt-3 text-[12.5px] text-[var(--color-ink-muted)]">
                   Reason: <span className="text-[var(--color-ink)]">{selected.reason}</span>
                 </p>
               ) : null}
@@ -276,24 +322,30 @@ function AuditRow({
   centreName: string | null;
   onView: () => void;
 }) {
+  const changedFields = (e.changed_fields ?? [])
+    .filter((f) => !SKIP_FIELDS.has(f))
+    .map((f) => FIELD_LABELS[f] ?? f.replace(/_/g, ' '))
+    .slice(0, 4);
+
   return (
     <li className="flex items-center justify-between gap-3 py-2.5">
       <div className="min-w-0">
-        <p className="text-[13px] font-medium">
+        <p className="text-[13px] font-medium capitalize">
           {actionPhrase(e)}
-          <span className="ml-1.5 font-normal text-[var(--color-ink-muted)]">
-            #{e.record_id.slice(0, 8)}
-          </span>
+          {changedFields.length > 0 && (
+            <span className="ml-1.5 font-normal text-[var(--color-ink-muted)]">
+              — {changedFields.join(', ')}
+            </span>
+          )}
         </p>
         <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink-muted)]">
-          {e.actor_email ?? 'System'} &middot; {formatDateWithDay(new Date(e.occurred_at))}
+          {e.actor_email} &middot; {formatDateWithDay(new Date(e.occurred_at))}
           {centreName ? <> &middot; {centreName}</> : null}
-          {e.reason ? <> &middot; {e.reason}</> : null}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Chip
-          label={e.action.charAt(0).toUpperCase() + e.action.slice(1)}
+          label={ACTION_VERB[e.action] ?? e.action}
           tone={ACTION_TONE[e.action] ?? 'neutral'}
         />
         <button
