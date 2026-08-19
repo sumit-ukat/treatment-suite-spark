@@ -3,7 +3,6 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Gauge,
   History,
   LayoutGrid,
   Shield,
@@ -173,16 +172,6 @@ export function Sidebar({
           >
             <LayoutGrid aria-hidden="true" className="size-4 shrink-0" />
             {!collapsed ? <span className="flex-1 truncate text-left">Back to group hub</span> : null}
-          </button>
-          {/* Executive hub — absolute path so onSelect('/exec') navigates out of the centre shell */}
-          <button
-            type="button"
-            onClick={() => onSelect('/exec')}
-            title={collapsed ? 'Executive view' : undefined}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--color-ink-muted)] transition hover:bg-muted/60 hover:text-[var(--color-ink)]"
-          >
-            <Gauge aria-hidden="true" className="size-4 shrink-0" />
-            {!collapsed ? <span className="flex-1 truncate text-left">Executive view</span> : null}
           </button>
         </div>
       </div>
