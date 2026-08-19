@@ -695,7 +695,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                 <span className="text-right">Occupied</span>
                 <span className="text-right">Overdue</span>
                 <span className="text-right">On time</span>
-                <span className="text-right">Discharges</span>
+                <span className="text-right">Graduating</span>
                 <span className="w-4" />
               </div>
               {regionRollup.map(({ region: r, totals: t, count, assessed: ra }) => {
@@ -744,7 +744,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       {t.onTimePercent}%
                     </span>
                     <span className="tabular text-[13px] text-muted-foreground sm:text-right">
-                      <span className="sm:hidden text-muted-foreground text-[11px]">Discharges </span>
+                      <span className="sm:hidden text-muted-foreground text-[11px]">Graduating </span>
                       {t.dischargingThisWeek}
                     </span>
                     <Activity
