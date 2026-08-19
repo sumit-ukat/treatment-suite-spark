@@ -853,6 +853,38 @@ export const discharge = {
   },
 };
 
+export type IncidentType = 'client' | 'centre' | 'medication' | 'staff' | 'other';
+export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export const incidents = {
+  async log(
+    centreId: string,
+    incidentType: IncidentType,
+    severity: IncidentSeverity,
+    description: string,
+    opts?: { clientId?: string; clientName?: string; location?: string; incidentAt?: string },
+  ): Promise<string> {
+    const { data, error } = await client().rpc('log_incident_report', {
+      p_centre_id:     centreId,
+      p_incident_type: incidentType,
+      p_severity:      severity,
+      p_client_id:     opts?.clientId ?? null,
+      p_client_name:   opts?.clientName ?? null,
+      p_description:   description,
+      p_location:      opts?.location ?? null,
+      p_incident_at:   opts?.incidentAt ?? null,
+    });
+    if (error) throw new DataAccessError('incidents.log', error);
+    return data as string;
+  },
+
+  async count7d(centreId: string): Promise<number> {
+    const { data, error } = await client().rpc('incident_report_count_7d', { p_centre_id: centreId });
+    if (error) throw new DataAccessError('incidents.count7d', error);
+    return (data as number) ?? 0;
+  },
+};
+
 export const extension = {
   /** Applies a stay extension immediately — no second-person approval (migration 0043/0044). */
   async apply(admissionId: string, additionalDays: number, reason: string, newBedId?: string | null): Promise<string> {

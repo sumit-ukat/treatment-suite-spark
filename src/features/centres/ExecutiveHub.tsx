@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
-import { discharge as dischargeService } from '../../services/data-access.js';
+import { discharge as dischargeService, incidents as incidentsService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
@@ -268,19 +268,27 @@ const PRIMROSE_CENTRE_ID = '00000000-0000-0000-0000-000000000201';
 export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) => void }) {
   const baseCentres = useMemo(() => buildCentres(), []);
   const [primroseDischargeCount, setPrimroseDischargeCount] = useState<number | null>(null);
+  const [primroseIncidentCount, setPrimroseIncidentCount] = useState<number | null>(null);
 
   useEffect(() => {
     dischargeService.earlyDischargeCount(PRIMROSE_CENTRE_ID)
       .then(setPrimroseDischargeCount)
-      .catch(() => {}); // fall back to seeded value silently
+      .catch(() => {});
+    incidentsService.count7d(PRIMROSE_CENTRE_ID)
+      .then(setPrimroseIncidentCount)
+      .catch(() => {});
   }, []);
 
   const centres = useMemo<readonly CentreSummary[]>(() => {
-    if (primroseDischargeCount === null) return baseCentres;
-    return baseCentres.map((c) =>
-      c.slug === 'primrose-lodge' ? { ...c, unplannedExits: primroseDischargeCount } : c,
-    );
-  }, [baseCentres, primroseDischargeCount]);
+    return baseCentres.map((c) => {
+      if (c.slug !== 'primrose-lodge') return c;
+      return {
+        ...c,
+        ...(primroseDischargeCount !== null ? { unplannedExits: primroseDischargeCount } : {}),
+        ...(primroseIncidentCount !== null ? { incidentReports7Days: primroseIncidentCount } : {}),
+      };
+    });
+  }, [baseCentres, primroseDischargeCount, primroseIncidentCount]);
 
   /**
    * Two ways to narrow, deliberately mutually exclusive: picking a region clears the manual picks and

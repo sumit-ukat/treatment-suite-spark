@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useBoardData } from './use-board-data.js';
+import { IncidentReportSection } from './IncidentReportSection.tsx';
 import { summarise } from './board-data.js';
 import type { BoardBed, Occupant } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
@@ -360,6 +361,8 @@ export function StakeholderDashboard({
         )}
       </div>
 
+      {/* ── Incident Reports ── */}
+      <IncidentReportSection centreId={centreId} beds={beds} />
 
     </div>
   );
