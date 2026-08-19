@@ -18,11 +18,12 @@ const COLUMNS = [
   { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
   { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
   { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
-  { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
-  { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
-  { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
-  { code: 'step_3',                       label: 'Step 3',         full: '12-Step programme — Step 3',             group: 'lifestep' },
-  { code: 'ccp',                          label: 'CCP',            full: 'Care & Continuing Plan (CCP)',            group: 'lifestep' },
+  { code: 'life_story',        label: 'Life Story/Surrender', full: 'Life story / surrender',          group: 'lifestep' },
+  { code: 'step_1',           label: 'Step 1',               full: '12-Step programme — Step 1',      group: 'lifestep' },
+  { code: 'step_2',           label: 'Step 2',               full: '12-Step programme — Step 2',      group: 'lifestep' },
+  { code: 'step_3',           label: 'Step 3',               full: '12-Step programme — Step 3',      group: 'lifestep' },
+  { code: 'side_assignment',  label: 'Side Assignment',      full: 'Side assignment',                 group: 'lifestep' },
+  { code: 'ccp',              label: 'CCP',                  full: 'Care & Continuing Plan (CCP)',     group: 'lifestep' },
   { code: 'session_intro',                label: 'Intro CP/121',   full: 'Introductory counselling session',        group: 'careplan' },
   { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 CP/121 counselling session',       group: 'careplan' },
   { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 CP/121 counselling session',       group: 'careplan' },
@@ -34,7 +35,7 @@ const COL_GROUPS = [
   { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300'  },
   { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
   { label: '7 Day Satisfaction',       count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { label: 'Life Story & Step Works', count: 5,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { label: 'Life Story & Step Works', count: 6,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
   { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
@@ -144,6 +145,7 @@ export function TreatmentBoard({
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
   const [adminExpanded, setAdminExpanded] = useState(false);
   const [contactExpanded, setContactExpanded] = useState(false);
+  const [lifeStepExpanded, setLifeStepExpanded] = useState(false);
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
@@ -426,6 +428,24 @@ export function TreatmentBoard({
                       )}
                     </span>
                   </th>
+                ) : g.label === 'Life Story & Step Works' ? (
+                  <th
+                    key="Life Story & Step Works"
+                    colSpan={lifeStepExpanded ? 6 : 1}
+                    onClick={() => setLifeStepExpanded((v) => !v)}
+                    title={lifeStepExpanded ? 'Click to collapse Life Story & Step Works' : 'Click to expand Life Story & Step Works'}
+                    className="cursor-pointer select-none border-b border-x-2 border-violet-400/60 bg-violet-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/30"
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {lifeStepExpanded
+                        ? <ChevronDown className="size-3" />
+                        : <ChevronRight className="size-3" />}
+                      Life Story &amp; Step Works
+                      {!lifeStepExpanded && (
+                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+5 cols</span>
+                      )}
+                    </span>
+                  </th>
                 ) : (
                   <th
                     key={g.label}
@@ -501,6 +521,33 @@ export function TreatmentBoard({
                     </th>
                   );
                 }
+                if (col.group === 'lifestep') {
+                  const isFirst = col.code === 'life_story';
+                  const isLast  = col.code === 'ccp';
+                  if (!isFirst && !lifeStepExpanded) return null;
+                  return (
+                    <th
+                      key={col.code}
+                      title={col.full}
+                      onClick={isFirst ? () => setLifeStepExpanded((v) => !v) : undefined}
+                      className={[
+                        'w-[58px] border-b border-[var(--color-line)] bg-violet-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-violet-950/25',
+                        isFirst && 'cursor-pointer select-none border-l-2 border-l-violet-400/70 transition hover:bg-violet-100/60 dark:border-l-violet-500/50',
+                        isFirst && !lifeStepExpanded && 'border-r-2 border-r-violet-400/70 dark:border-r-violet-500/50',
+                        isLast && lifeStepExpanded && 'border-r-2 border-r-violet-400/70 dark:border-r-violet-500/50',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      {isFirst ? (
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          {lifeStepExpanded
+                            ? <ChevronDown className="size-2.5 text-violet-500" />
+                            : <ChevronRight className="size-2.5 text-violet-500" />}
+                          {col.label}
+                        </span>
+                      ) : col.label}
+                    </th>
+                  );
+                }
                 return (
                   <th
                     key={col.code}
@@ -538,7 +585,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 11 }).map((_, i) => (
+                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 1 + (lifeStepExpanded ? 6 : 1) + 5 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -699,9 +746,8 @@ export function TreatmentBoard({
 
                   {/* Task cells */}
                   {COLUMNS.map((col) => {
-                    if (col.group === 'contact') {
-                      if (col.code !== 'family_contact_24h' && !contactExpanded) return null;
-                    }
+                    if (col.group === 'contact' && col.code !== 'family_contact_24h' && !contactExpanded) return null;
+                    if (col.group === 'lifestep' && col.code !== 'life_story' && !lifeStepExpanded) return null;
                     return <TaskCell key={col.code} bed={bed} code={col.code} />;
                   })}
                 </tr>
