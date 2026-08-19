@@ -1,17 +1,18 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   BedDouble,
   CalendarClock,
   CheckCircle2,
-  CircleAlert,
   ClipboardList,
+  FileWarning,
   RefreshCw,
   TrendingUp,
   UserX,
   Repeat2,
   type LucideIcon,
 } from 'lucide-react';
+import { incidents as incidentsService } from '../../services/data-access.js';
 import { useBoardData } from './use-board-data.js';
 import { summarise } from './board-data.js';
 import type { BoardBed, Occupant } from './board-data.js';
@@ -89,6 +90,11 @@ export function StakeholderDashboard({
   centreName: string;
 }) {
   const { beds, loading, refreshing, loadedAt, refresh } = useBoardData(centreId);
+  const [incidentCount, setIncidentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
+  }, [centreId]);
 
   const stats = useMemo(() => summarise(beds), [beds]);
 
@@ -124,7 +130,6 @@ export function StakeholderDashboard({
   const completionPct = pct(totalDone, totalTasks - totalNA);
 
   const extendedStays  = occupants.filter((o) => o.isExtendedStay).length;
-  const openConcerns   = occupants.filter((o) => o.hasOpenConcern).length;
   const pendingD       = occupants.filter((o) => o.dischargeRequest !== null).length;
 
   if (loading) {
@@ -217,11 +222,11 @@ export function StakeholderDashboard({
             accent={stats.missingTherapist > 0 ? 'amber' : 'green'}
           />
           <KpiTile
-            icon={CircleAlert}
-            value={openConcerns}
-            label="Open concerns"
-            sub={openConcerns > 0 ? 'Clients with flagged concerns' : 'No open concerns'}
-            accent={openConcerns > 0 ? 'amber' : 'green'}
+            icon={FileWarning}
+            value={incidentCount ?? '—'}
+            label="Incident reports"
+            sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
+            accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
           />
         </div>
       </div>
