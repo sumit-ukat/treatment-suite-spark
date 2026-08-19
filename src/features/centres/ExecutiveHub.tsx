@@ -613,7 +613,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             {
               label: 'Discharge',
               value: totals.unplannedExits,
-              hint: 'early, transfer or other exits',
+              hint: 'early discharges',
               icon: <LogOut className="size-4" />,
               accent: totals.unplannedExits > 3 ? 'critical' : totals.unplannedExits > 0 ? 'warn' : 'good',
             },

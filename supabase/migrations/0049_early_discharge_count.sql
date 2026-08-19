@@ -13,8 +13,7 @@ as $$
   from   public.admissions
   where  centre_id    = p_centre_id
   and    status       = 'discharged'
-  and    discharge_type is not null
-  and    discharge_type <> 'planned';
+  and    discharge_type = 'early';
 $$;
 
 create or replace function public.early_discharge_count(p_centre_id uuid)
