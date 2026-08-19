@@ -856,7 +856,40 @@ export const discharge = {
 export type IncidentType = 'client' | 'centre' | 'medication' | 'staff' | 'other';
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 
+export interface IncidentReportRow {
+  id: string;
+  centre_id: string;
+  incident_type: IncidentType;
+  severity: IncidentSeverity;
+  description: string;
+  client_id: string | null;
+  client_name: string | null;
+  location: string | null;
+  incident_at: string;
+  created_at: string;
+}
+
 export const incidents = {
+  /** Recent incident reports for a centre, newest first. */
+  async list(centreId: string, opts?: { days?: number }): Promise<IncidentReportRow[]> {
+    let q = client()
+      .from('incident_reports')
+      .select('id, centre_id, incident_type, severity, description, client_id, client_name, location, incident_at, created_at')
+      .eq('centre_id', centreId)
+      .order('incident_at', { ascending: false })
+      .limit(200);
+
+    if (opts?.days != null) {
+      const since = new Date(Date.now() - opts.days * 86_400_000).toISOString();
+      q = q.gte('incident_at', since);
+    }
+
+    const { data, error } = await q;
+    if (error) throw new DataAccessError('incidents.list', error);
+    return (data ?? []) as unknown as IncidentReportRow[];
+  },
+
+
   async log(
     centreId: string,
     incidentType: IncidentType,
