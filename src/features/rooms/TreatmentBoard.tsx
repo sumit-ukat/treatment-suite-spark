@@ -25,11 +25,11 @@ const COLUMNS = [
   { code: 'step_3',           label: 'Step 3',               full: '12-Step programme — Step 3',      group: 'lifestep' },
   { code: 'side_assignment',  label: 'Side Assignment',      full: 'Side assignment',                 group: 'lifestep' },
   { code: 'ccp',              label: 'CCP',                  full: 'Care & Continuing Plan (CCP)',     group: 'lifestep' },
-  { code: 'session_intro',                label: 'Intro CP/121',   full: 'Introductory counselling session',        group: 'careplan' },
-  { code: 'session_week_1',               label: 'Week 1',         full: 'Week 1 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_2',               label: 'Week 2',         full: 'Week 2 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_3',               label: 'Week 3',         full: 'Week 3 CP/121 counselling session',       group: 'careplan' },
-  { code: 'session_week_4',               label: 'Week 4',         full: 'Week 4 CP/121 counselling session',       group: 'careplan' },
+  { code: 'session_intro',   label: 'Intro CP/121',    full: 'Introductory counselling session',  group: 'careplan' },
+  { code: 'session_week_1', label: 'Week 1 CP/121',   full: 'Week 1 CP/121 counselling session', group: 'careplan' },
+  { code: 'session_week_2', label: 'Week 2 CP/121',   full: 'Week 2 CP/121 counselling session', group: 'careplan' },
+  { code: 'session_week_3', label: 'Week 3 CP/121',   full: 'Week 3 CP/121 counselling session', group: 'careplan' },
+  { code: 'session_week_4', label: 'Week 4 CP/121',   full: 'Week 4 CP/121 counselling session', group: 'careplan' },
 ] as const;
 
 const COL_GROUPS = [
@@ -148,6 +148,7 @@ export function TreatmentBoard({
   const [adminExpanded, setAdminExpanded] = useState(false);
   const [contactExpanded, setContactExpanded] = useState(false);
   const [lifeStepExpanded, setLifeStepExpanded] = useState(false);
+  const [carePlanExpanded, setCarePlanExpanded] = useState(false);
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
@@ -448,6 +449,24 @@ export function TreatmentBoard({
                       )}
                     </span>
                   </th>
+                ) : g.label === 'Care Plan' ? (
+                  <th
+                    key="Care Plan"
+                    colSpan={carePlanExpanded ? 5 : 1}
+                    onClick={() => setCarePlanExpanded((v) => !v)}
+                    title={carePlanExpanded ? 'Click to collapse Care Plan' : 'Click to expand Care Plan'}
+                    className="cursor-pointer select-none border-b border-x-2 border-indigo-400/60 bg-indigo-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-indigo-800 transition hover:bg-indigo-100 dark:border-indigo-600/40 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {carePlanExpanded
+                        ? <ChevronDown className="size-3" />
+                        : <ChevronRight className="size-3" />}
+                      Care Plan
+                      {!carePlanExpanded && (
+                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+4 cols</span>
+                      )}
+                    </span>
+                  </th>
                 ) : (
                   <th
                     key={g.label}
@@ -550,6 +569,33 @@ export function TreatmentBoard({
                     </th>
                   );
                 }
+                if (col.group === 'careplan') {
+                  const isFirst = col.code === 'session_intro';
+                  const isLast  = col.code === 'session_week_4';
+                  if (!isFirst && !carePlanExpanded) return null;
+                  return (
+                    <th
+                      key={col.code}
+                      title={col.full}
+                      onClick={isFirst ? () => setCarePlanExpanded((v) => !v) : undefined}
+                      className={[
+                        'w-[58px] border-b border-[var(--color-line)] bg-indigo-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-indigo-950/25',
+                        isFirst && 'cursor-pointer select-none border-l-2 border-l-indigo-400/70 transition hover:bg-indigo-100/60 dark:border-l-indigo-500/50',
+                        isFirst && !carePlanExpanded && 'border-r-2 border-r-indigo-400/70 dark:border-r-indigo-500/50',
+                        isLast && carePlanExpanded && 'border-r-2 border-r-indigo-400/70 dark:border-r-indigo-500/50',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      {isFirst ? (
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          {carePlanExpanded
+                            ? <ChevronDown className="size-2.5 text-indigo-500" />
+                            : <ChevronRight className="size-2.5 text-indigo-500" />}
+                          {col.label}
+                        </span>
+                      ) : col.label}
+                    </th>
+                  );
+                }
                 return (
                   <th
                     key={col.code}
@@ -587,7 +633,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + 5 }).map((_, i) => (
+                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -748,8 +794,9 @@ export function TreatmentBoard({
 
                   {/* Task cells */}
                   {COLUMNS.map((col) => {
-                    if (col.group === 'contact' && col.code !== 'family_contact_24h' && !contactExpanded) return null;
-                    if (col.group === 'lifestep' && col.code !== 'life_story' && !lifeStepExpanded) return null;
+                    if (col.group === 'contact'  && col.code !== 'family_contact_24h' && !contactExpanded)  return null;
+                    if (col.group === 'lifestep' && col.code !== 'life_story'         && !lifeStepExpanded) return null;
+                    if (col.group === 'careplan' && col.code !== 'session_intro'      && !carePlanExpanded) return null;
                     return <TaskCell key={col.code} bed={bed} code={col.code} />;
                   })}
                 </tr>
