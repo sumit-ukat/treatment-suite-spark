@@ -5,6 +5,7 @@ import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
 import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
+import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
@@ -141,6 +142,11 @@ export function TreatmentBoard({
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
+  const [incidentCount, setIncidentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
+  }, [centreId]);
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
 
@@ -341,6 +347,14 @@ export function TreatmentBoard({
           active={activeFilter === 'open_concerns'}
           onClick={() => toggle('open_concerns')}
         />
+        {incidentCount !== null && (
+          <StatTile
+            label="Incident reports (7d)"
+            value={incidentCount}
+            icon="▲"
+            tone={incidentCount > 0 ? 'alert' : 'neutral'}
+          />
+        )}
       </div>
 
       {/* ── Table ── */}
