@@ -17,7 +17,7 @@ const COLUMNS = [
   { code: 'family_contact_week_1',        label: '1st Week',       full: 'Week 1 family contact',                  group: 'contact'  },
   { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
   { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
-  { code: 'satisfaction_survey_7day',     label: '7 Day Satisfaction', full: '7-day satisfaction survey',          group: 'survey'   },
+  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
   { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
   { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
   { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
