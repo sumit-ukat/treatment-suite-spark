@@ -147,8 +147,8 @@ export function DetailPanel({
   }
 
   function openEditName() {
-    const parts = (localDisplayName ?? o.displayName).split(' ');
-    setNameForm({ firstName: parts.slice(0, -1).join(' ') || parts[0], lastName: parts.length > 1 ? parts[parts.length - 1] : '' });
+    const parts = (localDisplayName ?? o?.displayName ?? '').split(' ');
+    setNameForm({ firstName: parts.slice(0, -1).join(' ') || parts[0] || '', lastName: parts.length > 1 ? (parts[parts.length - 1] ?? '') : '' });
     setNameError(null);
     setEditNameMode(true);
   }
