@@ -143,6 +143,7 @@ export function TreatmentBoard({
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
   const [adminExpanded, setAdminExpanded] = useState(false);
+  const [contactExpanded, setContactExpanded] = useState(false);
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
@@ -407,6 +408,24 @@ export function TreatmentBoard({
                       )}
                     </span>
                   </th>
+                ) : g.label === 'Contact/Comms' ? (
+                  <th
+                    key="Contact/Comms"
+                    colSpan={contactExpanded ? 4 : 1}
+                    onClick={() => setContactExpanded((v) => !v)}
+                    title={contactExpanded ? 'Click to collapse Contact/Comms' : 'Click to expand Contact/Comms'}
+                    className="cursor-pointer select-none border-b border-x-2 border-sky-400/60 bg-sky-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-sky-800 transition hover:bg-sky-100 dark:border-sky-600/40 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-900/30"
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      {contactExpanded
+                        ? <ChevronDown className="size-3" />
+                        : <ChevronRight className="size-3" />}
+                      Contact/Comms
+                      {!contactExpanded && (
+                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+3 cols</span>
+                      )}
+                    </span>
+                  </th>
                 ) : (
                   <th
                     key={g.label}
@@ -454,15 +473,44 @@ export function TreatmentBoard({
                   <th className="border-b border-[var(--color-line)] border-r-2 border-r-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-amber-500/50 dark:bg-amber-950/25">Peeps</th>
                 </>
               )}
-              {COLUMNS.map((col) => (
-                <th
-                  key={col.code}
-                  title={col.full}
-                  className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
-                >
-                  {col.label}
-                </th>
-              ))}
+              {COLUMNS.map((col) => {
+                if (col.group === 'contact') {
+                  const isFirst = col.code === 'family_contact_24h';
+                  const isLast  = col.code === 'family_contact_pre_discharge';
+                  if (!isFirst && !contactExpanded) return null;
+                  return (
+                    <th
+                      key={col.code}
+                      title={col.full}
+                      onClick={isFirst ? () => setContactExpanded((v) => !v) : undefined}
+                      className={[
+                        'w-[58px] border-b border-[var(--color-line)] bg-sky-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-sky-950/25',
+                        isFirst && 'cursor-pointer select-none border-l-2 border-l-sky-400/70 transition hover:bg-sky-100/60 dark:border-l-sky-500/50',
+                        isFirst && !contactExpanded && 'border-r-2 border-r-sky-400/70 dark:border-r-sky-500/50',
+                        isLast && contactExpanded && 'border-r-2 border-r-sky-400/70 dark:border-r-sky-500/50',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      {isFirst ? (
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          {contactExpanded
+                            ? <ChevronDown className="size-2.5 text-sky-500" />
+                            : <ChevronRight className="size-2.5 text-sky-500" />}
+                          {col.label}
+                        </span>
+                      ) : col.label}
+                    </th>
+                  );
+                }
+                return (
+                  <th
+                    key={col.code}
+                    title={col.full}
+                    className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
+                  >
+                    {col.label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
@@ -490,7 +538,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + COLUMNS.length }).map((_, i) => (
+                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 11 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -650,9 +698,12 @@ export function TreatmentBoard({
                   )}
 
                   {/* Task cells */}
-                  {COLUMNS.map((col) => (
-                    <TaskCell key={col.code} bed={bed} code={col.code} />
-                  ))}
+                  {COLUMNS.map((col) => {
+                    if (col.group === 'contact') {
+                      if (col.code !== 'family_contact_24h' && !contactExpanded) return null;
+                    }
+                    return <TaskCell key={col.code} bed={bed} code={col.code} />;
+                  })}
                 </tr>
               );
             })}
