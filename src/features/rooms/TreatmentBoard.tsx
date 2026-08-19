@@ -33,13 +33,13 @@ const COLUMNS = [
 ] as const;
 
 const COL_GROUPS = [
-  { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300'  },
-  { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { label: '7 Day Satisfaction',       count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { label: 'Family Visit',            count: 1,  cls: 'bg-teal-50   text-teal-800   dark:bg-teal-950/50   dark:text-teal-300'   },
-  { label: 'Life Story & Step Works', count: 6,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
-  { label: 'Doctor – Thursday',       count: 1,  cls: 'bg-rose-50   text-rose-800   dark:bg-rose-950/50   dark:text-rose-300'   },
+  { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300',  bCls: 'border-amber-400/60  dark:border-amber-600/40'  },
+  { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300',    bCls: 'border-sky-400/60    dark:border-sky-600/40'    },
+  { label: '7 Day Satisfaction',       count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300', bCls: 'border-yellow-400/60 dark:border-yellow-600/40' },
+  { label: 'Family Visit',            count: 1,  cls: 'bg-teal-50   text-teal-800   dark:bg-teal-950/50   dark:text-teal-300',   bCls: 'border-teal-400/60   dark:border-teal-600/40'   },
+  { label: 'Life Story & Step Works', count: 6,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300', bCls: 'border-violet-400/60 dark:border-violet-600/40' },
+  { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300', bCls: 'border-indigo-400/60 dark:border-indigo-600/40' },
+  { label: 'Doctor – Thursday',       count: 1,  cls: 'bg-rose-50   text-rose-800   dark:bg-rose-950/50   dark:text-rose-300',   bCls: 'border-rose-400/60   dark:border-rose-600/40'   },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,9 +62,9 @@ function fmtTime(d: Date): string {
 // ─── Task cell ────────────────────────────────────────────────────────────────
 
 // Uses the same icon + tone vocabulary as the attention chips in BedList.
-function TaskCell({ bed, code }: { bed: BoardBed; code: string }) {
+function TaskCell({ bed, code, extraCls }: { bed: BoardBed; code: string; extraCls?: string }) {
   const o = bed.occupant;
-  const td = 'w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center';
+  const td = `w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center${extraCls ? ` ${extraCls}` : ''}`;
 
   if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
 
@@ -472,7 +472,7 @@ export function TreatmentBoard({
                   <th
                     key={g.label}
                     colSpan={g.count}
-                    className={`border-b border-[var(--color-line)] px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls}`}
+                    className={`border-b border-x-2 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls} ${g.bCls}`}
                   >
                     {g.label}
                   </th>
@@ -596,15 +596,22 @@ export function TreatmentBoard({
                     </th>
                   );
                 }
-                return (
-                  <th
-                    key={col.code}
-                    title={col.full}
-                    className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]"
-                  >
-                    {col.label}
-                  </th>
-                );
+                if (col.group === 'survey') {
+                  return (
+                    <th key={col.code} title={col.full}
+                      className="w-[58px] border-b border-[var(--color-line)] border-x-2 border-yellow-400/70 bg-yellow-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-yellow-600/40 dark:bg-yellow-950/25">
+                      {col.label}
+                    </th>
+                  );
+                }
+                if (col.group === 'familyvisit') {
+                  return (
+                    <th key={col.code} title={col.full}
+                      className="w-[58px] border-b border-[var(--color-line)] border-x-2 border-teal-400/70 bg-teal-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-teal-600/40 dark:bg-teal-950/25">
+                      {col.label}
+                    </th>
+                  );
+                }
               })}
               {/* Doctor – Thursday */}
               <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
@@ -785,7 +792,42 @@ export function TreatmentBoard({
                     if (col.group === 'contact'  && col.code !== 'family_contact_24h' && !contactExpanded)  return null;
                     if (col.group === 'lifestep' && col.code !== 'life_story'         && !lifeStepExpanded) return null;
                     if (col.group === 'careplan' && col.code !== 'session_intro'      && !carePlanExpanded) return null;
-                    return <TaskCell key={col.code} bed={bed} code={col.code} />;
+
+                    let extraCls = '';
+                    if (col.group === 'contact') {
+                      const isFirst = col.code === 'family_contact_24h';
+                      const isLast  = col.code === 'family_contact_pre_discharge';
+                      const needsRight = (isFirst && !contactExpanded) || (isLast && contactExpanded);
+                      extraCls = [
+                        'bg-sky-50/30 dark:bg-sky-950/10',
+                        isFirst    ? 'border-l-2 border-l-sky-300/60 dark:border-l-sky-600/30' : '',
+                        needsRight ? 'border-r-2 border-r-sky-300/60 dark:border-r-sky-600/30' : '',
+                      ].filter(Boolean).join(' ');
+                    } else if (col.group === 'survey') {
+                      extraCls = 'border-x-2 border-yellow-300/60 bg-yellow-50/30 dark:border-yellow-600/30 dark:bg-yellow-950/10';
+                    } else if (col.group === 'familyvisit') {
+                      extraCls = 'border-x-2 border-teal-300/60 bg-teal-50/30 dark:border-teal-600/30 dark:bg-teal-950/10';
+                    } else if (col.group === 'lifestep') {
+                      const isFirst = col.code === 'life_story';
+                      const isLast  = col.code === 'ccp';
+                      const needsRight = (isFirst && !lifeStepExpanded) || (isLast && lifeStepExpanded);
+                      extraCls = [
+                        'bg-violet-50/30 dark:bg-violet-950/10',
+                        isFirst    ? 'border-l-2 border-l-violet-300/60 dark:border-l-violet-600/30' : '',
+                        needsRight ? 'border-r-2 border-r-violet-300/60 dark:border-r-violet-600/30' : '',
+                      ].filter(Boolean).join(' ');
+                    } else if (col.group === 'careplan') {
+                      const isFirst = col.code === 'session_intro';
+                      const isLast  = col.code === 'session_week_4';
+                      const needsRight = (isFirst && !carePlanExpanded) || (isLast && carePlanExpanded);
+                      extraCls = [
+                        'bg-indigo-50/30 dark:bg-indigo-950/10',
+                        isFirst    ? 'border-l-2 border-l-indigo-300/60 dark:border-l-indigo-600/30' : '',
+                        needsRight ? 'border-r-2 border-r-indigo-300/60 dark:border-r-indigo-600/30' : '',
+                      ].filter(Boolean).join(' ');
+                    }
+
+                    return <TaskCell key={col.code} bed={bed} code={col.code} {...(extraCls ? { extraCls } : {})} />;
                   })}
 
                   {/* Doctor – Thursday: assessment reason */}
