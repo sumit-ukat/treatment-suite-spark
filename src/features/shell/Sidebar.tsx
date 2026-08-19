@@ -10,6 +10,7 @@ import {
   Table2,
   UserPlus,
   Users,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandMark } from '../../components/brand.tsx';
@@ -54,6 +55,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
   {
     heading: 'Oversight',
     items: [
+      { id: 'incidents', label: 'Incident reports', icon: AlertTriangle, ready: true },
       { id: 'audit', label: 'Audit history', icon: History, ready: true },
       { id: 'admin', label: 'Administration', icon: Shield, ready: true },
     ],

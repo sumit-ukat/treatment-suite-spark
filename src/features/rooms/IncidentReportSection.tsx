@@ -25,10 +25,11 @@ interface Props {
   centreId: string;
   beds: readonly BoardBed[];
   onSubmitted?: () => void;
+  defaultOpen?: boolean;
 }
 
-export function IncidentReportSection({ centreId, beds, onSubmitted }: Props) {
-  const [open, setOpen] = useState(false);
+export function IncidentReportSection({ centreId, beds, onSubmitted, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

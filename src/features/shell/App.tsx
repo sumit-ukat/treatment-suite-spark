@@ -60,6 +60,7 @@ import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { TreatmentBoard } from '../rooms/TreatmentBoard.tsx';
 import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
+import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip } from '../../components/ui.tsx';
 import {
@@ -131,6 +132,7 @@ function AppRoutes() {
         <Route path="medical" element={<NotBuiltPage />} />
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
+        <Route path="incidents" element={<IncidentsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/exec" replace />} />
     </Routes>
@@ -954,6 +956,18 @@ function OverviewPage() {
   const { centre, authCentre } = useCentreContext();
   if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
   return <StakeholderDashboard centreId={authCentre.id} centreName={centre.name} />;
+}
+
+function IncidentsPage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  const { beds } = useBoardData(authCentre.id);
+  return (
+    <div className="mx-auto max-w-[680px] px-6 py-8">
+      <h1 className="mb-6 font-display text-xl font-semibold text-[var(--color-ink)]">Incident Reports</h1>
+      <IncidentReportSection centreId={authCentre.id} beds={beds} defaultOpen />
+    </div>
+  );
 }
 
 /** The four "soon" nav items (My work, All tasks, Family contact, Medical reviews) all land here —
