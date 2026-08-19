@@ -17,7 +17,7 @@ const COLUMNS = [
   { code: 'family_contact_week_1',        label: '1st Week',       full: 'Week 1 family contact',                  group: 'contact'  },
   { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
   { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
-  { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
+  { code: 'satisfaction_survey_7day',     label: '7 Day Satisfaction', full: '7-day satisfaction survey',          group: 'survey'   },
   { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
   { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
   { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
@@ -33,7 +33,7 @@ const COLUMNS = [
 const COL_GROUPS = [
   { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300'  },
   { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { label: '7-Day Survey',            count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { label: '7 Day Satisfaction',       count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
   { label: 'Life Story & Step Works', count: 5,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
   { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
