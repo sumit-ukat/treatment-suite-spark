@@ -18,7 +18,6 @@ const COLUMNS = [
   { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
   { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
   { code: 'satisfaction_survey_7day',     label: '7-Day Survey',   full: '7-day satisfaction survey',              group: 'survey'   },
-  { code: 'gp_summary',                   label: 'GP Summary',     full: 'GP summary letter sent to GP',           group: 'medical'  },
   { code: 'life_story',                   label: 'Life Story',     full: 'Life story / surrender',                 group: 'lifestep' },
   { code: 'step_1',                       label: 'Step 1',         full: '12-Step programme — Step 1',             group: 'lifestep' },
   { code: 'step_2',                       label: 'Step 2',         full: '12-Step programme — Step 2',             group: 'lifestep' },
@@ -32,11 +31,11 @@ const COLUMNS = [
 ] as const;
 
 const COL_GROUPS = [
-  { label: 'Contact/Comms',           count: 4, cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
-  { label: '7-Day Survey',            count: 1, cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
-  { label: 'Medical',                 count: 1, cls: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' },
-  { label: 'Life Story & Step Works', count: 5, cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
-  { label: 'Care Plan',               count: 5, cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
+  { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300'  },
+  { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300'    },
+  { label: '7-Day Survey',            count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300' },
+  { label: 'Life Story & Step Works', count: 5,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
+  { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -383,7 +382,7 @@ export function TreatmentBoard({
             {/* Row 1 — category group spans */}
             <tr>
               <th
-                colSpan={8}
+                colSpan={4}
                 className="border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
               >
                 Client &amp; Placement
@@ -408,10 +407,17 @@ export function TreatmentBoard({
               </th>
               <th className={th}>Admitted</th>
               <th className={th}>Status</th>
-              <th className={th}>Day</th>
-              <th className={th}>Discharge</th>
+              {/* Admin columns */}
+              <th className={th}>Focal Therapist</th>
+              <th className={th}>Substance</th>
+              <th title="GP summary letter sent to GP" className="w-[58px] border-b border-[var(--color-line)] bg-card px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)]">GP Summary</th>
+              <th className={th}>Treatment Duration</th>
+              <th className={th}>Discharge Date</th>
+              <th className={th}>Detox ends</th>
               <th className={th}>Group</th>
-              <th className={th}>Therapist</th>
+              <th className={th}>Doctor</th>
+              <th className={th}>Buddy</th>
+              <th className={th}>Peeps</th>
               {COLUMNS.map((col) => (
                 <th
                   key={col.code}
@@ -448,7 +454,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 5 + COLUMNS.length }).map((_, i) => (
+                    {Array.from({ length: 1 + 10 + COLUMNS.length }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -546,13 +552,27 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Treatment day + progress bar */}
+                  {/* Admin: Focal Therapist */}
+                  <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
+                    {o.therapist ? (
+                      <span className="text-[12.5px]">{o.therapist}</span>
+                    ) : (
+                      <span className="text-[12.5px] text-amber-600 dark:text-amber-400">Not assigned</span>
+                    )}
+                  </td>
+
+                  {/* Admin: Substance */}
+                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+
+                  {/* Admin: GP Summary */}
+                  <TaskCell bed={bed} code="gp_summary" />
+
+                  {/* Admin: Treatment Duration */}
                   <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
                     <span className="nums text-[12.5px]">
                       {o.treatmentDay}
                       <span className="text-[var(--color-ink-muted)]"> / {o.durationDays}</span>
                     </span>
-                    {/* Progress bar — matches BedList's track style */}
                     <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
                       <div
                         className="h-full rounded-full bg-[var(--color-accent)]"
@@ -561,7 +581,7 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Planned discharge */}
+                  {/* Admin: Discharge Date */}
                   <td
                     className={`${cb} nums px-3 py-3 whitespace-nowrap text-[12.5px] ${
                       urgentDischarge
@@ -572,19 +592,22 @@ export function TreatmentBoard({
                     {fmtStr(o.plannedDischargeDate)}
                   </td>
 
-                  {/* Group */}
+                  {/* Admin: Detox ends */}
+                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+
+                  {/* Admin: Group */}
                   <td className={`${cb} px-3 py-3 text-center text-[var(--color-ink-muted)]`}>
                     {o.group || '—'}
                   </td>
 
-                  {/* Therapist — plain amber text matches BedList */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap`}>
-                    {o.therapist ? (
-                      <span className="text-[12.5px]">{o.therapist}</span>
-                    ) : (
-                      <span className="text-[12.5px] text-amber-600 dark:text-amber-400">Not assigned</span>
-                    )}
-                  </td>
+                  {/* Admin: Doctor */}
+                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+
+                  {/* Admin: Buddy */}
+                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+
+                  {/* Admin: Peeps */}
+                  <td className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
 
                   {/* Task cells */}
                   {COLUMNS.map((col) => (
