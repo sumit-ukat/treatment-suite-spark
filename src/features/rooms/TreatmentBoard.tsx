@@ -39,7 +39,7 @@ const COL_GROUPS = [
   { label: 'Family Visit',            count: 1,  cls: 'bg-teal-50   text-teal-800   dark:bg-teal-950/50   dark:text-teal-300'   },
   { label: 'Life Story & Step Works', count: 6,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300' },
   { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300' },
-  { label: 'Doctor – Thursday',       count: 2,  cls: 'bg-rose-50   text-rose-800   dark:bg-rose-950/50   dark:text-rose-300'   },
+  { label: 'Doctor – Thursday',       count: 1,  cls: 'bg-rose-50   text-rose-800   dark:bg-rose-950/50   dark:text-rose-300'   },
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -607,10 +607,7 @@ export function TreatmentBoard({
                 );
               })}
               {/* Doctor – Thursday */}
-              <th className="border-b border-[var(--color-line)] border-l-2 border-l-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-l-rose-500/50 dark:bg-rose-950/25">
-                Client
-              </th>
-              <th className="border-b border-[var(--color-line)] border-r-2 border-r-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-rose-500/50 dark:bg-rose-950/25">
+              <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
                 Reason / Assessment
               </th>
             </tr>
@@ -640,7 +637,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) + 2 }).map((_, i) => (
+                    {Array.from({ length: (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) + 1 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -791,11 +788,8 @@ export function TreatmentBoard({
                     return <TaskCell key={col.code} bed={bed} code={col.code} />;
                   })}
 
-                  {/* Doctor – Thursday: client name + assessment reason */}
-                  <td className={`${cb} border-l-2 border-l-rose-300/60 bg-rose-50/30 px-3 py-3 whitespace-nowrap text-[12.5px] dark:border-l-rose-600/30 dark:bg-rose-950/10`}>
-                    {o.displayName}
-                  </td>
-                  <td className={`${cb} border-r-2 border-r-rose-300/60 bg-rose-50/30 px-3 py-3 text-[12.5px] text-[var(--color-ink-muted)] dark:border-r-rose-600/30 dark:bg-rose-950/10`}>
+                  {/* Doctor – Thursday: assessment reason */}
+                  <td className={`${cb} border-x-2 border-rose-300/60 bg-rose-50/30 px-3 py-3 text-[12.5px] text-[var(--color-ink-muted)] dark:border-rose-600/30 dark:bg-rose-950/10`}>
                     —
                   </td>
                 </tr>
