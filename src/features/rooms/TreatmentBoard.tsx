@@ -384,13 +384,13 @@ export function TreatmentBoard({
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
       >
-        <table className="min-w-max border-separate border-spacing-0 text-[12.5px]">
+        <table className="w-full border-separate border-spacing-0 text-[12.5px]">
 
           <thead className="sticky top-0 z-20">
             {/* Row 1 — category group spans */}
             <tr>
               <th
-                colSpan={4}
+                colSpan={3}
                 className="border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
               >
                 Client &amp; Placement
@@ -488,7 +488,6 @@ export function TreatmentBoard({
                 Client
               </th>
               <th className={th}>Admitted</th>
-              <th className={th}>Status</th>
               {/* Admin: Focal Therapist — always visible, clicking toggles the section */}
               <th
                 onClick={() => setAdminExpanded((v) => !v)}
@@ -641,7 +640,7 @@ export function TreatmentBoard({
                         Available
                       </span>
                     </td>
-                    {Array.from({ length: 1 + (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) + 2 }).map((_, i) => (
+                    {Array.from({ length: (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) + 2 }).map((_, i) => (
                       <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
@@ -721,22 +720,6 @@ export function TreatmentBoard({
                   {/* Admitted */}
                   <td className={`${cb} px-3 py-3 whitespace-nowrap text-[var(--color-ink-muted)]`}>
                     {fmt(o.admittedAt)}
-                  </td>
-
-                  {/* Status — Chip tones match BedList attention column */}
-                  <td className={`${cb} px-3 py-3`}>
-                    <div className="flex flex-col gap-1">
-                      {o.overdueCount > 0 ? (
-                        <Chip icon="▲" label="Overdue" tone="alert" />
-                      ) : o.dueTodayCount > 0 ? (
-                        <Chip icon="●" label="Due today" tone="warn" />
-                      ) : (
-                        <Chip icon="✓" label="On track" tone="good" />
-                      )}
-                      {o.isExtendedStay ? (
-                        <Chip icon="↗" label={`+${o.extensionDays ?? '?'}d`} tone="neutral" />
-                      ) : null}
-                    </div>
                   </td>
 
                   {/* Admin: Focal Therapist — always visible */}
