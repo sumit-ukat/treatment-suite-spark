@@ -406,9 +406,9 @@ export function TreatmentBoard({
               <th className={`sticky left-16 z-30 min-w-[168px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
                 Client
               </th>
+              <th className={th}>Admitted</th>
               <th className={th}>Status</th>
               <th className={th}>Day</th>
-              <th className={th}>Admitted</th>
               <th className={th}>Discharge</th>
               <th className={th}>Group</th>
               <th className={th}>Therapist</th>
@@ -525,6 +525,11 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
+                  {/* Admitted */}
+                  <td className={`${cb} px-3 py-3 whitespace-nowrap text-[var(--color-ink-muted)]`}>
+                    {fmt(o.admittedAt)}
+                  </td>
+
                   {/* Status — Chip tones match BedList attention column */}
                   <td className={`${cb} px-3 py-3`}>
                     <div className="flex flex-col gap-1">
@@ -554,11 +559,6 @@ export function TreatmentBoard({
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                  </td>
-
-                  {/* Admitted */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap text-[var(--color-ink-muted)]`}>
-                    {fmt(o.admittedAt)}
                   </td>
 
                   {/* Planned discharge */}
