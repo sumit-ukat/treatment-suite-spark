@@ -146,10 +146,13 @@ export function TreatmentBoard({
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
-  const [adminExpanded, setAdminExpanded] = useState(false);
-  const [contactExpanded, setContactExpanded] = useState(false);
-  const [lifeStepExpanded, setLifeStepExpanded] = useState(false);
-  const [carePlanExpanded, setCarePlanExpanded] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<'admin' | 'contact' | 'lifestep' | 'careplan' | null>(null);
+  const expandCol = (s: 'admin' | 'contact' | 'lifestep' | 'careplan') =>
+    setExpandedSection((v) => (v === s ? null : s));
+  const adminExpanded    = expandedSection === 'admin';
+  const contactExpanded  = expandedSection === 'contact';
+  const lifeStepExpanded = expandedSection === 'lifestep';
+  const carePlanExpanded = expandedSection === 'careplan';
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
@@ -400,7 +403,7 @@ export function TreatmentBoard({
                   <th
                     key="Admin"
                     colSpan={adminExpanded ? 10 : 1}
-                    onClick={() => setAdminExpanded((v) => !v)}
+                    onClick={() => expandCol('admin')}
                     title={adminExpanded ? 'Click to collapse Admin columns' : 'Click to expand Admin columns'}
                     className="cursor-pointer select-none border-b border-x-2 border-amber-400/60 bg-amber-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-amber-800 transition hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/30"
                   >
@@ -418,7 +421,7 @@ export function TreatmentBoard({
                   <th
                     key="Contact/Comms"
                     colSpan={contactExpanded ? 4 : 1}
-                    onClick={() => setContactExpanded((v) => !v)}
+                    onClick={() => expandCol('contact')}
                     title={contactExpanded ? 'Click to collapse Contact/Comms' : 'Click to expand Contact/Comms'}
                     className="cursor-pointer select-none border-b border-x-2 border-sky-400/60 bg-sky-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-sky-800 transition hover:bg-sky-100 dark:border-sky-600/40 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-900/30"
                   >
@@ -436,7 +439,7 @@ export function TreatmentBoard({
                   <th
                     key="Life Story & Step Works"
                     colSpan={lifeStepExpanded ? 6 : 1}
-                    onClick={() => setLifeStepExpanded((v) => !v)}
+                    onClick={() => expandCol('lifestep')}
                     title={lifeStepExpanded ? 'Click to collapse Life Story & Step Works' : 'Click to expand Life Story & Step Works'}
                     className="cursor-pointer select-none border-b border-x-2 border-violet-400/60 bg-violet-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/30"
                   >
@@ -454,7 +457,7 @@ export function TreatmentBoard({
                   <th
                     key="Care Plan"
                     colSpan={carePlanExpanded ? 5 : 1}
-                    onClick={() => setCarePlanExpanded((v) => !v)}
+                    onClick={() => expandCol('careplan')}
                     title={carePlanExpanded ? 'Click to collapse Care Plan' : 'Click to expand Care Plan'}
                     className="cursor-pointer select-none border-b border-x-2 border-indigo-400/60 bg-indigo-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-indigo-800 transition hover:bg-indigo-100 dark:border-indigo-600/40 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
                   >
@@ -490,7 +493,7 @@ export function TreatmentBoard({
               <th className={th}>Admitted</th>
               {/* Admin: Focal Therapist — always visible, clicking toggles the section */}
               <th
-                onClick={() => setAdminExpanded((v) => !v)}
+                onClick={() => expandCol('admin')}
                 title={adminExpanded ? 'Collapse Admin' : 'Expand Admin'}
                 className={`cursor-pointer select-none border-b border-[var(--color-line)] border-l-2 border-l-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap transition hover:bg-amber-100/60 dark:border-l-amber-500/50 dark:bg-amber-950/25 dark:hover:bg-amber-900/20 ${!adminExpanded ? 'border-r-2 border-r-amber-400/70 dark:border-r-amber-500/50' : ''}`}
               >
@@ -523,7 +526,7 @@ export function TreatmentBoard({
                     <th
                       key={col.code}
                       title={col.full}
-                      onClick={isFirst ? () => setContactExpanded((v) => !v) : undefined}
+                      onClick={isFirst ? () => expandCol('contact') : undefined}
                       className={[
                         'w-[58px] border-b border-[var(--color-line)] bg-sky-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-sky-950/25',
                         isFirst && 'cursor-pointer select-none border-l-2 border-l-sky-400/70 transition hover:bg-sky-100/60 dark:border-l-sky-500/50',
@@ -550,7 +553,7 @@ export function TreatmentBoard({
                     <th
                       key={col.code}
                       title={col.full}
-                      onClick={isFirst ? () => setLifeStepExpanded((v) => !v) : undefined}
+                      onClick={isFirst ? () => expandCol('lifestep') : undefined}
                       className={[
                         'w-[58px] border-b border-[var(--color-line)] bg-violet-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-violet-950/25',
                         isFirst && 'cursor-pointer select-none border-l-2 border-l-violet-400/70 transition hover:bg-violet-100/60 dark:border-l-violet-500/50',
@@ -577,7 +580,7 @@ export function TreatmentBoard({
                     <th
                       key={col.code}
                       title={col.full}
-                      onClick={isFirst ? () => setCarePlanExpanded((v) => !v) : undefined}
+                      onClick={isFirst ? () => expandCol('careplan') : undefined}
                       className={[
                         'w-[58px] border-b border-[var(--color-line)] bg-indigo-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-indigo-950/25',
                         isFirst && 'cursor-pointer select-none border-l-2 border-l-indigo-400/70 transition hover:bg-indigo-100/60 dark:border-l-indigo-500/50',
