@@ -883,6 +883,12 @@ export const incidents = {
     if (error) throw new DataAccessError('incidents.count7d', error);
     return (data as number) ?? 0;
   },
+
+  async countAll7d(): Promise<number> {
+    const { data, error } = await client().rpc('incident_report_count_all_7d');
+    if (error) throw new DataAccessError('incidents.countAll7d', error);
+    return (data as number) ?? 0;
+  },
 };
 
 export const extension = {

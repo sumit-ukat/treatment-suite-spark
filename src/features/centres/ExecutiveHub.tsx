@@ -269,13 +269,19 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const baseCentres = useMemo(() => buildCentres(), []);
   const [primroseDischargeCount, setPrimroseDischargeCount] = useState<number | null>(null);
   const [primroseIncidentCount, setPrimroseIncidentCount] = useState<number | null>(null);
+  const [groupIncidentCount, setGroupIncidentCount] = useState<number | null>(null);
 
   useEffect(() => {
     dischargeService.earlyDischargeCount(PRIMROSE_CENTRE_ID)
       .then(setPrimroseDischargeCount)
       .catch(() => {});
+    // Per-centre real count for Primrose Lodge's row in the by-region table
     incidentsService.count7d(PRIMROSE_CENTRE_ID)
       .then(setPrimroseIncidentCount)
+      .catch(() => {});
+    // Combined total across ALL centres for the group hub tile
+    incidentsService.countAll7d()
+      .then(setGroupIncidentCount)
       .catch(() => {});
   }, []);
 
@@ -688,10 +694,10 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             },
             {
               label: 'Incident reports',
-              value: totals.incidentReports7Days,
-              hint: 'reported in the last 7 days',
+              value: groupIncidentCount ?? totals.incidentReports7Days,
+              hint: 'all centres · last 7 days',
               icon: <FileWarning className="size-4" />,
-              accent: totals.incidentReports7Days > 5 ? 'critical' : totals.incidentReports7Days > 0 ? 'warn' : 'good',
+              accent: (groupIncidentCount ?? totals.incidentReports7Days) > 5 ? 'critical' : (groupIncidentCount ?? totals.incidentReports7Days) > 0 ? 'warn' : 'good',
             },
             {
               label: 'On-time rate',
