@@ -311,6 +311,8 @@ export interface AdmitClientInput {
   focalTherapistLabel?: string | undefined;
   buddyLabel?: string | undefined;
   doctorLabel?: string | undefined;
+  peepsLabel?: string | undefined;
+  detoxEnds?: string | undefined; // ISO date (YYYY-MM-DD)
   reason?: string | undefined;
 }
 
@@ -339,6 +341,8 @@ export const admissions = {
       p_focal_therapist_label: input.focalTherapistLabel ?? null,
       p_buddy_label: input.buddyLabel ?? null,
       p_doctor_label: input.doctorLabel ?? null,
+      p_peeps_label: input.peepsLabel ?? null,
+      p_detox_ends: input.detoxEnds ?? null,
       p_reason: input.reason ?? null,
     });
     if (error) throw new DataAccessError('admissions.admitClient', error);

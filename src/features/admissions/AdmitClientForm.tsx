@@ -54,6 +54,8 @@ interface FormState {
   focalTherapistLabel: string;
   buddyLabel: string;
   doctorLabel: string;
+  peepsLabel: string;
+  detoxEndsDate: string;
   safeguardingConcerns: string;
   reason: string;
 }
@@ -74,6 +76,8 @@ const EMPTY: FormState = {
   focalTherapistLabel: '',
   buddyLabel: '',
   doctorLabel: '',
+  peepsLabel: '',
+  detoxEndsDate: '',
   safeguardingConcerns: '',
   reason: '',
 };
@@ -217,6 +221,8 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         focalTherapistLabel: form.focalTherapistLabel.trim() || undefined,
         buddyLabel: form.buddyLabel.trim() || undefined,
         doctorLabel: form.doctorLabel.trim() || undefined,
+        peepsLabel: form.peepsLabel.trim() || undefined,
+        detoxEnds: form.detoxEndsDate || undefined,
         reason: form.reason.trim() || undefined,
       });
       // Upload photo after admission — non-blocking: a photo failure never rolls back the admission.
@@ -403,6 +409,18 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             <div>
               <dt className="text-[11px] text-[var(--color-ink-muted)]">Doctor</dt>
               <dd className="font-medium">{form.doctorLabel}</dd>
+            </div>
+          ) : null}
+          {form.peepsLabel ? (
+            <div>
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Peeps</dt>
+              <dd className="font-medium">{form.peepsLabel}</dd>
+            </div>
+          ) : null}
+          {form.detoxEndsDate ? (
+            <div>
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Detox ends</dt>
+              <dd className="font-medium">{form.detoxEndsDate}</dd>
             </div>
           ) : null}
           {form.safeguardingConcerns.trim() ? (
@@ -661,7 +679,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           </select>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Field label="Treatment group (optional)">
             <input
               className={inputCls}
@@ -677,6 +695,14 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               value={form.substanceName}
               onChange={(e) => set('substanceName', e.target.value)}
               placeholder="e.g. Alcohol, Cannabis"
+            />
+          </Field>
+          <Field label="Detox ends (optional)">
+            <input
+              type="date"
+              className={inputCls}
+              value={form.detoxEndsDate}
+              onChange={(e) => set('detoxEndsDate', e.target.value)}
             />
           </Field>
         </div>
@@ -709,7 +735,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
 
         <SectionHeading>Care team</SectionHeading>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Field label="Focal therapist (optional)">
             <input
               className={inputCls}
@@ -718,7 +744,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               placeholder="Name"
             />
           </Field>
-          <Field label="Buddy (optional)" hint="Centre staff (Q41)">
+          <Field label="Buddy (optional)" hint="Centre staff">
             <input
               className={inputCls}
               value={form.buddyLabel}
@@ -731,6 +757,14 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               className={inputCls}
               value={form.doctorLabel}
               onChange={(e) => set('doctorLabel', e.target.value)}
+              placeholder="Name"
+            />
+          </Field>
+          <Field label="Peeps (optional)">
+            <input
+              className={inputCls}
+              value={form.peepsLabel}
+              onChange={(e) => set('peepsLabel', e.target.value)}
               placeholder="Name"
             />
           </Field>
@@ -834,6 +868,8 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           {form.focalTherapistLabel ? <SummaryRow label="Therapist" value={form.focalTherapistLabel} /> : null}
           {form.buddyLabel ? <SummaryRow label="Buddy" value={form.buddyLabel} /> : null}
           {form.doctorLabel ? <SummaryRow label="Doctor" value={form.doctorLabel} /> : null}
+          {form.peepsLabel ? <SummaryRow label="Peeps" value={form.peepsLabel} /> : null}
+          {form.detoxEndsDate ? <SummaryRow label="Detox ends" value={form.detoxEndsDate} /> : null}
           {form.safeguardingConcerns.trim() ? (
             <div className="min-w-0">
               <dt className="text-[10.5px] font-semibold text-amber-700 dark:text-amber-400">Safeguarding / Risks</dt>
