@@ -215,7 +215,7 @@ export function TreatmentBoard({
   const toggle = (f: FilterId) => setActiveFilter((prev) => (prev === f ? 'all' : f));
 
   // Header cell — matches BedList's header label style
-  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap';
+  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap';
 
   return (
     <div className="space-y-6 px-4 py-5 sm:px-5">
@@ -495,7 +495,7 @@ export function TreatmentBoard({
               <th
                 onClick={() => expandCol('admin')}
                 title={adminExpanded ? 'Collapse Admin' : 'Expand Admin'}
-                className={`cursor-pointer select-none border-b border-[var(--color-line)] border-l-2 border-l-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap transition hover:bg-amber-100/60 dark:border-l-amber-500/50 dark:bg-amber-950/25 dark:hover:bg-amber-900/20 ${!adminExpanded ? 'border-r-2 border-r-amber-400/70 dark:border-r-amber-500/50' : ''}`}
+                className={`cursor-pointer select-none border-b border-[var(--color-line)] border-l-2 border-l-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap transition hover:bg-amber-100/60 dark:border-l-amber-500/50 dark:bg-amber-950/25 dark:hover:bg-amber-900/20 ${!adminExpanded ? 'border-r-2 border-r-amber-400/70 dark:border-r-amber-500/50' : ''}`}
               >
                 <span className="inline-flex items-center gap-1">
                   {adminExpanded
@@ -506,15 +506,15 @@ export function TreatmentBoard({
               </th>
               {adminExpanded && (
                 <>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Substance</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Substance</th>
                   <th title="GP summary letter sent to GP" className="w-[58px] border-b border-[var(--color-line)] bg-amber-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-amber-950/25">GP Summary</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Treatment Duration</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Discharge Date</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Detox ends</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Group</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Doctor</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Buddy</th>
-                  <th className="border-b border-[var(--color-line)] border-r-2 border-r-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-amber-500/50 dark:bg-amber-950/25">Peeps</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Treatment Duration</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Discharge Date</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Detox ends</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Group</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Doctor</th>
+                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Buddy</th>
+                  <th className="border-b border-[var(--color-line)] border-r-2 border-r-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-amber-500/50 dark:bg-amber-950/25">Peeps</th>
                 </>
               )}
               {COLUMNS.map((col) => {
@@ -617,7 +617,7 @@ export function TreatmentBoard({
                 }
               })}
               {/* Doctor – Thursday */}
-              <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
+              <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
                 Reason / Assessment
               </th>
             </tr>
