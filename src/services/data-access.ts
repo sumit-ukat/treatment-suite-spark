@@ -871,6 +871,7 @@ export interface IncidentReportRow {
   location: string | null;
   incident_at: string;
   created_at: string;
+  reported_by_name: string | null;
 }
 
 export const incidents = {
@@ -878,7 +879,7 @@ export const incidents = {
   async list(centreId: string, opts?: { days?: number; limit?: number }): Promise<IncidentReportRow[]> {
     let q = client()
       .from('incident_reports')
-      .select('id, centre_id, incident_type, severity, description, client_id, client_name, location, incident_at, created_at')
+      .select('id, centre_id, incident_type, severity, description, client_id, client_name, location, incident_at, created_at, reported_by_name')
       .eq('centre_id', centreId)
       .order('incident_at', { ascending: false })
       .limit(opts?.limit ?? 200);

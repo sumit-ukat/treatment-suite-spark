@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle, Building2, ChevronDown, ChevronUp,
-  FileWarning, MapPin, Pill, Plus, User, Users, CheckCircle2,
+  FileWarning, MapPin, Pill, Plus, User, UserCheck, Users, CheckCircle2,
 } from 'lucide-react';
 import type { BoardBed } from './board-data.js';
 import {
@@ -411,7 +411,7 @@ function IncidentRow({ row }: { row: IncidentReportRow }) {
             )}
           </p>
 
-          {/* Meta: location + time */}
+          {/* Meta: location + time + reporter */}
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[var(--color-ink-muted)]">
             {row.location && (
               <span className="inline-flex items-center gap-1">
@@ -420,6 +420,12 @@ function IncidentRow({ row }: { row: IncidentReportRow }) {
               </span>
             )}
             <span>{relativeTime(row.incident_at)}</span>
+            {row.reported_by_name && (
+              <span className="inline-flex items-center gap-1">
+                <UserCheck className="size-3" aria-hidden />
+                Logged by {row.reported_by_name}
+              </span>
+            )}
           </div>
         </div>
       </div>
