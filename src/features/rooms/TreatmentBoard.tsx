@@ -441,16 +441,19 @@ export function TreatmentBoard({
                     colSpan={lifeStepExpanded ? 6 : 1}
                     onClick={() => expandCol('lifestep')}
                     title={lifeStepExpanded ? 'Click to collapse Life Story & Step Works' : 'Click to expand Life Story & Step Works'}
-                    className="cursor-pointer select-none border-b border-x-2 border-violet-400/60 bg-violet-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/30"
+                    className="cursor-pointer select-none border-b border-x-2 border-violet-400/60 bg-violet-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/30"
                   >
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {lifeStepExpanded
-                        ? <ChevronDown className="size-3" />
-                        : <ChevronRight className="size-3" />}
-                      Life Story &amp; Step Works
-                      {!lifeStepExpanded && (
-                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+5 cols</span>
-                      )}
+                    <span className="inline-flex flex-col items-center justify-center gap-0.5">
+                      <span className="inline-flex items-center gap-1.5">
+                        {lifeStepExpanded
+                          ? <ChevronDown className="size-3" />
+                          : <ChevronRight className="size-3" />}
+                        Life Story
+                        {!lifeStepExpanded && (
+                          <span className="text-[9px] font-normal opacity-60">+5 cols</span>
+                        )}
+                      </span>
+                      <span>&amp; Step Works</span>
                     </span>
                   </th>
                 ) : g.label === 'Care Plan' ? (
@@ -475,9 +478,15 @@ export function TreatmentBoard({
                   <th
                     key={g.label}
                     colSpan={g.count}
-                    className={`border-b border-x-2 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap ${g.cls} ${g.bCls}`}
+                    className={`border-b border-x-2 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase ${g.cls} ${g.bCls}`}
                   >
-                    {g.label}
+                    {g.label === '7 Day Satisfaction' ? (
+                      <span className="inline-flex flex-col items-center gap-0"><span>7 Day</span><span>Satisfaction</span></span>
+                    ) : g.label === 'Doctor – Thursday' ? (
+                      <span className="inline-flex flex-col items-center gap-0"><span>Doctor –</span><span>Thursday</span></span>
+                    ) : (
+                      g.label
+                    )}
                   </th>
                 )
               )}
