@@ -313,6 +313,7 @@ export interface AdmitClientInput {
   doctorLabel?: string | undefined;
   peepsLabel?: string | undefined;
   detoxEnds?: string | undefined; // ISO date (YYYY-MM-DD)
+  programmeModules?: string[] | undefined;
   reason?: string | undefined;
 }
 
@@ -343,6 +344,7 @@ export const admissions = {
       p_doctor_label: input.doctorLabel ?? null,
       p_peeps_label: input.peepsLabel ?? null,
       p_detox_ends: input.detoxEnds ?? null,
+      p_programme_modules: input.programmeModules ?? null,
       p_reason: input.reason ?? null,
     });
     if (error) throw new DataAccessError('admissions.admitClient', error);
@@ -479,6 +481,8 @@ export interface AdmissionRow {
   admission_notes: string | null;
   admission_notes_updated_by_name: string | null;
   admission_notes_updated_at: string | null;
+  detox_ends: string | null;
+  programme_modules: string[];
 }
 
 export interface ClientRow {
@@ -972,7 +976,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules',
           )
           .eq('centre_id', centreId)
           .eq('status', 'active'),
@@ -1163,7 +1167,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules',
           )
           .in('id', admissionIds),
       ),

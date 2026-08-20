@@ -839,6 +839,18 @@ export function TreatmentBoard({
                       ].filter(Boolean).join(' ');
                     }
 
+                    if (!o.programmeModules.includes(col.group)) {
+                      return (
+                        <td
+                          key={col.code}
+                          title="Not included in this client's treatment programme"
+                          className={`w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center opacity-30${extraCls ? ` ${extraCls}` : ''}`}
+                        >
+                          <span className="text-[var(--color-ink-muted)]">—</span>
+                        </td>
+                      );
+                    }
+
                     return <TaskCell key={col.code} bed={bed} code={col.code} {...(extraCls ? { extraCls } : {})} />;
                   })}
 
@@ -893,6 +905,10 @@ export function TreatmentBoard({
           <div className="flex items-center gap-2">
             <span className="text-[13px] text-[var(--color-ink-muted)]">×</span>
             Not applicable — this task is not part of this programme
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] opacity-30 text-[var(--color-ink-muted)]">—</span>
+            Faded column — this module was not selected for this client&apos;s programme
           </div>
           <div className="flex items-center gap-2">
             <span className="size-2 shrink-0 rounded-full bg-red-500" />

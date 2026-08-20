@@ -223,6 +223,9 @@ function buildRealOccupant(
     admissionNotes: admission.admission_notes ?? legacyParsed.admissionNotes,
     admissionNotesUpdatedByName: admission.admission_notes_updated_by_name ?? null,
     admissionNotesUpdatedAt: admission.admission_notes_updated_at ?? null,
+    programmeModules: admission.programme_modules.length
+      ? admission.programme_modules
+      : ['contact', 'survey', 'familyvisit', 'lifestep', 'careplan'],
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

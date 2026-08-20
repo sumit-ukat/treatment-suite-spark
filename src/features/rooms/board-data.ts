@@ -384,6 +384,8 @@ export interface Occupant {
   admissionNotes: string | null;
   admissionNotesUpdatedByName: string | null;
   admissionNotesUpdatedAt: string | null;
+  /** Which Treatment Board module groups apply to this client's programme. */
+  programmeModules: string[];
   familyMeetingEligibleFrom: Date;
   familyMeetingEligibleNow: boolean;
   tasks: readonly BoardTask[];
@@ -503,6 +505,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     admissionNotes: null,
     admissionNotesUpdatedByName: null,
     admissionNotesUpdatedAt: null,
+    programmeModules: ['contact', 'survey', 'familyvisit', 'lifestep', 'careplan'],
     familyMeetingEligibleFrom: eligibility.eligibleFrom,
     familyMeetingEligibleNow: eligibility.isEligibleNow,
     tasks,

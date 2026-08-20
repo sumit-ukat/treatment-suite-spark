@@ -56,6 +56,7 @@ interface FormState {
   doctorLabel: string;
   peepsLabel: string;
   detoxEndsDate: string;
+  programmeModules: string[];
   safeguardingConcerns: string;
   reason: string;
 }
@@ -78,6 +79,7 @@ const EMPTY: FormState = {
   doctorLabel: '',
   peepsLabel: '',
   detoxEndsDate: '',
+  programmeModules: ['contact', 'survey', 'familyvisit', 'lifestep', 'careplan'],
   safeguardingConcerns: '',
   reason: '',
 };
@@ -223,6 +225,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         doctorLabel: form.doctorLabel.trim() || undefined,
         peepsLabel: form.peepsLabel.trim() || undefined,
         detoxEnds: form.detoxEndsDate || undefined,
+        programmeModules: form.programmeModules,
         reason: form.reason.trim() || undefined,
       });
       // Upload photo after admission — non-blocking: a photo failure never rolls back the admission.
@@ -423,6 +426,24 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               <dd className="font-medium">{form.detoxEndsDate}</dd>
             </div>
           ) : null}
+          <div className="col-span-2">
+            <dt className="text-[11px] text-[var(--color-ink-muted)]">Programme modules</dt>
+            <dd className="font-medium">
+              {form.programmeModules.length === 0
+                ? 'None selected'
+                : [
+                    { code: 'contact',     label: 'Contact/Comms'         },
+                    { code: 'survey',      label: '7 Day Satisfaction'     },
+                    { code: 'familyvisit', label: 'Family Visit'           },
+                    { code: 'lifestep',    label: 'Life Story & Step Works'},
+                    { code: 'careplan',    label: 'Care Plan'              },
+                  ]
+                    .filter(({ code }) => form.programmeModules.includes(code))
+                    .map(({ label }) => label)
+                    .join(', ')
+              }
+            </dd>
+          </div>
           {form.safeguardingConcerns.trim() ? (
             <div className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/40">
               <dt className="text-[11px] font-semibold text-amber-800 dark:text-amber-400">Safeguarding / Risks / Concerns</dt>
@@ -770,6 +791,42 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           </Field>
         </div>
 
+        <SectionHeading>Treatment programme modules</SectionHeading>
+
+        <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+          <p className="mb-2.5 text-[11px] text-[var(--color-ink-muted)]">
+            Tick each module that applies to this client&apos;s programme. The Treatment Board will
+            grey out columns for any unticked module.
+          </p>
+          <div className="grid grid-cols-2 gap-y-2 gap-x-4 sm:grid-cols-3">
+            {(
+              [
+                { code: 'contact',     label: 'Contact / Comms'        },
+                { code: 'survey',      label: '7 Day Satisfaction'      },
+                { code: 'familyvisit', label: 'Family Visit'            },
+                { code: 'lifestep',    label: 'Life Story & Step Works' },
+                { code: 'careplan',    label: 'Care Plan'               },
+              ] as const
+            ).map(({ code, label }) => (
+              <label key={code} className="flex items-center gap-2 text-[13px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.programmeModules.includes(code)}
+                  onChange={(e) =>
+                    set(
+                      'programmeModules',
+                      e.target.checked
+                        ? [...form.programmeModules, code]
+                        : form.programmeModules.filter((m) => m !== code),
+                    )
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <SectionHeading>Safeguarding / Risks / Concerns</SectionHeading>
 
         <Field
@@ -870,6 +927,16 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           {form.doctorLabel ? <SummaryRow label="Doctor" value={form.doctorLabel} /> : null}
           {form.peepsLabel ? <SummaryRow label="Peeps" value={form.peepsLabel} /> : null}
           {form.detoxEndsDate ? <SummaryRow label="Detox ends" value={form.detoxEndsDate} /> : null}
+          <SummaryRow
+            label="Programme modules"
+            value={
+              form.programmeModules.length === 5
+                ? 'All modules'
+                : form.programmeModules.length === 0
+                ? 'None selected'
+                : `${form.programmeModules.length} / 5 modules`
+            }
+          />
           {form.safeguardingConcerns.trim() ? (
             <div className="min-w-0">
               <dt className="text-[10.5px] font-semibold text-amber-700 dark:text-amber-400">Safeguarding / Risks</dt>
