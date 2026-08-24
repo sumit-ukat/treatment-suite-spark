@@ -144,7 +144,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
     <button
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full flex-col gap-3 rounded-2xl border bg-card p-3.5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+      className={`group relative flex w-full flex-col gap-4 rounded-2xl border bg-card p-4 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
         o.hasRestrictedAlert
           ? 'border-t-[3px] border-t-red-400 hover:border-[var(--color-accent)]/55 hover:border-t-red-400 dark:border-t-red-500 dark:hover:border-t-red-500'
           : o.hasOpenConcern
@@ -200,16 +200,16 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
               </span>
             ) : null}
           </div>
-          <div className="mt-1.5 truncate text-[13.5px] leading-tight font-semibold">
+          <div className="mt-1.5 truncate text-sm leading-tight font-semibold">
             {o.displayName}
           </div>
-          <div className="nums text-[11px] text-[var(--color-ink-muted)]">{o.reference}</div>
+          <div className="nums mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">{o.reference}</div>
         </div>
       </div>
 
-      <dl className="nums grid grid-cols-3 gap-x-2 text-[11.5px]">
+      <dl className="nums grid grid-cols-3 gap-x-3 text-xs">
         <div>
-          <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Day</dt>
+          <dt className="text-[11px] text-[var(--color-ink-muted)]">Day</dt>
           <dd className="font-medium">
             {dischargePassed ? (
               <span className="text-red-600 dark:text-red-400">
@@ -224,11 +224,11 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           </dd>
         </div>
         <div>
-          <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Discharge</dt>
+          <dt className="text-[11px] text-[var(--color-ink-muted)]">Discharge</dt>
           <dd className={`font-medium ${dischargeTone}`}>{formatDate(o.plannedDischargeDate)}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-[10.5px] text-[var(--color-ink-muted)]">Therapist</dt>
+          <dt className="text-[11px] text-[var(--color-ink-muted)]">Therapist</dt>
           <dd className="truncate font-medium">
             {o.therapist ?? (
               <span className="text-amber-600 dark:text-amber-400">None</span>
@@ -238,7 +238,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
       </dl>
 
       <div
-        className="h-[3px] overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12"
+        className="h-1 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12"
         role="progressbar"
         aria-valuenow={progress}
         aria-valuemin={0}
@@ -251,7 +251,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         />
       </div>
 
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {dischargePassed ? <StatusBadge status="overdue" label="Discharge passed" size="sm" /> : null}
         {dischargeToday ? <StatusBadge status="attention" label="Discharging today" size="sm" /> : null}
         {o.overdueCount > 0 ? (
@@ -284,7 +284,7 @@ export function AvailableCard({ bed, onOpen }: { bed: BoardBed; onOpen?: () => v
       type="button"
       onClick={onOpen}
       disabled={!onOpen}
-      className="flex min-h-[168px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-3.5 text-left transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:cursor-default"
+      className="flex min-h-[192px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-4 text-left transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:cursor-default"
     >
       <BedLabel label={bed.label} shared={bed.shared} variant="available" />
       <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
