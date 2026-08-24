@@ -365,15 +365,9 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const assessed = useMemo(() => visible.map(assess), [visible]);
   const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
   const nearFullCentres = useMemo(() => visible.filter((c) => c.occupancyPercent >= 90), [visible]);
-  const avgFilledPercent = useMemo(
-    () => (visible.length ? Math.round(visible.reduce((s, c) => s + c.occupancyPercent, 0) / visible.length) : null),
+  const avg3MonthFilledPercent = useMemo(
+    () => (visible.length ? Math.round(visible.reduce((s, c) => s + c.avgOccupancy3MonthPercent, 0) / visible.length) : null),
     [visible],
-  );
-  const avgFilledTrend = useMemo(
-    () => avgFilledPercent !== null
-      ? [Math.max(0, avgFilledPercent - 5), Math.max(0, avgFilledPercent - 2), avgFilledPercent]
-      : undefined,
-    [avgFilledPercent],
   );
 
   const needAction = assessed.filter((a) => a.health === 'act');
@@ -604,11 +598,10 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             />
             <HeroStat
               label="Avg. filled — all centres"
-              value={avgFilledPercent ?? '—'}
-              {...(avgFilledPercent !== null ? { suffix: '%' } : {})}
-              hint={`simple mean across ${visible.length} centre${visible.length === 1 ? '' : 's'}`}
+              value={avg3MonthFilledPercent ?? '—'}
+              {...(avg3MonthFilledPercent !== null ? { suffix: '%' } : {})}
+              hint={`3-mo avg · ${visible.length} centre${visible.length === 1 ? '' : 's'}`}
               icon={<Percent className="size-3.5" />}
-              trend={avgFilledTrend}
             />
             <HeroStat
               label="Centres near full (≥90%)"
