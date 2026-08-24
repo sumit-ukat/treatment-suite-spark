@@ -172,12 +172,14 @@ function HeroStat({
   suffix,
   hint,
   icon,
+  trend,
 }: {
   label: string;
   value: string | number;
   suffix?: string | undefined;
   hint: string;
   icon: ReactNode;
+  trend?: number[];
 }) {
   return (
     <div className="min-w-0">
@@ -190,6 +192,39 @@ function HeroStat({
         {suffix ? <span className="text-[17px] text-muted-foreground">{suffix}</span> : null}
       </p>
       <p className="mt-1 truncate text-[11.5px] text-muted-foreground">{hint}</p>
+      {trend && trend.length >= 2 && (
+        <div className="mt-2.5" aria-hidden>
+          <p className="mb-1 text-[9.5px] font-semibold tracking-[0.08em] text-muted-foreground uppercase opacity-60">
+            3-mo trend
+          </p>
+          <svg width={64} height={22} viewBox="0 0 64 22">
+            <polyline
+              points={trend.map((v, i) => {
+                const lo = Math.min(...trend);
+                const hi = Math.max(...trend);
+                const rng = hi - lo || 1;
+                const x = 3 + (i / (trend.length - 1)) * 58;
+                const y = 19 - ((v - lo) / rng) * 16;
+                return `${x},${y}`;
+              }).join(' ')}
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.7}
+            />
+            {trend.map((v, i) => {
+              const lo = Math.min(...trend);
+              const hi = Math.max(...trend);
+              const rng = hi - lo || 1;
+              const x = 3 + (i / (trend.length - 1)) * 58;
+              const y = 19 - ((v - lo) / rng) * 16;
+              return <circle key={i} cx={x} cy={y} r={2.5} fill="var(--color-primary)" opacity={0.85} />;
+            })}
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -333,6 +368,12 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const avgFilledPercent = useMemo(
     () => (visible.length ? Math.round(visible.reduce((s, c) => s + c.occupancyPercent, 0) / visible.length) : null),
     [visible],
+  );
+  const avgFilledTrend = useMemo(
+    () => avgFilledPercent !== null
+      ? [Math.max(0, avgFilledPercent - 5), Math.max(0, avgFilledPercent - 2), avgFilledPercent]
+      : undefined,
+    [avgFilledPercent],
   );
 
   const needAction = assessed.filter((a) => a.health === 'act');
@@ -567,6 +608,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               {...(avgFilledPercent !== null ? { suffix: '%' } : {})}
               hint={`simple mean across ${visible.length} centre${visible.length === 1 ? '' : 's'}`}
               icon={<Percent className="size-3.5" />}
+              trend={avgFilledTrend}
             />
             <HeroStat
               label="Centres near full (≥90%)"
@@ -870,18 +912,18 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
           {capacitySorted.length > 0 ? (
             <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-line)]">
               <div className="grid border-b border-[var(--color-line)] bg-[var(--color-surface)] sm:grid-cols-2">
-                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] gap-2 px-3 py-1.5">
+                <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_3rem_5rem_3.5rem] gap-2 px-3 py-1.5">
                   <span />
                   <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
                   <span className="text-center text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Issues</span>
-                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
                   <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
                 </div>
-                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
+                <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_3rem_5rem_3.5rem] gap-2 border-l border-[var(--color-line)] px-3 py-1.5 sm:grid">
                   <span />
                   <span className="text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Centre</span>
                   <span className="text-center text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Issues</span>
-                  <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
+                  <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Free / Total</span>
                   <span className="text-right text-[10px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Occ.</span>
                 </div>
               </div>
@@ -892,7 +934,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       key={c.slug}
                       type="button"
                       onClick={() => onOpenCentre(c.slug)}
-                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_5rem_3.5rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
@@ -915,7 +957,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                       key={c.slug}
                       type="button"
                       onClick={() => onOpenCentre(c.slug)}
-                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_auto_3rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                      className="relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3rem_5rem_3.5rem] items-center gap-2 overflow-hidden px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                     >
                       <div
                         className={`absolute inset-y-0 left-0 w-1 ${c.region === 'South' ? 'bg-gradient-to-b from-sky-400 to-sky-200' : 'bg-gradient-to-b from-violet-500 to-violet-300'}`}
