@@ -330,6 +330,10 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const assessed = useMemo(() => visible.map(assess), [visible]);
   const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
   const nearFullCentres = useMemo(() => visible.filter((c) => c.occupancyPercent >= 90), [visible]);
+  const avgFilledPercent = useMemo(
+    () => (visible.length ? Math.round(visible.reduce((s, c) => s + c.occupancyPercent, 0) / visible.length) : null),
+    [visible],
+  );
 
   const needAction = assessed.filter((a) => a.health === 'act');
   const watching = assessed.filter((a) => a.health === 'watch');
@@ -542,7 +546,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-[var(--color-line)] pt-5 lg:grid-cols-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7">
             <HeroStat
               label="Highest occupied (3-mo avg)"
               value={extremes ? extremes.highest.avgOccupancy3MonthPercent : '—'}
@@ -556,6 +560,13 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               {...(extremes ? { suffix: '%' } : {})}
               hint={extremes ? extremes.lowest.name : 'Nothing in scope'}
               icon={<TrendingDown className="size-3.5" />}
+            />
+            <HeroStat
+              label="Avg. filled — all centres"
+              value={avgFilledPercent ?? '—'}
+              {...(avgFilledPercent !== null ? { suffix: '%' } : {})}
+              hint={`simple mean across ${visible.length} centre${visible.length === 1 ? '' : 's'}`}
+              icon={<Percent className="size-3.5" />}
             />
             <HeroStat
               label="Centres near full (≥90%)"

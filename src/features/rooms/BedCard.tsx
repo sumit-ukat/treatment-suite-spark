@@ -144,7 +144,7 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
     <button
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full flex-col gap-4 rounded-2xl border bg-card p-4 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+      className={`group relative flex w-full flex-col gap-5 rounded-2xl border bg-card p-5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
         o.hasRestrictedAlert
           ? 'border-t-[3px] border-t-red-400 hover:border-[var(--color-accent)]/55 hover:border-t-red-400 dark:border-t-red-500 dark:hover:border-t-red-500'
           : o.hasOpenConcern
@@ -251,17 +251,25 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         />
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {dischargePassed ? <StatusBadge status="overdue" label="Discharge passed" size="sm" /> : null}
-        {dischargeToday ? <StatusBadge status="attention" label="Discharging today" size="sm" /> : null}
+      <div className="flex items-center gap-2 text-[11.5px]">
+        {dischargePassed ? (
+          <span className="font-medium text-red-600 dark:text-red-400">Discharge passed</span>
+        ) : dischargeToday ? (
+          <span className="font-medium text-amber-600 dark:text-amber-400">Discharging today</span>
+        ) : null}
         {o.overdueCount > 0 ? (
-          <StatusBadge status="overdue" label={`${o.overdueCount} overdue`} size="sm" />
-        ) : null}
-        {o.dueTodayCount > 0 ? (
-          <StatusBadge status="attention" label={`${o.dueTodayCount} due today`} size="sm" />
-        ) : null}
+          <span className="font-medium text-red-600 dark:text-red-400">
+            {dischargePassed ? '·' : ''} {o.overdueCount} overdue
+          </span>
+        ) : o.dueTodayCount > 0 ? (
+          <span className="font-medium text-amber-600 dark:text-amber-400">{o.dueTodayCount} due today</span>
+        ) : (
+          <span className="text-emerald-600 dark:text-emerald-400">On track</span>
+        )}
         {o.isExtendedStay ? (
-          <Chip icon="↗" label={`+${o.extensionDays ?? '?'}d`} tone="good" title="Stay extended" />
+          <span className="ml-auto text-[11px] font-medium text-teal-600 dark:text-teal-400">
+            +{o.extensionDays ?? '?'}d ext.
+          </span>
         ) : null}
       </div>
     </button>
@@ -284,7 +292,7 @@ export function AvailableCard({ bed, onOpen }: { bed: BoardBed; onOpen?: () => v
       type="button"
       onClick={onOpen}
       disabled={!onOpen}
-      className="flex min-h-[192px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-4 text-left transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:cursor-default"
+      className="flex min-h-[220px] flex-col rounded-2xl border border-dashed border-[color-mix(in_oklab,var(--brand-blue)_55%,transparent)] bg-[color:color-mix(in_oklab,var(--brand-blue)_9%,transparent)] p-5 text-left transition hover:bg-[color:color-mix(in_oklab,var(--brand-blue)_16%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] disabled:cursor-default"
     >
       <BedLabel label={bed.label} shared={bed.shared} variant="available" />
       <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
