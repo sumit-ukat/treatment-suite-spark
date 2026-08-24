@@ -946,7 +946,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
                       <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
+                      <span className="tabular whitespace-nowrap text-right text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </button>
                   ))}
@@ -969,7 +969,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                         <span className="block text-[11px] text-muted-foreground">{c.region}</span>
                       </span>
                       <span className={`tabular text-center text-[12px] font-semibold ${c.overdue >= OVERDUE_ACT ? 'text-overdue' : c.overdue > 0 ? 'text-attention' : 'text-muted-foreground'}`}>{c.overdue}</span>
-                      <span className="tabular whitespace-nowrap text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
+                      <span className="tabular whitespace-nowrap text-right text-[12px] text-muted-foreground">{c.available}/{c.capacity}</span>
                       <span className="tabular text-right text-[12px] font-semibold text-muted-foreground">{c.occupancyPercent}%</span>
                     </button>
                   ))}
