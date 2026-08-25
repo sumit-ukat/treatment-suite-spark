@@ -1,4 +1,4 @@
-import { Filter, Search } from 'lucide-react';
+import { CalendarDays, Filter, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -45,16 +45,23 @@ export function ClientDirectory({
   const { query, setQuery, results, loading, error } = useClientSearch(centre.id);
   const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
   const [scope, setScope] = useState<'all' | 'current' | 'former'>('all');
+  const [asOfDate, setAsOfDate] = useState<string>('');
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
 
   // Filters whatever a search already returned — it does not fetch more than the search itself
-  // already asked for.
+  // already asked for. The date filter uses last_admitted_at as a proxy: it shows every client
+  // admitted on or before the chosen date. Former clients without a stored discharge date may
+  // appear even if they left before that date; the label makes this approximation visible.
   const visible = results.filter((r) => {
     if (scope === 'current') return r.has_open_admission;
     if (scope === 'former') return !r.has_open_admission;
     return true;
+  }).filter((r) => {
+    if (!asOfDate) return true;
+    if (!r.last_admitted_at) return false;
+    return r.last_admitted_at.slice(0, 10) <= asOfDate;
   });
 
   if (!canSearch) {
@@ -97,6 +104,29 @@ export function ClientDirectory({
             className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
           />
         </label>
+        <div className="relative flex shrink-0 items-center">
+          <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" aria-hidden />
+          <input
+            type="date"
+            value={asOfDate}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setAsOfDate(e.target.value)}
+            aria-label="Show clients admitted on or before this date"
+            title="Snapshot date — show clients admitted on or before this date"
+            className="h-9 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            style={{ width: asOfDate ? '11rem' : '9.5rem' }}
+          />
+          {asOfDate ? (
+            <button
+              type="button"
+              onClick={() => setAsOfDate('')}
+              aria-label="Clear date filter"
+              className="absolute right-1.5 rounded p-0.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          ) : null}
+        </div>
         <select
           value={scope}
           onChange={(e) => setScope(e.target.value as typeof scope)}
@@ -109,7 +139,8 @@ export function ClientDirectory({
         </select>
         {results.length > 0 ? (
           <span className="tabular ml-auto shrink-0 pr-1 text-xs text-muted-foreground">
-            {visible.length} results
+            {visible.length} result{visible.length === 1 ? '' : 's'}
+            {asOfDate ? <span className="ml-1 text-[11px]">as of {asOfDate}</span> : null}
           </span>
         ) : null}
       </div>
