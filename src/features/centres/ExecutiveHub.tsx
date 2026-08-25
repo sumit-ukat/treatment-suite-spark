@@ -339,7 +339,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const [region, setRegionState] = useState<'all' | 'North' | 'South'>('all');
   const [picked, setPickedState] = useState<readonly string[]>([]);
   const [sort, setSort] = useState<SortKey>('risk');
-  const [capacitySort, setCapacitySort] = useState<'occ-asc' | 'occ-desc' | 'name' | 'region'>('occ-asc');
+  const [capacitySort, setCapacitySort] = useState<'occ-asc' | 'occ-desc' | 'issues' | 'name' | 'region'>('occ-asc');
 
   const setRegion = (r: 'all' | 'North' | 'South') => {
     setRegionState(r);
@@ -435,6 +435,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         switch (capacitySort) {
           case 'occ-asc':  return a.occupancyPercent - b.occupancyPercent;
           case 'occ-desc': return b.occupancyPercent - a.occupancyPercent;
+          case 'issues':   return b.overdue - a.overdue;
           case 'name':     return a.name.localeCompare(b.name);
           case 'region':
             return a.region !== b.region
@@ -847,11 +848,12 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               Sort:
               <select
                 value={capacitySort}
-                onChange={(e) => setCapacitySort(e.target.value as 'occ-asc' | 'occ-desc' | 'name' | 'region')}
+                onChange={(e) => setCapacitySort(e.target.value as 'occ-asc' | 'occ-desc' | 'issues' | 'name' | 'region')}
                 className="cursor-pointer appearance-none bg-transparent text-[12px] font-medium"
               >
                 <option value="occ-asc">Most free beds</option>
                 <option value="occ-desc">Highest occupancy</option>
+                <option value="issues">Most issues</option>
                 <option value="name">A–Z by name</option>
                 <option value="region">By region</option>
               </select>
