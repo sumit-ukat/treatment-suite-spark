@@ -31,6 +31,8 @@ export interface HelpArticle {
   /** Extra search terms — synonyms and the words people use that the article itself does not. */
   keywords: readonly string[];
   body: readonly HelpBlock[];
+  /** Path to an annotated screenshot, relative to /public. Shown as an expandable image. */
+  screenshot?: string;
 }
 
 export type CategoryId =
@@ -145,6 +147,7 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'p', text: 'Use it when you need to know where somebody is, whether you have a bed free, or who needs attention today.' },
       { kind: 'note', text: 'A bed marked "shared" is one of two beds in the same room.' },
     ],
+    screenshot: '/help-screenshots/room-board.png',
   },
   {
     id: 'roomboard-read-card',
@@ -225,6 +228,7 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'p', text: 'Scroll sideways to see all the columns — the client names stay fixed on the left so you never lose your place.' },
       { kind: 'note', text: 'Use the Treatment board when you want to compare everyone at once. Use the Room board when you want to look at one person.' },
     ],
+    screenshot: '/help-screenshots/treatment-board.png',
   },
   {
     id: 'treatmentboard-columns',
@@ -307,6 +311,7 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'p', text: 'With the box empty you get everyone who has ever stayed at this centre — not just current residents. Use the dropdown on the right to switch between Everyone, Currently resident, and Former clients.' },
       { kind: 'note', text: 'If your role does not allow you to see names, you can still search by reference number. The results will show references rather than names.' },
     ],
+    screenshot: '/help-screenshots/clients.png',
   },
   {
     id: 'clients-date-filter',
@@ -491,24 +496,26 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'p', text: 'The Overview is the first screen to open at the start of a shift. It answers "is this centre running properly today, and if not, what do I look at first" without you having to read either board.' },
       { kind: 'p', text: 'It covers occupancy, tasks due and overdue, clients graduating this week, and anything flagged for attention.' },
     ],
+    screenshot: '/help-screenshots/centre-overview.png',
   },
   {
-    id: 'oversight-hub',
-    category: 'oversight',
-    title: 'What is the group hub?',
-    summary: 'All centres in one view, for managers and directors.',
-    keywords: ['group hub', 'all centres', 'executive', 'exec', 'estate', 'across centres', 'compare', 'region', 'north', 'south'],
+    id: ‘oversight-hub’,
+    category: ‘oversight’,
+    title: ‘What is the group hub?’,
+    summary: ‘All centres in one view, for managers and directors.’,
+    keywords: [‘group hub’, ‘all centres’, ‘executive’, ‘exec’, ‘estate’, ‘across centres’, ‘compare’, ‘region’, ‘north’, ‘south’],
     body: [
-      { kind: 'p', text: 'The group hub is the view above any single centre. It opens with a plain-English verdict — for example "7 centres need attention" — and then explains it with numbers underneath.' },
-      { kind: 'bullets', items: [
-        'The ring shows overall occupancy across every centre in scope.',
-        'The buttons at the top right narrow the view to one region or a handful of picked centres.',
-        'The "By region" table compares North and South.',
-        'The "All centres" table lists every centre — sort it by free beds, occupancy, most issues, name or region.',
-        'Clicking any centre takes you into it.',
+      { kind: ‘p’, text: ‘The group hub is the view above any single centre. It opens with a plain-English verdict — for example "7 centres need attention" — and then explains it with numbers underneath.’ },
+      { kind: ‘bullets’, items: [
+        ‘The ring shows overall occupancy across every centre in scope.’,
+        ‘The buttons at the top right narrow the view to one region or a handful of picked centres.’,
+        ‘The "By region" table compares North and South.’,
+        ‘The "All centres" table lists every centre — sort it by free beds, occupancy, most issues, name or region.’,
+        ‘Clicking any centre takes you into it.’,
       ] },
-      { kind: 'warn', text: 'Read the amber "What is real on this page" box at the bottom. Only Primrose Lodge’s current-day figures come from real data — the other centres’ occupancy, overdue counts and on-time rates are placeholders while the data is being connected.' },
+      { kind: ‘warn’, text: ‘Read the amber "What is real on this page" box at the bottom. Only Primrose Lodge’s current-day figures come from real data — the other centres’ occupancy, overdue counts and on-time rates are placeholders while the data is being connected.’ },
     ],
+    screenshot: ‘/help-screenshots/group-hub.png’,
   },
   {
     id: 'oversight-audit',
