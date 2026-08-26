@@ -61,6 +61,7 @@ import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { TreatmentBoard } from '../rooms/TreatmentBoard.tsx';
 import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
 import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
+import { HelpCentre } from '../help/HelpCentre.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { Chip } from '../../components/ui.tsx';
 import {
@@ -133,6 +134,7 @@ function AppRoutes() {
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
+        <Route path="help" element={<HelpPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/exec" replace />} />
     </Routes>
@@ -968,6 +970,11 @@ function IncidentsPage() {
       <IncidentReportSection centreId={authCentre.id} beds={beds} defaultOpen />
     </div>
   );
+}
+
+function HelpPage() {
+  const { centre } = useCentreContext();
+  return <HelpCentre centreName={centre.name} />;
 }
 
 /** The four "soon" nav items (My work, All tasks, Family contact, Medical reviews) all land here —

@@ -3,6 +3,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
   History,
   LayoutGrid,
   Shield,
@@ -57,6 +58,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
       { id: 'incidents', label: 'Incident reports', icon: AlertTriangle, ready: true },
       { id: 'audit', label: 'Activity log', icon: History, ready: true },
       { id: 'admin', label: 'Administration', icon: Shield, ready: true },
+      { id: 'help', label: 'Guide & help', icon: HelpCircle, ready: true },
     ],
   },
 ];
