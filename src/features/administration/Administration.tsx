@@ -5,17 +5,22 @@ import { RoomsAndBedsAdmin } from './RoomsAndBeds.tsx';
 import { UsersAndRoles } from './UsersAndRoles.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 
-// ─── Dummy staff data — placeholder until real staff records are imported ─────
-// Roles and permissions mirror the real role_permissions schema. Names are
-// fictional; they will be replaced when the centre provides its staff list.
-
-type StaffRole = 'Centre Manager' | 'Therapist' | 'Nurse' | 'Support Worker' | 'Admin';
+type StaffRole =
+  | 'Centre Manager'
+  | 'Office Manager'
+  | 'Nurse'
+  | 'Therapist'
+  | 'Support Worker'
+  | 'Night Support Worker'
+  | 'Ops Manager'
+  | 'Master / Dev';
 
 interface StaffMember {
   id: string;
   name: string;
   email: string;
   role: StaffRole;
+  position: string;
   permissions: string[];
   lastActive: string;
   initials: string;
@@ -29,27 +34,50 @@ interface PendingInvite {
   invitedAt: string;
 }
 
+const ALL_PERMISSIONS = ['View board', 'Admit clients', 'Approve discharge', 'Complete actions', 'Manage staff', 'View audit'];
+
 const ROLE_PERMISSIONS: Record<StaffRole, string[]> = {
-  'Centre Manager': ['View board', 'Admit clients', 'Approve discharge', 'Complete actions', 'Manage staff', 'View audit'],
-  'Therapist':      ['View board', 'Complete actions'],
-  'Nurse':          ['View board', 'Complete actions'],
-  'Support Worker': ['View board', 'Complete actions'],
-  'Admin':          ['View board', 'Admit clients', 'View audit'],
+  'Centre Manager':       ALL_PERMISSIONS,
+  'Office Manager':       ['View board', 'Admit clients', 'View audit'],
+  'Nurse':                ['View board', 'Complete actions'],
+  'Therapist':            ['View board', 'Complete actions'],
+  'Support Worker':       ['View board', 'Complete actions'],
+  'Night Support Worker': ['View board', 'Complete actions'],
+  'Ops Manager':          ALL_PERMISSIONS,
+  'Master / Dev':         ALL_PERMISSIONS,
 };
 
+function initials(name: string) {
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function staff(id: string, name: string, email: string, role: StaffRole, position: string, lastActive: string): StaffMember {
+  return { id, name, email, role, position, initials: initials(name), permissions: ROLE_PERMISSIONS[role], lastActive };
+}
+
 const STAFF: StaffMember[] = [
-  { id: '1', name: 'Tom Ashworth',    email: 'tom.ashworth@ukat.co.uk',    role: 'Centre Manager', initials: 'TA', permissions: ROLE_PERMISSIONS['Centre Manager'], lastActive: '6 Aug · 00:00' },
-  { id: '2', name: 'Callum Moreau',   email: 'callum.moreau@ukat.co.uk',   role: 'Therapist',      initials: 'CM', permissions: ROLE_PERMISSIONS['Therapist'],      lastActive: '6 Aug · 22:00' },
-  { id: '3', name: 'Michael Halloran',email: 'michael.halloran@ukat.co.uk',role: 'Nurse',          initials: 'MH', permissions: ROLE_PERMISSIONS['Nurse'],          lastActive: '31 Jul · 22:00' },
-  { id: '4', name: 'Michael Costa',   email: 'michael.costa@ukat.co.uk',   role: 'Support Worker', initials: 'MC', permissions: ROLE_PERMISSIONS['Support Worker'], lastActive: '30 Jul · 17:00' },
-  { id: '5', name: 'Erin Whelan',     email: 'erin.whelan@ukat.co.uk',     role: 'Admin',          initials: 'EW', permissions: ROLE_PERMISSIONS['Admin'],          lastActive: '31 Jul · 04:00' },
-  { id: '6', name: 'Grace Iqbal',     email: 'grace.iqbal@ukat.co.uk',     role: 'Therapist',      initials: 'GI', permissions: ROLE_PERMISSIONS['Therapist'],      lastActive: '29 Jul · 19:00' },
-  { id: '7', name: 'Nadia Hollis',    email: 'nadia.hollis@ukat.co.uk',    role: 'Therapist',      initials: 'NH', permissions: ROLE_PERMISSIONS['Therapist'],      lastActive: '25 Jul · 16:00' },
+  staff('1',  'Jonnny Beggache',         'jonnny.beggache@ukat.co.uk',         'Centre Manager',       'Centre Manager',          '27 Aug · 09:00'),
+  staff('2',  'Rebecca Roberts',          'rebecca.roberts@ukat.co.uk',          'Office Manager',       'Office Manager',          '27 Aug · 08:30'),
+  staff('3',  'Adrian Allan',             'adrian.allan@ukat.co.uk',             'Nurse',                'Registered Nurse',        '26 Aug · 22:00'),
+  staff('4',  'Barbora Mason',            'barbora.mason@ukat.co.uk',            'Therapist',            'Lead Counsellor',         '27 Aug · 08:00'),
+  staff('5',  'Gary Davidson',            'gary.davidson@ukat.co.uk',            'Therapist',            'Counsellor',              '26 Aug · 17:00'),
+  staff('6',  'Fabio Randolfi',           'fabio.randolfi@ukat.co.uk',           'Therapist',            'Counsellor',              '25 Aug · 16:00'),
+  staff('7',  'Michael Dann',             'michael.dann@ukat.co.uk',             'Therapist',            'Counsellor – Trainee',    '24 Aug · 14:00'),
+  staff('8',  'Soraya McLellan',          'soraya.mclellan@ukat.co.uk',          'Therapist',            'Counsellor',              '26 Aug · 09:00'),
+  staff('9',  'Kim Mclaren',              'kim.mclaren@ukat.co.uk',              'Therapist',            'Weekend Counsellor',      '24 Aug · 18:00'),
+  staff('10', 'Carl Bossley',             'carl.bossley@ukat.co.uk',             'Support Worker',       'Support Worker',          '27 Aug · 07:00'),
+  staff('11', 'Christopher Howard',       'christopher.howard@ukat.co.uk',       'Support Worker',       'Support Worker',          '27 Aug · 07:00'),
+  staff('12', 'Sam David',               'sam.david@ukat.co.uk',                'Support Worker',       'Support Worker',          '26 Aug · 19:00'),
+  staff('13', 'Christopher Brooks',       'christopher.brooks@ukat.co.uk',       'Support Worker',       'Senior Support Worker',   '26 Aug · 07:00'),
+  staff('14', 'Kosiscochukwu Madueke',   'kosiscochukwu.madueke@ukat.co.uk',   'Night Support Worker', 'Night Support Worker',    '27 Aug · 06:00'),
+  staff('15', 'Kenneth Ogbu',             'kenneth.ogbu@ukat.co.uk',             'Night Support Worker', 'Night Support Worker',    '26 Aug · 06:00'),
+  staff('16', 'Samantha Gilbert',         'samantha.gilbert@ukat.co.uk',         'Support Worker',       'Bank Support Worker',     '20 Aug · 12:00'),
+  staff('17', 'Jana Harvanova',           'jana.harvanova@ukat.co.uk',           'Support Worker',       'Bank Support Worker',     '18 Aug · 10:00'),
+  staff('18', 'John Portman',             'john.portman@ukat.co.uk',             'Support Worker',       'Bank Support Worker',     '15 Aug · 09:00'),
+  staff('19', 'Kim Wilmot',              'kim.wilmot@ukat.co.uk',               'Support Worker',       'Bank Support Worker',     '22 Aug · 14:00'),
 ];
 
-const PENDING: PendingInvite[] = [
-  { id: 'p1', name: 'Connor Brennan', email: 'connor.brennan@ukat.co.uk', role: 'Therapist', invitedAt: '12 Aug · 09:15' },
-];
+const PENDING: PendingInvite[] = [];
 
 // ─── Permission chip colour ───────────────────────────────────────────────────
 
@@ -89,12 +117,15 @@ function StaffRow({ member: m }: { member: StaffMember }) {
         </div>
       </td>
 
-      {/* Role pill — static dropdown appearance */}
+      {/* Role */}
       <td className="py-3 pr-4">
         <div className="inline-flex cursor-default items-center gap-1 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] font-medium">
           {m.role}
           <ChevronDown className="size-3 text-[var(--color-ink-muted)]" />
         </div>
+        {m.position !== m.role ? (
+          <p className="mt-0.5 text-[10.5px] text-[var(--color-ink-muted)]">{m.position}</p>
+        ) : null}
       </td>
 
       {/* Permissions */}
@@ -247,9 +278,8 @@ function StaffView({ centreName }: { centreName: string }) {
       <div className="flex items-start gap-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
         <span className="mt-0.5 text-[var(--color-ink-muted)]">🔒</span>
         <p className="text-[11.5px] text-[var(--color-ink-muted)]">
-          Role and invite changes are written to audit history against your account immediately. Staff
-          displayed here use placeholder data — contact your implementation lead to import your real
-          staff directory.
+          Role and permission changes are written to audit history against your account immediately.
+          To invite a new user or manage system access, use the <strong>System access</strong> tab.
         </p>
       </div>
     </div>
@@ -259,7 +289,7 @@ function StaffView({ centreName }: { centreName: string }) {
 // ─── Root Administration component ───────────────────────────────────────────
 
 export function Administration({ centre }: { centre: AccessibleCentre }) {
-  const [tab, setTab] = useState<'staff' | 'rooms' | 'system'>('staff');
+  const [tab, setTab] = useState<'staff' | 'rooms' | 'system'>('system');
 
   const TABS = [
     { id: 'staff',  label: 'Staff & permissions' },
