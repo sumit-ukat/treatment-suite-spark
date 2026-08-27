@@ -490,6 +490,11 @@ export function TreatmentBoard({
                   </th>
                 )
               )}
+              <th
+                className="border-b border-x-2 border-purple-400/60 bg-purple-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-purple-800 dark:border-purple-600/40 dark:bg-purple-950/50 dark:text-purple-300"
+              >
+                Custom
+              </th>
             </tr>
 
             {/* Row 2 — individual column headers */}
@@ -628,6 +633,10 @@ export function TreatmentBoard({
               {/* Doctor – Thursday */}
               <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
                 Reason / Assessment
+              </th>
+              {/* Custom / Extra */}
+              <th className="w-[64px] border-b border-[var(--color-line)] border-x-2 border-purple-400/70 bg-purple-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-purple-600/40 dark:bg-purple-950/25">
+                Extra
               </th>
             </tr>
           </thead>
@@ -865,6 +874,38 @@ export function TreatmentBoard({
                   <td className={`${cb} border-x-2 border-rose-300/60 bg-rose-50/30 px-3 py-3 text-[12.5px] text-[var(--color-ink-muted)] dark:border-rose-600/30 dark:bg-rose-950/10`}>
                     —
                   </td>
+
+                  {/* Extra / Custom assignments */}
+                  {(() => {
+                    const td = `w-[64px] border-b border-x-2 border-purple-300/60 bg-purple-50/20 border-[var(--color-line)] px-1 py-2.5 text-center dark:border-purple-600/30 dark:bg-purple-950/10`;
+                    if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
+                    const manual = o.tasks.filter((t) => t.isManual);
+                    if (manual.length === 0) return <td className={td}><span className="opacity-30 text-[var(--color-ink-muted)]">—</span></td>;
+                    const overdueCount = manual.filter((t) => t.isOverdue).length;
+                    const todayCount   = manual.filter((t) => t.isDueToday).length;
+                    const doneCount    = manual.filter((t) => t.isComplete).length;
+                    const label = manual.map((t) => t.title).join(', ');
+                    if (overdueCount > 0) return (
+                      <td className={td} title={label}>
+                        <Chip icon="▲" label={String(overdueCount)} tone="alert" />
+                      </td>
+                    );
+                    if (todayCount > 0) return (
+                      <td className={td} title={label}>
+                        <Chip icon="●" label={String(todayCount)} tone="warn" />
+                      </td>
+                    );
+                    if (doneCount === manual.length) return (
+                      <td className={td} title={label}>
+                        <Chip icon="✓" label="" tone="good" />
+                      </td>
+                    );
+                    return (
+                      <td className={td} title={label}>
+                        <span className="text-[12px] font-medium text-[var(--color-ink-muted)]">{manual.length}</span>
+                      </td>
+                    );
+                  })()}
                 </tr>
               );
             })}

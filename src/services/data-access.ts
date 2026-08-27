@@ -523,6 +523,7 @@ export interface ClientTaskRow {
    * snapshot timestamp, not a real completion time, and must never be displayed as one. */
   source_interpretation: string | null;
   reschedule_count: number;
+  origin: string;
 }
 
 export interface TaskCompleterRow {
@@ -593,6 +594,29 @@ export const tasks = {
     const { data, error } = await client().rpc('task_date_history', { p_task_id: taskId });
     if (error) throw new DataAccessError('tasks.dateHistory', error);
     return (data ?? []) as TaskDateChangeRow[];
+  },
+
+  async addManualTask(input: {
+    admissionId: string;
+    title: string;
+    category: 'milestone' | 'session' | 'admin';
+    dueAt?: string | undefined;
+    description?: string | undefined;
+  }): Promise<string> {
+    const { data, error } = await client().rpc('add_manual_task', {
+      p_admission_id: input.admissionId,
+      p_title: input.title,
+      p_category: input.category,
+      p_due_at: input.dueAt ?? null,
+      p_description: input.description ?? null,
+    });
+    if (error) throw new DataAccessError('tasks.addManualTask', error);
+    return data as string;
+  },
+
+  async deleteManualTask(taskId: string): Promise<void> {
+    const { error } = await client().rpc('delete_manual_task', { p_task_id: taskId });
+    if (error) throw new DataAccessError('tasks.deleteManualTask', error);
   },
 };
 
@@ -1002,7 +1026,7 @@ export const roomBoard = {
         client()
           .from('client_tasks')
           .select(
-            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count,origin',
           )
           .eq('centre_id', centreId),
       ),
@@ -1185,7 +1209,7 @@ export const roomBoard = {
         client()
           .from('client_tasks')
           .select(
-            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count,origin',
           )
           .in('admission_id', admissionIds),
       ),

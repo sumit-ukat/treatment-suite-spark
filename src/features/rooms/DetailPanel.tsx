@@ -97,6 +97,10 @@ export function DetailPanel({
   const [newConcernText, setNewConcernText] = useState('');
   const [newConcernBusy, setNewConcernBusy] = useState(false);
   const [newConcernError, setNewConcernError] = useState<string | null>(null);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [newTask, setNewTask] = useState<{ name: string; dueDay: string; type: 'milestone' | 'session' | 'admin' }>({ name: '', dueDay: '1', type: 'milestone' });
+  const [addTaskBusy, setAddTaskBusy] = useState(false);
+  const [addTaskError, setAddTaskError] = useState<string | null>(null);
   const [concernRows, setConcernRows] = useState<ConcernRow[]>([]);
   const clientId = bed.occupant?.clientId;
   useEffect(() => {
@@ -130,6 +134,30 @@ export function DetailPanel({
       setNotesError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
       setNotesBusy(false);
+    }
+  }
+
+  async function addAssignment() {
+    if (!o?.admissionId || !newTask.name.trim()) return;
+    setAddTaskBusy(true);
+    setAddTaskError(null);
+    try {
+      const dueDay = Math.max(1, parseInt(newTask.dueDay, 10) || 1);
+      const dueAt = new Date(o.admittedAt);
+      dueAt.setDate(dueAt.getDate() + dueDay - 1);
+      await taskService.addManualTask({
+        admissionId: o.admissionId,
+        title: newTask.name.trim(),
+        category: newTask.type,
+        dueAt: dueAt.toISOString(),
+      });
+      setNewTask({ name: '', dueDay: '1', type: 'milestone' });
+      setAddTaskOpen(false);
+      onChanged?.();
+    } catch (err) {
+      setAddTaskError(err instanceof Error ? err.message : 'Could not add assignment.');
+    } finally {
+      setAddTaskBusy(false);
     }
   }
 
@@ -767,6 +795,75 @@ export function DetailPanel({
           </div>
         </div>
 
+        {/* Add custom assignment */}
+        {!readOnly && o.admissionId ? (
+          <div className="shrink-0 border-b border-[var(--color-line)] px-5 py-2">
+            {!addTaskOpen ? (
+              <button
+                type="button"
+                onClick={() => setAddTaskOpen(true)}
+                className="text-[11.5px] font-medium text-[var(--color-accent)] hover:underline"
+              >
+                + Add custom assignment
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Assignment name"
+                    autoFocus
+                    value={newTask.name}
+                    onChange={(e) => setNewTask((t) => ({ ...t, name: e.target.value }))}
+                    className="min-w-0 flex-1 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] focus:border-[var(--color-accent)] focus:outline-none"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[11px] text-[var(--color-ink-muted)]">Day</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={newTask.dueDay}
+                      onChange={(e) => setNewTask((t) => ({ ...t, dueDay: e.target.value }))}
+                      className="w-14 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-center text-[12.5px] focus:border-[var(--color-accent)] focus:outline-none"
+                    />
+                  </div>
+                  <select
+                    value={newTask.type}
+                    onChange={(e) => setNewTask((t) => ({ ...t, type: e.target.value as 'milestone' | 'session' | 'admin' }))}
+                    className="shrink-0 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12.5px] focus:border-[var(--color-accent)] focus:outline-none"
+                  >
+                    <option value="milestone">Step work</option>
+                    <option value="session">Session</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                {addTaskError ? (
+                  <p className="text-[11px] text-red-600 dark:text-red-400">{addTaskError}</p>
+                ) : null}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={addTaskBusy || !newTask.name.trim()}
+                    onClick={() => void addAssignment()}
+                    className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
+                  >
+                    {addTaskBusy ? 'Adding…' : 'Add'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={addTaskBusy}
+                    onClick={() => { setAddTaskOpen(false); setAddTaskError(null); }}
+                    className="text-[12px] text-[var(--color-ink-muted)] hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* Three-column task body */}
         <div className="flex min-h-0 flex-1 gap-4 overflow-hidden p-5">
           <TaskColumn
@@ -987,6 +1084,8 @@ function TaskRow({
   const canComplete = !readOnly && isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
   const canReopen = !readOnly && isReal && t.isComplete && can('tasks.reopen');
   const canReschedule = !readOnly && isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  const canDelete = !readOnly && isReal && t.isManual && can('tasks.complete');
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const dayNumber = t.dueAt ? calendarDaysBetween(admittedAt, t.dueAt, TZ) + 1 : null;
   // Whole calendar days, the same way treatment days are counted everywhere else in this codebase.
   const daysOverdue = t.isOverdue && t.dueAt ? calendarDaysBetween(t.dueAt, new Date(), TZ) : 0;
@@ -1075,6 +1174,11 @@ function TaskRow({
             {dayNumber !== null ? `Due day ${dayNumber}` : 'No due date'} &middot;{' '}
             {CATEGORY_LABEL[t.category] ?? t.category}
           </span>
+          {t.isManual ? (
+            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[9.5px] font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-400">
+              ✎ Custom
+            </span>
+          ) : null}
           {t.hasDateChanges ? (
             <button
               type="button"
@@ -1149,6 +1253,26 @@ function TaskRow({
             className="shrink-0 rounded-md border border-[var(--color-line)] p-1 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
           >
             <Calendar className="size-3.5" />
+          </button>
+        ) : null}
+        {canDelete && mode === 'idle' ? (
+          <button
+            type="button"
+            title="Delete custom assignment"
+            disabled={deleteBusy}
+            onClick={() => {
+              if (!t.id) return;
+              setDeleteBusy(true);
+              void taskService.deleteManualTask(t.id).then(() => {
+                onChanged?.();
+              }).catch((err) => {
+                setError(err instanceof Error ? err.message : 'Could not delete.');
+                setDeleteBusy(false);
+              });
+            }}
+            className="shrink-0 rounded-md border border-red-200 p-1 text-red-500 transition hover:bg-red-50 disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
+          >
+            <X className="size-3.5" />
           </button>
         ) : null}
       </div>

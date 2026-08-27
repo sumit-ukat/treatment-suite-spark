@@ -7,6 +7,7 @@ import {
   admissions,
   clientPhotos,
   roomsAndBeds,
+  tasks as taskService,
   type BedRow,
   type ClientSearchResult,
   type RoomRow,
@@ -57,6 +58,7 @@ interface FormState {
   peepsLabel: string;
   detoxEndsDate: string;
   programmeModules: string[];
+  extraAssignments: Array<{ name: string; dueDay: string; type: 'milestone' | 'session' | 'admin' }>;
   safeguardingConcerns: string;
   reason: string;
 }
@@ -80,6 +82,7 @@ const EMPTY: FormState = {
   peepsLabel: '',
   detoxEndsDate: '',
   programmeModules: ['contact', 'survey', 'familyvisit', 'lifestep', 'careplan'],
+  extraAssignments: [],
   safeguardingConcerns: '',
   reason: '',
 };
@@ -228,6 +231,21 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         programmeModules: form.programmeModules,
         reason: form.reason.trim() || undefined,
       });
+      // Extra assignments — blocking: if one fails the admission already succeeded but the user sees
+      // the error so they can add the task manually via the profile panel.
+      const admittedAt = new Date(`${form.admittedDate}T${form.admittedTime}:00`);
+      for (const ea of form.extraAssignments) {
+        if (!ea.name.trim()) continue;
+        const dueDay = Math.max(1, parseInt(ea.dueDay, 10) || 1);
+        const dueAt = new Date(admittedAt);
+        dueAt.setDate(dueAt.getDate() + dueDay - 1);
+        await taskService.addManualTask({
+          admissionId,
+          title: ea.name.trim(),
+          category: ea.type,
+          dueAt: dueAt.toISOString(),
+        });
+      }
       // Upload photo after admission — non-blocking: a photo failure never rolls back the admission.
       if (photoFile) {
         try {
@@ -287,8 +305,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         </div>
         <h2 className="mt-3.5 font-display text-[16px] font-semibold">Admission created</h2>
         <p className="mt-1.5 text-[12.5px] text-[var(--color-ink-muted)]">
-          {clientLabel} has been admitted to bed {selectedBed?.bed.label} at {centre.name}. 20 tasks
-          were generated automatically.
+          {clientLabel} has been admitted to bed {selectedBed?.bed.label} at {centre.name}. 20 standard
+          tasks were generated automatically
+          {form.extraAssignments.filter((e) => e.name.trim()).length > 0
+            ? `, plus ${form.extraAssignments.filter((e) => e.name.trim()).length} custom assignment${form.extraAssignments.filter((e) => e.name.trim()).length !== 1 ? 's' : ''}.`
+            : '.'
+          }
         </p>
         <button
           type="button"
@@ -444,6 +466,21 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               }
             </dd>
           </div>
+          {form.extraAssignments.filter((e) => e.name.trim()).length > 0 ? (
+            <div className="col-span-2">
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Custom assignments</dt>
+              <dd className="mt-1 flex flex-col gap-1">
+                {form.extraAssignments.filter((e) => e.name.trim()).map((ea, i) => (
+                  <span key={i} className="text-[12.5px]">
+                    {ea.name.trim()}
+                    <span className="ml-1.5 text-[var(--color-ink-muted)]">
+                      · day {Math.max(1, parseInt(ea.dueDay, 10) || 1)} · {ea.type === 'milestone' ? 'Step work' : ea.type === 'session' ? 'Session' : 'Admin'}
+                    </span>
+                  </span>
+                ))}
+              </dd>
+            </div>
+          ) : null}
           {form.safeguardingConcerns.trim() ? (
             <div className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/40">
               <dt className="text-[11px] font-semibold text-amber-800 dark:text-amber-400">Safeguarding / Risks / Concerns</dt>
@@ -825,6 +862,77 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               </label>
             ))}
           </div>
+        </div>
+
+        <SectionHeading>Additional assignments (optional)</SectionHeading>
+
+        <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+          <p className="mb-2.5 text-[11px] text-[var(--color-ink-muted)]">
+            Add any tasks beyond the standard 20 — step work, one-to-one sessions, admin items. They appear in
+            the client profile alongside the standard tasks, and roll up in the Treatment Board&apos;s Extra column.
+          </p>
+          {form.extraAssignments.length > 0 && (
+            <div className="mb-2 flex flex-col gap-2">
+              {form.extraAssignments.map((ea, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Assignment name"
+                    value={ea.name}
+                    onChange={(e) => {
+                      const next = [...form.extraAssignments];
+                      next[i] = { ...next[i]!, name: e.target.value };
+                      set('extraAssignments', next);
+                    }}
+                    className={`${inputCls} min-w-0 flex-1`}
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[11px] text-[var(--color-ink-muted)]">Day</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={ea.dueDay}
+                      onChange={(e) => {
+                        const next = [...form.extraAssignments];
+                        next[i] = { ...next[i]!, dueDay: e.target.value };
+                        set('extraAssignments', next);
+                      }}
+                      className={`${inputCls} w-16 text-center`}
+                    />
+                  </div>
+                  <select
+                    value={ea.type}
+                    onChange={(e) => {
+                      const next = [...form.extraAssignments];
+                      next[i] = { ...next[i]!, type: e.target.value as 'milestone' | 'session' | 'admin' };
+                      set('extraAssignments', next);
+                    }}
+                    className={`${inputCls} shrink-0`}
+                  >
+                    <option value="milestone">Step work</option>
+                    <option value="session">Session</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => set('extraAssignments', form.extraAssignments.filter((_, j) => j !== i))}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                    aria-label="Remove assignment"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => set('extraAssignments', [...form.extraAssignments, { name: '', dueDay: '1', type: 'milestone' }])}
+            className="text-[12px] font-medium text-[var(--color-accent)] hover:underline"
+          >
+            + Add assignment
+          </button>
         </div>
 
         <SectionHeading>Safeguarding / Risks / Concerns</SectionHeading>

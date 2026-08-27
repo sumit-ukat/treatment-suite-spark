@@ -312,6 +312,8 @@ export interface BoardTask {
   requiresCompletionNote: boolean;
   /** True when the due date has been moved at least once via the reschedule_task RPC. Always false on fictional boards. */
   hasDateChanges: boolean;
+  /** True for tasks added manually at or after admission, false for template-generated tasks. */
+  isManual: boolean;
 }
 
 /** Current state of a non-routine discharge request. See migration 0027 — 'rejected'/'finalised' are not "current" and never appear here. */
@@ -448,6 +450,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
       // Irrelevant here: with id null nothing on this board can be completed anyway.
       requiresCompletionNote: false,
       hasDateChanges: false,
+      isManual: false,
       // A not-applicable task is never overdue. The programme does not reach it, so there is no
       // work to be late for — counting it would manufacture a failure out of a shorter stay.
       isOverdue:
