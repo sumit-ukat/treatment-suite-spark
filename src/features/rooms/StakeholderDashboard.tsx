@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileWarning,
   RefreshCw,
+  Stethoscope,
   TrendingUp,
   UserX,
   Repeat2,
@@ -132,6 +133,15 @@ export function StakeholderDashboard({
   const extendedStays  = occupants.filter((o) => o.isExtendedStay).length;
   const pendingD       = occupants.filter((o) => o.dischargeRequest !== null).length;
 
+  const gpPendingCount = occupants.filter((o) => {
+    const t = o.tasks.find((t) => t.code === 'gp_summary');
+    return t && !t.isComplete && !t.isNotApplicable;
+  }).length;
+  const gpOverdueCount = occupants.filter((o) => {
+    const t = o.tasks.find((t) => t.code === 'gp_summary');
+    return t && !t.isComplete && !t.isNotApplicable && t.isOverdue;
+  }).length;
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-[13px] text-[var(--color-ink-muted)]">
@@ -196,30 +206,6 @@ export function StakeholderDashboard({
         </div>
       </div>
 
-      {/* ── GP Summary alert strip ── */}
-      {(() => {
-        const gpIssues = occupants.filter((o) => {
-          const t = o.tasks.find((t) => t.code === 'gp_summary');
-          return t && !t.isComplete && !t.isNotApplicable && (t.isOverdue || o.treatmentDay >= 2);
-        });
-        if (gpIssues.length === 0) return null;
-        const worst = gpIssues.find((o) => {
-          const t = o.tasks.find((t) => t.code === 'gp_summary');
-          return t?.isOverdue;
-        });
-        return (
-          <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] dark:border-red-800 dark:bg-red-950/20">
-            <span aria-hidden="true" className="text-[14px]">⚕</span>
-            <span className="flex-1 text-red-800 dark:text-red-300">
-              <span className="font-semibold">
-                {gpIssues.length} client{gpIssues.length !== 1 ? 's' : ''} need{gpIssues.length === 1 ? 's' : ''} a GP summary
-              </span>
-              {worst ? ` — ${worst.displayName} is overdue` : ' — due within 3 days of admission'}
-            </span>
-          </div>
-        );
-      })()}
-
       {/* ── Secondary KPIs ── */}
       <div>
         <SectionTitle>Programme health</SectionTitle>
@@ -251,6 +237,19 @@ export function StakeholderDashboard({
             label="Incident reports"
             sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
             accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
+          />
+          <KpiTile
+            icon={Stethoscope}
+            value={gpPendingCount}
+            label="GP summaries pending"
+            sub={
+              gpOverdueCount > 0
+                ? `${gpOverdueCount} overdue · due within 3 days of admission`
+                : gpPendingCount > 0
+                ? 'Due within 3 days of admission'
+                : 'All GP summaries up to date'
+            }
+            accent={gpOverdueCount > 0 ? 'red' : gpPendingCount > 0 ? 'amber' : 'green'}
           />
         </div>
       </div>
