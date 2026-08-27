@@ -149,7 +149,7 @@ function buildRealOccupant(
       ),
       isDueToday: !isComplete && !isNotApplicable && dueAt !== null && calendarDaysBetween(now, dueAt, TZ) === 0,
       hasDateChanges: t.reschedule_count > 0,
-      isManual: t.origin === 'manual',
+      isManual: (t.origin ?? 'template') === 'manual',
     };
   });
 
