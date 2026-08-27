@@ -196,6 +196,30 @@ export function StakeholderDashboard({
         </div>
       </div>
 
+      {/* ── GP Summary alert strip ── */}
+      {(() => {
+        const gpIssues = occupants.filter((o) => {
+          const t = o.tasks.find((t) => t.code === 'gp_summary');
+          return t && !t.isComplete && !t.isNotApplicable && (t.isOverdue || o.treatmentDay >= 2);
+        });
+        if (gpIssues.length === 0) return null;
+        const worst = gpIssues.find((o) => {
+          const t = o.tasks.find((t) => t.code === 'gp_summary');
+          return t?.isOverdue;
+        });
+        return (
+          <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] dark:border-red-800 dark:bg-red-950/20">
+            <span aria-hidden="true" className="text-[14px]">⚕</span>
+            <span className="flex-1 text-red-800 dark:text-red-300">
+              <span className="font-semibold">
+                {gpIssues.length} client{gpIssues.length !== 1 ? 's' : ''} need{gpIssues.length === 1 ? 's' : ''} a GP summary
+              </span>
+              {worst ? ` — ${worst.displayName} is overdue` : ' — due within 3 days of admission'}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* ── Secondary KPIs ── */}
       <div>
         <SectionTitle>Programme health</SectionTitle>

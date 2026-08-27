@@ -729,6 +729,13 @@ export function TreatmentBoard({
                           )}
                         </div>
                         <div className="nums text-[11px] text-[var(--color-ink-muted)]">{o.reference}</div>
+                        {(() => {
+                          const gpTask = o.tasks.find((t) => t.code === 'gp_summary');
+                          if (!gpTask || gpTask.isComplete || gpTask.isNotApplicable) return null;
+                          if (gpTask.isOverdue) return <Chip icon="⚕" label="GP overdue" tone="alert" />;
+                          if (o.treatmentDay >= 2) return <Chip icon="⚕" label={`GP · day ${o.treatmentDay}`} tone="warn" />;
+                          return null;
+                        })()}
                       </div>
                     </div>
                   </td>

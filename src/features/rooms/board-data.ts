@@ -76,7 +76,7 @@ export const TASK_TEMPLATES: readonly TaskTemplate[] = [
   { code: 'session_week_2', name: 'Week 2 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 2, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
   { code: 'session_week_3', name: 'Week 3 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 3, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
   { code: 'session_week_4', name: 'Week 4 CP/121', category: 'session', dueBasis: 'admission', dueOffset: 4, dueOffsetUnit: 'weeks', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 2 },
-  { code: 'gp_summary', name: 'GP summary', category: 'medical', dueBasis: 'admission', dueOffset: 5, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 3 },
+  { code: 'gp_summary', name: 'GP summary', category: 'medical', dueBasis: 'admission', dueOffset: 3, dueOffsetUnit: 'days', isRequired: true, rescheduleOnDischargeChange: false, visibilityLevel: 3 },
   { code: 'family_contact_pre_discharge', name: 'Family contact 24h before leaving', category: 'family_contact', dueBasis: 'planned_discharge', dueOffset: -24, dueOffsetUnit: 'hours', isRequired: true, rescheduleOnDischargeChange: true, visibilityLevel: 1 },
 ];
 

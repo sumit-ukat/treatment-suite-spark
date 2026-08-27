@@ -272,6 +272,25 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           </span>
         ) : null}
       </div>
+      {(() => {
+        const gpTask = o.tasks.find((t) => t.code === 'gp_summary');
+        if (!gpTask || gpTask.isComplete || gpTask.isNotApplicable) return null;
+        const isRed = gpTask.isOverdue;
+        const isAmber = !isRed && o.treatmentDay >= 2;
+        if (!isRed && !isAmber) return null;
+        return (
+          <div
+            className={`-mx-5 -mb-5 flex items-center gap-1.5 rounded-b-2xl border-t px-4 py-2 text-[10.5px] font-semibold ${
+              isRed
+                ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'
+                : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/25 dark:text-amber-300'
+            }`}
+          >
+            <span aria-hidden="true">⚕</span>
+            {isRed ? 'GP summary overdue' : 'GP summary due · day 3'}
+          </div>
+        );
+      })()}
     </button>
   );
 }
