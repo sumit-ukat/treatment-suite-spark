@@ -233,11 +233,11 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
       });
       // Extra assignments — blocking: if one fails the admission already succeeded but the user sees
       // the error so they can add the task manually via the profile panel.
-      const admittedAt = new Date(`${form.admittedDate}T${form.admittedTime}:00`);
+      const admittedAtDate = new Date(`${form.admittedDate}T${form.admittedTime}:00`);
       for (const ea of form.extraAssignments) {
         if (!ea.name.trim()) continue;
         const dueDay = Math.max(1, parseInt(ea.dueDay, 10) || 1);
-        const dueAt = new Date(admittedAt);
+        const dueAt = new Date(admittedAtDate);
         dueAt.setDate(dueAt.getDate() + dueDay - 1);
         await taskService.addManualTask({
           admissionId,
