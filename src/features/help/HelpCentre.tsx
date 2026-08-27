@@ -2,7 +2,6 @@ import { useMemo, useState, type ReactNode } from 'react';
 import {
   BookOpen,
   ChevronDown,
-  Image,
   Info,
   Lightbulb,
   Search,
@@ -210,7 +209,6 @@ function Article({
   open: boolean;
   onToggle: () => void;
 }) {
-  const [imgOpen, setImgOpen] = useState(false);
   const category = CATEGORIES.find((c) => c.id === article.category);
   return (
     <li className="overflow-hidden rounded-xl border border-[var(--color-line)] bg-card">
@@ -248,24 +246,12 @@ function Article({
             <Block key={i} block={block} terms={terms} />
           ))}
           {article.screenshot ? (
-            <div className="mt-1">
-              <button
-                type="button"
-                onClick={() => setImgOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-[12px] font-medium text-primary transition hover:underline"
-              >
-                <Image aria-hidden className="size-3.5" />
-                {imgOpen ? 'Hide screenshot' : 'See how it looks →'}
-              </button>
-              {imgOpen ? (
-                <div className="mt-2 overflow-hidden rounded-lg border border-[var(--color-line)]">
-                  <img
-                    src={article.screenshot}
-                    alt={`Screenshot: ${article.title}`}
-                    className="block w-full"
-                  />
-                </div>
-              ) : null}
+            <div className="mt-1 overflow-hidden rounded-lg border border-[var(--color-line)]">
+              <img
+                src={article.screenshot}
+                alt={`Screenshot: ${article.title}`}
+                className="block w-full"
+              />
             </div>
           ) : null}
         </div>
@@ -276,20 +262,34 @@ function Article({
 
 /* ─────────────────────────── page ─────────────────────────── */
 
+const FIRST_DAY_ITEMS: ReadonlyArray<{
+  id: string;
+  category: CategoryId;
+  label: string;
+  desc: string;
+}> = [
+  { id: "finding-your-way",        category: "start",          label: "Find your way around",  desc: "What each menu item is for"              },
+  { id: "roomboard-read-card",     category: "roomboard",      label: "Read a bed card",        desc: "Everything on an occupied card"          },
+  { id: "roomboard-colours",       category: "roomboard",      label: "What the colours mean",  desc: "Red, amber, green, blue and teal"        },
+  { id: "treatmentboard-complete", category: "treatmentboard", label: "Mark a task as done",    desc: "Clicking a square on the Treatment board" },
+  { id: "admissions-admit",        category: "admissions",     label: "Admit a new client",     desc: "Step-by-step from clicking Admissions"   },
+];
+
 /** The questions people ask in their first week — offered as one-click searches. */
 const QUICK_SEARCHES: readonly string[] = [
-  'admit a new client',
-  'mark a task done',
-  'what the colours mean',
-  'graduate a client',
-  'past date',
-  'why can’t I see',
+  "admit a new client",
+  "mark a task done",
+  "what the colours mean",
+  "graduate a client",
+  "past date",
+  "why can’t I see",
 ];
 
 export function HelpCentre({ centreName }: { centreName?: string | undefined }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryId | 'all'>('all');
   const [openIds, setOpenIds] = useState<readonly string[]>([]);
+  const [openSections, setOpenSections] = useState<ReadonlySet<CategoryId>>(new Set());
 
   const terms = useMemo(
     () => normalise(query).split(/\s+/).filter((t) => t.length >= 2),
@@ -303,6 +303,20 @@ export function HelpCentre({ centreName }: { centreName?: string | undefined }) 
     if (terms.length === 0) return byCategory.map((e) => e.article);
     return byCategory.filter((e) => terms.every((t) => e.text.includes(t))).map((e) => e.article);
   }, [terms, category]);
+
+  const toggleSection = (id: CategoryId) =>
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next as ReadonlySet<CategoryId>;
+    });
+
+  const openArticle = (id: string, cat: CategoryId) => {
+    setQuery('');
+    setCategory('all');
+    setOpenIds([id]);
+    setOpenSections(new Set([cat]) as ReadonlySet<CategoryId>);
+  };
 
   const searching = terms.length > 0;
   // A search opens what it found; without one, the reader chooses. Tracking only manual toggles
@@ -327,6 +341,30 @@ export function HelpCentre({ centreName }: { centreName?: string | undefined }) 
         title="Guide & help"
         description="Search for whatever you are trying to do, or browse the sections below. Written for someone using this tool for the first time."
       />
+
+      {/* ── Your first day — numbered steps that jump straight to the relevant article. ── */}
+      <div className="rounded-2xl border bg-card p-4 shadow-soft">
+        <p className="mb-3 text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">Your first day</p>
+        <ol className="flex flex-col gap-2">
+          {FIRST_DAY_ITEMS.map((item, i) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => openArticle(item.id, item.category)}
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-muted/50"
+              >
+                <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">
+                  {i + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-medium text-[var(--color-ink)]">{item.label}</span>
+                  <span className="block text-[11px] text-[var(--color-ink-muted)]">{item.desc}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
 
       {/* ── Search — the primary control, so it is the biggest thing on the page. ── */}
       <div className="rounded-2xl border bg-card p-4 shadow-soft">
@@ -431,25 +469,41 @@ export function HelpCentre({ centreName }: { centreName?: string | undefined }) 
           </button>
         </div>
       ) : (
-        <div className="space-y-5">
-          {grouped.map((g) => (
-            <section key={g.id}>
-              <h2 className="mb-2 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-                {g.label}
-              </h2>
-              <ul className="flex flex-col gap-2">
-                {g.items.map((a) => (
-                  <Article
-                    key={a.id}
-                    article={a}
-                    terms={terms}
-                    open={isOpen(a.id)}
-                    onToggle={() => toggle(a.id)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
+        <div className="space-y-3">
+          {grouped.map((g) => {
+            const sectionOpen = searching || openSections.has(g.id);
+            return (
+              <section key={g.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(g.id)}
+                  className="flex w-full items-center justify-between rounded-lg border border-[var(--color-line)] bg-card px-3 py-2.5 text-left transition hover:bg-muted/40"
+                >
+                  <h2 className="text-[12px] font-semibold text-[var(--color-ink)]">{g.label}</h2>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-[var(--color-ink-muted)]">{g.items.length} article{g.items.length !== 1 ? 's' : ''}</span>
+                    <ChevronDown
+                      aria-hidden
+                      className={`size-4 text-muted-foreground transition-transform ${sectionOpen ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+                </button>
+                {sectionOpen ? (
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {g.items.map((a) => (
+                      <Article
+                        key={a.id}
+                        article={a}
+                        terms={terms}
+                        open={isOpen(a.id)}
+                        onToggle={() => toggle(a.id)}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       )}
 

@@ -215,6 +215,24 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'note', text: 'There is also a search box at the top of the page that finds a bed, client or staff member by name. Press Ctrl+K (Cmd+K on a Mac) to jump straight into it.' },
     ],
   },
+  {
+    id: 'gp-summary',
+    category: 'roomboard',
+    title: 'What is the GP summary rule?',
+    summary: 'A GP summary must be completed within 3 days of admission. The bed card and Overview dashboard both track it.',
+    keywords: ['gp', 'gp summary', 'doctor summary', 'three days', '3 days', 'amber bar', 'red bar', 'medical', 'deadline', 'summary pending', 'pending'],
+    body: [
+      { kind: 'p', text: 'Every client needs a GP summary completed within 3 days of arriving. The tool tracks this automatically from their admission date — you do not need to set anything up.' },
+      { kind: 'p', text: 'How the status appears on the bed card:' },
+      { kind: 'table', head: ['What you see', 'What it means'], rows: [
+        ['Red bar at the bottom of the card',   'Overdue — more than 3 days in and the GP summary has not been done.'],
+        ['Amber bar at the bottom of the card', 'Due soon — the client is on day 2 or later.'],
+        ['No bar',                              'Either done, or the client arrived today.'],
+      ] },
+      { kind: 'p', text: 'On the Overview dashboard there is a "GP summaries pending" tile. It shows how many are outstanding across all current clients and turns red if any are overdue.' },
+      { kind: 'note', text: 'Mark the GP summary done by completing the GP Summary task in the client\'s task list — click the square in the Treatment board or tick it from inside their profile.' },
+    ],
+  },
 
   /* ───────────────────────── Treatment board ───────────────────────── */
   {
@@ -246,6 +264,7 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Life Story & Step Works', '6',  'Life story / surrender, Steps 1–3, side assignment, and the CCP.'],
         ['Care Plan',               '5',  'The introductory counselling session and the weekly CP/121 sessions.'],
         ['Doctor – Thursday',  '1',  'The weekly doctor round.'],
+        ['Custom',             '1',  'Rolled-up status of any custom assignments added for this client. A coloured chip shows the worst status across all of them.'],
       ] },
       { kind: 'note', text: 'Hover over any column heading to see its full name — the headings are shortened to keep the grid readable.' },
     ],
@@ -280,6 +299,23 @@ export const ARTICLES: readonly HelpArticle[] = [
       ] },
       { kind: 'p', text: 'You can also open a client from either board and work down their full task list, which is easier when you are completing several things for one person.' },
       { kind: 'warn', text: 'Ticked something by mistake? Reopening a task needs the "reopen tasks" permission. If you do not have it, ask a manager — do not leave it ticked and hope. Both the completion and the reopening are recorded in the Activity log.' },
+    ],
+  },
+  {
+    id: 'tasks-reschedule',
+    category: 'treatmentboard',
+    title: "How do I change a task's due date?",
+    summary: 'Open the client, find the task, click the calendar icon, and pick a new date with a reason.',
+    keywords: ['reschedule', 'due date', 'change date', 'move date', 'postpone', 'wrong date', 'extend deadline', 'date changed', 'push back'],
+    body: [
+      { kind: 'steps', items: [
+        'Open the client from either board.',
+        'Find the task in their task list.',
+        'Click the small calendar icon next to the task.',
+        'Pick a new due date and type a short reason — for example "client was unwell".',
+        'Save. A "date changed" marker appears on the task so anyone reading the file knows the date moved.',
+      ] },
+      { kind: 'note', text: 'The original date, the new date, the reason and your name are all recorded automatically. Only template tasks can be rescheduled — custom assignments can instead be deleted and re-added with a different day.' },
     ],
   },
   {
@@ -349,6 +385,27 @@ export const ARTICLES: readonly HelpArticle[] = [
       { kind: 'note', text: 'If they are currently in a bed, there is a button to jump straight to them on the Room board.' },
     ],
   },
+  {
+    id: 'clients-photo',
+    category: 'clients',
+    title: "How do I add or change a client's photograph?",
+    summary: 'Upload it during admission, or open the client at any time and replace it from their file.',
+    keywords: ['photo', 'photograph', 'picture', 'upload', 'image', 'missing photo', 'red question mark', 'no photo', 'add photo', 'change photo'],
+    body: [
+      { kind: 'p', text: 'There are two ways to add or change a photograph.' },
+      { kind: 'table', head: ['When', 'How'], rows: [
+        ['During admission',  'Scroll to the "Client photo (optional)" section at the bottom of the admission form and upload a file.'],
+        ['After admission',   'Open the client from either board, find the photo area at the top of their file, and click it to upload a replacement.'],
+      ] },
+      { kind: 'p', text: 'Accepted formats: JPEG, PNG, or WebP. Maximum 5 MB. The image is resized automatically.' },
+      { kind: 'p', text: 'What the corner badge on a bed card means:' },
+      { kind: 'table', head: ['Badge', 'Means'], rows: [
+        ['Red "?" corner',   'No photograph on file — a quick visual reminder to chase one.'],
+        ['Green "✓" corner', 'A photograph is on file.'],
+      ] },
+      { kind: 'note', text: 'Photographs are only visible to staff with the "view identity" permission. Anyone below that level sees initials instead.' },
+    ],
+  },
 
   /* ───────────────────────── Admissions ───────────────────────── */
   {
@@ -356,6 +413,7 @@ export const ARTICLES: readonly HelpArticle[] = [
     category: 'admissions',
     title: 'How do I admit a new client?',
     summary: 'Admissions → fill the form → check the review screen → confirm.',
+    screenshot: '/help-screenshots/admissions.png',
     keywords: ['new client', 'admit', 'intake', 'book in', 'add client', 'arrival', 'new admission', 'create'],
     body: [
       { kind: 'steps', items: [
@@ -388,6 +446,31 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Care Plan',                'The intro session and weekly CP/121 sessions.'],
       ] },
       { kind: 'note', text: 'All five start ticked. If the client is doing the standard full programme, leave them alone — you do not have to touch this section.' },
+    ],
+  },
+  {
+    id: 'admissions-custom',
+    category: 'admissions',
+    title: 'How do I add a custom assignment to a client?',
+    summary: 'Add extra tasks during admission, or afterwards from the client\'s profile. They appear in the purple Extra column on the Treatment board.',
+    keywords: ['custom', 'assignment', 'extra', 'manual', 'task', 'add task', 'additional', 'bespoke', 'one-off', 'extra column', 'custom task', 'additional assignment'],
+    body: [
+      { kind: 'p', text: 'Custom assignments are tasks beyond the standard set — step work variations, extra one-to-one sessions, or anything specific to this client.' },
+      { kind: 'p', text: 'During admission:' },
+      { kind: 'steps', items: [
+        'Scroll to "Additional assignments (optional)" — it sits just below the programme modules.',
+        'Click "+ Add assignment".',
+        'Enter the task name, the day of their stay it should be done by, and the type (Step work, Session, or Admin).',
+        'Add as many as you need, then continue with the rest of the form.',
+      ] },
+      { kind: 'p', text: 'After admission:' },
+      { kind: 'steps', items: [
+        'Open the client from either board.',
+        'Click "+ Add custom assignment" above their task list.',
+        'Fill in the same fields and save.',
+      ] },
+      { kind: 'p', text: 'Custom assignments appear in the client\'s task list with a "✎ Custom" chip. On the Treatment board they roll up into the purple "Extra" column — a single chip shows the worst status across all of them. To remove one, open the task and click the red delete button next to it.' },
+      { kind: 'warn', text: 'Only custom assignments can be deleted. Standard template tasks can be rescheduled but not removed.' },
     ],
   },
 
@@ -482,6 +565,23 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Use it when','You want the next shift to be aware.','There has been an actual event needing a record.'],
       ] },
       { kind: 'note', text: 'If you are unsure which to use, raise a concern — it is quick, and it can always be escalated into a formal report.' },
+    ],
+  },
+  {
+    id: 'incidents-create',
+    category: 'concerns',
+    title: 'How do I file a formal incident report?',
+    summary: 'Go to Incident reports in the left menu, or open the client and use the incident section in their file.',
+    keywords: ['incident', 'report', 'file', 'formal', 'record', 'accident', 'event', 'serious', 'document', 'create incident', 'new incident', 'log incident'],
+    body: [
+      { kind: 'steps', items: [
+        'Click "Incident reports" in the left menu.',
+        'Click the button to create a new report.',
+        'Fill in the date, time, type of incident, what happened, and who was involved.',
+        'Save. It is immediately visible to anyone who has access to the Incident reports screen.',
+      ] },
+      { kind: 'p', text: 'You can also start a report directly from a client\'s file — open them and find the incident section there. Their details pre-fill automatically so you do not have to type them.' },
+      { kind: 'note', text: 'Incidents filed in the last seven days are counted on the Overview dashboard and the group hub, so managers see them without having to open each report individually.' },
     ],
   },
 
@@ -621,6 +721,8 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Teal top stripe',       'Bed card',         'Approved extension.'],
         ['"+Nd ext."',            'Bed card',         'Stay extended by N days.'],
         ['"shared"',              'Bed label',        'One of two beds in that room.'],
+        ['▲/●/✓ purple chip',    'Treatment board (Extra column)', 'Status of all custom assignments for that client — red triangle = overdue, amber dot = due today, green tick = all done.'],
+        ['✎ Custom chip',        'Client task list', 'This task was added manually, not from the standard template. It can be deleted.'],
       ] },
     ],
   },
