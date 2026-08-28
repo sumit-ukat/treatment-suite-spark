@@ -118,17 +118,18 @@ function TaskCard({
   const [historyRows, setHistoryRows] = useState<TaskDateChangeRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // After the green flash, trigger the refresh so the card moves to Done.
+  // Refresh immediately so the card moves to Done without waiting for a flash.
   useEffect(() => {
     if (!justCompleted) return;
-    const timer = setTimeout(() => { onChanged?.(); }, 1500);
-    return () => clearTimeout(timer);
+    onChanged?.();
   }, [justCompleted, onChanged]);
 
   const isReal = t.id !== null;
-  const canComplete = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  // justCompleted: treat as already complete locally so the button disappears instantly.
+  const effectivelyComplete = t.isComplete || justCompleted;
+  const canComplete = isReal && !effectivelyComplete && !t.isNotApplicable && can('tasks.complete');
   const canReopen = isReal && t.isComplete && can('tasks.reopen');
-  const canReschedule = isReal && !t.isComplete && !t.isNotApplicable && can('tasks.complete');
+  const canReschedule = isReal && !effectivelyComplete && !t.isNotApplicable && can('tasks.complete');
   const v = variance(t);
 
   function openReschedule() {
