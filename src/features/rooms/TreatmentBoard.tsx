@@ -305,7 +305,7 @@ export function TreatmentBoard({
       ) : null}
 
       {/* ── Summary tiles — StatTile matches GroupDashboard / BoardPage ── */}
-      <div className="flex gap-3 overflow-x-auto pb-1 print:hidden [&>*]:shrink-0">
+      <div className="grid grid-cols-4 gap-3 print:hidden lg:grid-cols-8">
         <StatTile
           label="Clients"
           value={counts.clients}
