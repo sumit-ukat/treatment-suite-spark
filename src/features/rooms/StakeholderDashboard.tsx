@@ -142,6 +142,9 @@ export function StakeholderDashboard({
     return t && !t.isComplete && !t.isNotApplicable && t.isOverdue;
   }).length;
 
+  const customPendingClients = occupants.filter((o) => o.tasks.some((t) => t.isManual && !t.isComplete)).length;
+  const customOverdueCount   = occupants.reduce((s, o) => s + o.tasks.filter((t) => t.isManual && !t.isComplete && t.isOverdue).length, 0);
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-[13px] text-[var(--color-ink-muted)]">
@@ -175,7 +178,7 @@ export function StakeholderDashboard({
       {/* ── Primary KPIs ── */}
       <div>
         <SectionTitle>At a glance</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiTile
             icon={BedDouble}
             value={`${stats.bedsOccupied}/${stats.bedsTotal}`}
@@ -203,13 +206,20 @@ export function StakeholderDashboard({
             sub={pendingD > 0 ? `${pendingD} pending request${pendingD !== 1 ? 's' : ''}` : 'No pending requests'}
             accent={leavingSoon.length > 0 ? 'amber' : 'neutral'}
           />
+          <KpiTile
+            icon={FileWarning}
+            value={incidentCount ?? '—'}
+            label="Incident reports"
+            sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
+            accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
+          />
         </div>
       </div>
 
       {/* ── Secondary KPIs ── */}
       <div>
         <SectionTitle>Programme health</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiTile
             icon={TrendingUp}
             value={`${completionPct}%`}
@@ -232,13 +242,6 @@ export function StakeholderDashboard({
             accent={stats.missingTherapist > 0 ? 'amber' : 'green'}
           />
           <KpiTile
-            icon={FileWarning}
-            value={incidentCount ?? '—'}
-            label="Incident reports"
-            sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
-            accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
-          />
-          <KpiTile
             icon={Stethoscope}
             value={gpPendingCount}
             label="GP summaries pending"
@@ -250,6 +253,19 @@ export function StakeholderDashboard({
                 : 'All GP summaries up to date'
             }
             accent={gpOverdueCount > 0 ? 'red' : gpPendingCount > 0 ? 'amber' : 'green'}
+          />
+          <KpiTile
+            icon={CheckCircle2}
+            value={customPendingClients}
+            label="Custom assignments"
+            sub={
+              customOverdueCount > 0
+                ? `${customOverdueCount} overdue custom task${customOverdueCount !== 1 ? 's' : ''}`
+                : customPendingClients > 0
+                ? `${customPendingClients} client${customPendingClients !== 1 ? 's' : ''} with pending custom tasks`
+                : 'No pending custom assignments'
+            }
+            accent={customOverdueCount > 0 ? 'red' : customPendingClients > 0 ? 'amber' : 'green'}
           />
         </div>
       </div>
