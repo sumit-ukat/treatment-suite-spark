@@ -147,9 +147,7 @@ function StaffRow({ member: m }: { member: StaffMember }) {
 
 // ─── Staff & permissions view ─────────────────────────────────────────────────
 
-function StaffView({ centreName }: { centreName: string }) {
-  const [showInvite, setShowInvite] = useState(false);
-
+function StaffView({ centreName, onInvite }: { centreName: string; onInvite: () => void }) {
   return (
     <div className="space-y-6 px-5 py-6">
       <PageHeader
@@ -159,7 +157,7 @@ function StaffView({ centreName }: { centreName: string }) {
         actions={
           <button
             type="button"
-            onClick={() => setShowInvite(true)}
+            onClick={onInvite}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-sm transition hover:opacity-90"
           >
             <UserPlus className="size-3.5" />
@@ -167,30 +165,6 @@ function StaffView({ centreName }: { centreName: string }) {
           </button>
         }
       />
-
-      {/* Invite panel (placeholder — real form in System access tab) */}
-      {showInvite ? (
-        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-          <p className="text-[12.5px] font-medium">Invite a new staff member</p>
-          <p className="mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">
-            Staff details are being finalised. Use the{' '}
-            <button
-              type="button"
-              className="font-medium text-[var(--color-accent)] underline underline-offset-2"
-            >
-              System access tab
-            </button>{' '}
-            to send a real invite email.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowInvite(false)}
-            className="mt-2 text-[11.5px] text-[var(--color-ink-muted)] underline underline-offset-2"
-          >
-            Dismiss
-          </button>
-        </div>
-      ) : null}
 
       {/* Staff & permissions table */}
       <div className="overflow-hidden rounded-xl border border-[var(--color-line)] bg-card">
@@ -320,7 +294,7 @@ export function Administration({ centre }: { centre: AccessibleCentre }) {
         </div>
       </div>
 
-      {tab === 'staff'  ? <StaffView centreName={centre.name} /> : null}
+      {tab === 'staff'  ? <StaffView centreName={centre.name} onInvite={() => setTab('system')} /> : null}
       {tab === 'rooms'  ? <RoomsAndBedsAdmin centre={centre} /> : null}
       {tab === 'system' ? <UsersAndRoles /> : null}
     </div>
