@@ -49,13 +49,12 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
       { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true },
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
-      { id: 'admissions', label: 'Admissions', icon: UserPlus, ready: true },
     ],
   },
   {
     heading: 'Oversight',
     items: [
-      { id: 'incidents', label: 'Incident reports', icon: AlertTriangle, ready: true },
+      // { id: 'incidents', label: 'Incident reports', icon: AlertTriangle, ready: true }, // hidden — restore when needed
       { id: 'audit', label: 'Activity log', icon: History, ready: true },
       { id: 'admin', label: 'Administration', icon: Shield, ready: true },
       { id: 'help', label: 'Guide & help', icon: HelpCircle, ready: true },
