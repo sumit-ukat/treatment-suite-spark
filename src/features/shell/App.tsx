@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   List as ListIcon,
   LogOut,
+  Menu,
   Plus,
   Search,
   X,
@@ -444,8 +445,24 @@ function CentreShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-collapse sidebar on tablet (< 1024px), auto-expand on desktop.
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const sync = (e: MediaQueryList | MediaQueryListEvent) => {
+      setCollapsed(!e.matches);
+      if (!e.matches) setMobileOpen(false);
+    };
+    sync(mql);
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
+  }, []);
+
+  // Close mobile drawer whenever the user navigates to a new page.
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   // ⌘K / Ctrl+K focuses the search bar from anywhere in the centre workspace, matching the shortcut
   // hint shown next to it.
@@ -478,18 +495,45 @@ function CentreShell() {
       <ProvenanceBanner />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar
-          active={activeId}
-          onSelect={(id) => navigate(id)}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((c) => !c)}
-          centreName={centre.name}
-          centreSlug={centreSlug}
-          onLeaveCentre={() => navigate('/exec')}
-        />
+        {/* Mobile overlay — tap outside the drawer to close */}
+        {mobileOpen && (
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+
+        {/* Sidebar: off-canvas on mobile (<md), inline on tablet/desktop (md+) */}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 md:relative md:z-auto md:inset-auto md:translate-x-0 ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          <Sidebar
+            active={activeId}
+            onSelect={(id) => { navigate(id); setMobileOpen(false); }}
+            collapsed={collapsed}
+            onToggle={() => setCollapsed((c) => !c)}
+            centreName={centre.name}
+            centreSlug={centreSlug}
+            onLeaveCentre={() => navigate('/exec')}
+          />
+        </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
+            {/* Hamburger — visible only on mobile (<md), where sidebar is off-canvas */}
+            <button
+              type="button"
+              onClick={() => setMobileOpen((c) => !c)}
+              className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/[0.05] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] dark:hover:bg-white/[0.08] md:hidden"
+              aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileOpen}
+            >
+              <Menu aria-hidden="true" className="size-5" />
+            </button>
+
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-[10.5px] tracking-wide text-[var(--color-ink-muted)] uppercase">
                 UK Addiction Treatment Group
