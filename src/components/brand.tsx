@@ -1,11 +1,40 @@
 import { cn } from '@/lib/utils';
-import markUrl from '../assets/brand/ukat-mark.png';
 
-/**
- * The real UKAT mark, not the placeholder heart-pulse glyph the Lovable source draws here — that
- * source had no access to the actual brand asset and invented one. The gradient tile, radius and
- * shadow around it are ported as-is; only what's inside changed.
- */
+/** Text-based "ukat." wordmark — navy with pink "a" and dot. Works on any light or dark surface. */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cn('wordmark', className)} aria-label="UKAT">
+      uk<span className="wordmark-a">a</span>t
+      <span className="wordmark-dot" aria-hidden="true" />
+    </span>
+  );
+}
+
+/** Inline-SVG UKAT mark — two interlocking palm/heart shapes in pink, blue, purple. No white box. */
+function UkatMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 215" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className={className}>
+      <defs>
+        <clipPath id="ukat-clip">
+          <ellipse cx="82" cy="122" rx="68" ry="92" transform="rotate(-22 82 122)" />
+        </clipPath>
+      </defs>
+      <ellipse cx="82" cy="122" rx="68" ry="92" transform="rotate(-22 82 122)" fill="#E8429E" />
+      <ellipse cx="118" cy="122" rx="68" ry="92" transform="rotate(22 118 122)" fill="#79C4EA" />
+      <ellipse cx="118" cy="122" rx="68" ry="92" transform="rotate(22 118 122)" fill="#9B3FA5" clipPath="url(#ukat-clip)" />
+      <path d="M 100 52 Q 148 8 166 56 Q 174 94 146 114 C 132 100 118 88 100 78 Z" fill="#E8429E" />
+      <path d="M 100 52 Q 52 8 34 56 Q 26 94 54 114 C 68 100 82 88 100 78 Z" fill="#79C4EA" />
+      <ellipse cx="100" cy="66" rx="9" ry="15" fill="#9B3FA5" />
+      <ellipse cx="100" cy="53" rx="5" ry="8" fill="white" />
+      <line x1="87" y1="178" x2="72" y2="210" stroke="white" strokeWidth="5.5" strokeLinecap="round" />
+      <line x1="94" y1="184" x2="84" y2="214" stroke="white" strokeWidth="5.5" strokeLinecap="round" />
+      <line x1="100" y1="186" x2="100" y2="215" stroke="white" strokeWidth="5.5" strokeLinecap="round" />
+      <line x1="106" y1="184" x2="116" y2="214" stroke="white" strokeWidth="5.5" strokeLinecap="round" />
+      <line x1="113" y1="178" x2="128" y2="210" stroke="white" strokeWidth="5.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function BrandMark({ className }: { className?: string | undefined }) {
   return (
     <span
@@ -15,7 +44,7 @@ export function BrandMark({ className }: { className?: string | undefined }) {
       )}
       aria-hidden
     >
-      <img src={markUrl} alt="" width={256} height={256} className="size-5 object-contain" />
+      <UkatMark className="size-6" />
     </span>
   );
 }

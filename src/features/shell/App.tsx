@@ -14,6 +14,7 @@ import {
 import {
   ArrowUpRight,
   ChevronDown,
+  ChevronRight,
   ClipboardList,
   Filter,
   History,
@@ -64,7 +65,6 @@ import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
 import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { HelpCentre } from '../help/HelpCentre.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
-import { Chip } from '../../components/ui.tsx';
 import {
   Dialog,
   DialogContent,
@@ -274,12 +274,9 @@ function CentreSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:border-[var(--color-accent-ring)] sm:flex"
-        >
-          <span className="max-w-[160px] truncate">{current?.name ?? 'Select centre'}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+        <button type="button" className="centre-switch">
+          <span className="max-w-[180px] truncate">{current?.name ?? 'Select centre'}</span>
+          <ChevronDown size={11} className="shrink-0" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-80 overflow-auto">
@@ -516,66 +513,56 @@ function CentreShell() {
             collapsed={collapsed}
             onToggle={() => setCollapsed((c) => !c)}
             centreName={centre.name}
+            centreRegion={centre.region}
             centreSlug={centreSlug}
             onLeaveCentre={() => navigate('/exec')}
           />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
-            {/* Hamburger — visible only on mobile (<md), where sidebar is off-canvas */}
+          <header className="topbar">
+            {/* Mobile hamburger */}
             <button
               type="button"
               onClick={() => setMobileOpen((c) => !c)}
-              className="flex shrink-0 items-center justify-center rounded-lg p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/[0.05] focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] dark:hover:bg-white/[0.08] md:hidden"
+              className="mobile-toggle"
               aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
               aria-expanded={mobileOpen}
             >
-              <Menu aria-hidden="true" className="size-5" />
+              <Menu size={18} aria-hidden="true" />
             </button>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 text-[10.5px] tracking-wide text-[var(--color-ink-muted)] uppercase">
-                UK Addiction Treatment Group
-                <span aria-hidden="true">›</span>
-                {centre.region}
-              </div>
-              <div className="flex items-center gap-2">
-                <h1 className="truncate font-display text-[15px] leading-tight font-semibold">
-                  {centre.name}
-                </h1>
-                <Chip label="Development" tone="warn" />
-              </div>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2.5">
+            {/* Breadcrumb: Group › Region › Centre */}
+            <div className="breadcrumb">
+              <button type="button" className="crumb-btn" onClick={() => navigate('/exec')}>
+                Group
+              </button>
+              <ChevronRight size={10} className="crumb-chevron" aria-hidden="true" />
+              <span className="crumb-region">{centre.region}</span>
+              <ChevronRight size={10} className="crumb-chevron" aria-hidden="true" />
               <CentreSwitcher
                 centres={centres}
                 value={centreSlug}
                 onChange={(slug) => navigate(`/centre/${slug}/treatment-board`)}
               />
-              <label className="relative hidden sm:block">
-                <span className="sr-only">Search beds, clients, staff</span>
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
-                />
+            </div>
+
+            {/* Right tools */}
+            <div className="header-tools">
+              <label className="header-search">
+                <Search size={13} aria-hidden="true" />
                 <input
                   ref={searchInputRef}
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search bed, client, staff…"
-                  className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+                  placeholder="Search anything…"
                 />
-                <kbd
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
-                >
-                  ⌘K
-                </kbd>
+                <kbd aria-hidden="true">⌘K</kbd>
               </label>
-              <LiveClock className="hidden lg:flex" />
+              <div className="header-clock">
+                <LiveClock />
+              </div>
               <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
             </div>
           </header>
