@@ -1026,7 +1026,7 @@ export const roomBoard = {
         client()
           .from('client_tasks')
           .select(
-            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count,origin',
           )
           .eq('centre_id', centreId),
       ),
@@ -1209,7 +1209,7 @@ export const roomBoard = {
         client()
           .from('client_tasks')
           .select(
-            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count',
+            'id,admission_id,template_id,code,category,title,due_at,completed_at,completed_by,status,not_applicable_reason,source_interpretation,reschedule_count,origin',
           )
           .in('admission_id', admissionIds),
       ),
