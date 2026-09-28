@@ -514,7 +514,8 @@ export function TreatmentBoard({
               { icon: '✓', tone: 'good'    as Tone, label: 'Done — every task in this category is complete'         },
               { icon: '▲', tone: 'alert'   as Tone, label: 'Overdue — one or more tasks were due and are unfinished' },
               { icon: '●', tone: 'warn'    as Tone, label: 'Due — one or more tasks are due today'                   },
-              { icon: '',  tone: 'neutral' as Tone, label: 'No actions — nothing currently due in this category'    },
+              { icon: '',  tone: 'neutral' as Tone, label: 'On track — assigned but not yet due'                    },
+              { icon: '',  tone: 'neutral' as Tone, label: 'No actions — nothing assigned in this category'         },
             ] satisfies Array<{ icon: string; tone: Tone; label: string }>
           ).map(({ icon, tone, label }) => (
             <div key={label} className="flex items-center gap-2">

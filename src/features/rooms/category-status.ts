@@ -87,7 +87,9 @@ function rollupTasks(tasks: readonly BoardTask[]): CategoryStatus {
   const overdue = applicable.filter((t) => t.isOverdue);
   const dueToday = applicable.filter((t) => t.isDueToday);
   const done = applicable.filter((t) => t.isComplete);
-  const fractionProp = applicable.length > 1 ? { fraction: `${done.length}/${applicable.length}` } : {};
+  // Shown even for a single-item category (Family Visit, Doctor, Custom often have just one task) so
+  // those columns read the same as a busy one, instead of looking empty next to it.
+  const fractionProp = { fraction: `${done.length}/${applicable.length}` };
 
   if (overdue.length > 0) {
     return {
@@ -112,7 +114,10 @@ function rollupTasks(tasks: readonly BoardTask[]): CategoryStatus {
   if (done.length === applicable.length) {
     return { tone: 'good', label: 'Done', ...fractionProp, attentionCount: 0, totalCount: tasks.length };
   }
-  return { tone: 'neutral', label: 'No actions', ...fractionProp, attentionCount: 0, totalCount: tasks.length };
+  // At least one task exists here and none of it is overdue, due today, or complete — it's pending
+  // but not yet a problem. Distinct from the true "No actions" case above (nothing assigned at all),
+  // which otherwise made a column with one on-track task look identical to an empty one.
+  return { tone: 'neutral', label: 'On track', ...fractionProp, attentionCount: 0, totalCount: tasks.length };
 }
 
 /** One rollup per category, built from real task/field state only — never a fabricated value. */
