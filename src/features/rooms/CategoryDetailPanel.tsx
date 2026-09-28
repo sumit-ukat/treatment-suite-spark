@@ -1,21 +1,15 @@
-import { useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Pencil, X } from 'lucide-react';
 import type { BoardBed } from './board-data.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip } from '../../components/ui.tsx';
-import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { formatDate } from '../../lib/format.js';
 import { admissions } from '../../services/data-access.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TaskRow } from './DetailPanel.tsx';
 import { CATEGORY_LABEL, categoryStatus, COLUMNS, type CategoryKey } from './category-status.js';
 
-/**
- * Category-scoped detail: shows and edits only the fields/tasks belonging to one board category,
- * for one client — never the full client file (that stays `DetailPanel`'s job). Task
- * completion/reopen reuses `TaskRow` verbatim, and the editable Admin fields reuse the same
- * `admissions.updateDetails` RPC `DetailPanel` uses — no parallel mutation path.
- */
 export function CategoryDetailPanel({
   bed,
   category,
@@ -32,25 +26,60 @@ export function CategoryDetailPanel({
   const o = bed.occupant;
   if (!o) return null;
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   const status = categoryStatus(o, category);
   const label = CATEGORY_LABEL[category];
 
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[560px] gap-0 p-0">
-        <DialogTitle className="sr-only">{`${o.displayName} — ${label}`}</DialogTitle>
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
+        aria-hidden
+        onClick={onClose}
+      />
 
+      {/* Side panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${o.displayName} — ${label}`}
+        className="fixed top-0 right-0 z-50 flex h-full w-full max-w-[480px] flex-col bg-card shadow-2xl"
+        style={{ animation: 'cdp-slide-in 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both' }}
+      >
         {/* Header */}
-        <div className="flex items-start gap-3 border-b border-[var(--color-line)] p-5">
+        <div className="flex items-start gap-3 border-b border-[var(--color-line)] p-5 shrink-0">
           <PhotoBadge occupant={o} size="md" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate pr-8 font-display text-[16px] font-semibold text-[var(--color-ink)]">{o.displayName}</h2>
-            <p className="text-[12px] text-[var(--color-ink-muted)]">Room {bed.label} · {label}</p>
+            <h2 className="truncate font-display text-[16px] font-semibold text-[var(--color-ink)]">
+              {o.displayName}
+            </h2>
+            <p className="text-[12px] text-[var(--color-ink-muted)]">
+              Room {bed.label} · {label}
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="ml-1 shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         {/* Facts row */}
-        <div className="grid grid-cols-2 gap-4 border-b border-[var(--color-line)] px-5 py-4 text-[12.5px]">
+        <div className="grid grid-cols-2 gap-4 border-b border-[var(--color-line)] px-5 py-4 text-[12.5px] shrink-0">
           <Fact label="Therapist" value={o.therapist ?? 'Not assigned'} />
           <Fact label="Client status" value="Admitted" />
           <Fact label="Admission date" value={formatDate(o.admittedAt)} />
@@ -58,26 +87,38 @@ export function CategoryDetailPanel({
         </div>
 
         {/* Status bar */}
-        <div className="flex items-center justify-between gap-3 bg-[var(--color-surface)] px-5 py-3">
+        <div className="flex items-center justify-between gap-3 bg-[var(--color-surface)] px-5 py-3 shrink-0">
           <div className="min-w-0">
             <div className="text-[13.5px] font-semibold text-[var(--color-ink)]">{label}</div>
-            <div className="text-[11.5px] text-[var(--color-ink-muted)]">{status.totalCount} internal {status.totalCount === 1 ? 'detail' : 'details'}</div>
+            <div className="text-[11.5px] text-[var(--color-ink-muted)]">
+              {status.totalCount} internal {status.totalCount === 1 ? 'detail' : 'details'}
+            </div>
           </div>
           {status.attentionCount > 0 ? (
             <Chip icon="⚠" label={`${status.attentionCount} need attention`} tone="warn" />
           ) : null}
         </div>
 
-        {/* Field/task grid */}
-        <div className="max-h-[60vh] overflow-y-auto p-5">
+        {/* Field / task content — scrollable */}
+        <div className="flex-1 overflow-y-auto p-5">
           {category === 'admin' ? (
             <AdminFields o={o} onChanged={onChanged} readOnly={readOnly} />
           ) : category === 'custom' ? (
-            <TaskList tasks={o.tasks.filter((t) => t.isManual)} admittedAt={o.admittedAt} onChanged={onChanged} readOnly={readOnly} emptyLabel="No custom assignments for this client." />
+            <TaskList
+              tasks={o.tasks.filter((t) => t.isManual)}
+              admittedAt={o.admittedAt}
+              onChanged={onChanged}
+              readOnly={readOnly}
+              emptyLabel="No custom assignments for this client."
+            />
           ) : category === 'doctor' ? (
-            <p className="text-[12.5px] text-[var(--color-ink-muted)]">No internal fields recorded yet for this category.</p>
+            <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+              No internal fields recorded yet for this category.
+            </p>
           ) : !o.programmeModules.includes(category) ? (
-            <p className="text-[12.5px] text-[var(--color-ink-muted)]">Not part of this client&apos;s treatment programme.</p>
+            <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+              Not part of this client&apos;s treatment programme.
+            </p>
           ) : (
             <TaskList
               tasks={o.tasks.filter((t) => COLUMNS.some((c) => c.group === category && c.code === t.code))}
@@ -88,15 +129,28 @@ export function CategoryDetailPanel({
             />
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <style>{`
+        @keyframes cdp-slide-in {
+          from { transform: translateX(100%); opacity: 0.6; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="cdp-slide-in"] { animation: none !important; }
+        }
+      `}</style>
+    </>,
+    document.body,
   );
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">{label}</div>
+      <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+        {label}
+      </div>
       <div className="mt-0.5 text-[var(--color-ink)]">{value}</div>
     </div>
   );
@@ -105,8 +159,12 @@ function Fact({ label, value }: { label: string; value: string }) {
 function Field({ label, children, highlight }: { label: string; children: React.ReactNode; highlight?: boolean }) {
   return (
     <div className={`rounded-lg px-3 py-2.5 ${highlight ? 'bg-amber-50 dark:bg-amber-950/20' : ''}`}>
-      <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">{label}</div>
-      <div className={`mt-1 text-[12.5px] ${highlight ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-[var(--color-ink)]'}`}>
+      <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+        {label}
+      </div>
+      <div
+        className={`mt-1 text-[12.5px] ${highlight ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-[var(--color-ink)]'}`}
+      >
         {children}
       </div>
     </div>
@@ -132,20 +190,18 @@ function TaskList({
   return (
     <ul className="flex flex-col gap-1.5">
       {tasks.map((t) => (
-        <TaskRow key={t.id ?? t.code} task={t} admittedAt={admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
+        <TaskRow
+          key={t.id ?? t.code}
+          task={t}
+          admittedAt={admittedAt}
+          onChanged={onChanged}
+          {...(readOnly ? { readOnly } : {})}
+        />
       ))}
     </ul>
   );
 }
 
-/**
- * Focal Therapist / Buddy / Group / Substance / Peeps edit the same admission row `DetailPanel`'s
- * "Key facts" editor does, via the same `admissions.updateDetails` RPC — Keyworker isn't shown here
- * (it isn't one of this board's 10 Admin columns) but is round-tripped unchanged so editing here
- * never silently clears it. GP Summary is a real task, so it uses `TaskRow` directly rather than a
- * plain field. Doctor and Detox Ends have no backing column anywhere yet — shown as "Not set", never
- * invented, and not editable until a real field exists.
- */
 function AdminFields({
   o,
   onChanged,
@@ -253,7 +309,11 @@ function AdminFields({
           />
           Peeps (personal evacuation plan required)
         </label>
-        {error ? <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        ) : null}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -272,11 +332,14 @@ function AdminFields({
             Cancel
           </button>
         </div>
-
         {gp ? (
           <div className="mt-1 border-t border-[var(--color-line)] pt-3">
-            <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-            <ul><TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} /></ul>
+            <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+              GP Summary
+            </div>
+            <ul>
+              <TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
+            </ul>
           </div>
         ) : null}
       </div>
@@ -314,8 +377,12 @@ function AdminFields({
       </div>
       {gp ? (
         <div className="mt-1 border-t border-[var(--color-line)] pt-3">
-          <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-          <ul><TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} /></ul>
+          <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+            GP Summary
+          </div>
+          <ul>
+            <TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
+          </ul>
         </div>
       ) : (
         <Field label="GP Summary">Not applicable</Field>
