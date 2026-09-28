@@ -8,7 +8,7 @@ import { formatDate } from '../../lib/format.js';
 import { admissions, tasks as taskService } from '../../services/data-access.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TaskRow } from './DetailPanel.tsx';
-import { CATEGORY_LABEL, categoryStatus, COLUMNS, type CategoryKey } from './category-status.js';
+import { CATEGORY_LABEL, categoryStatus, COLUMNS, isCustomTask, type CategoryKey } from './category-status.js';
 
 export function CategoryDetailPanel({
   bed,
@@ -324,7 +324,7 @@ function CustomSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const manualTasks = o.tasks.filter((t) => t.isManual);
+  const manualTasks = o.tasks.filter(isCustomTask);
 
   async function addTask() {
     if (!o.admissionId || !name.trim()) return;

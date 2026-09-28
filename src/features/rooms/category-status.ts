@@ -44,6 +44,15 @@ export const COLUMNS = [
   { code: 'session_week_4', label: 'Week 4 CP/121',   full: 'Week 4 CP/121 counselling session', group: 'careplan' as const },
 ] as const;
 
+const CATEGORY_TASK_TITLES = new Set<string>(COLUMNS.map((c) => c.full));
+
+/** A manual task only counts as "Custom" if it isn't one of the named category tasks assigned via
+ * that category's own Assign button (those are matched into their category panel by title, since
+ * manual tasks have no code — see ModuleTaskSection). Otherwise it would show up twice. */
+export function isCustomTask(task: BoardTask): boolean {
+  return task.isManual && !CATEGORY_TASK_TITLES.has(task.title);
+}
+
 export interface CategoryStatus {
   tone: Tone;
   label: string;
@@ -102,7 +111,7 @@ function rollupTasks(tasks: readonly BoardTask[]): CategoryStatus {
 /** One rollup per category, built from real task/field state only — never a fabricated value. */
 export function categoryStatus(occupant: Occupant, category: CategoryKey): CategoryStatus {
   if (category === 'custom') {
-    return rollupTasks(occupant.tasks.filter((t) => t.isManual));
+    return rollupTasks(occupant.tasks.filter(isCustomTask));
   }
 
   if (category === 'doctor') {
