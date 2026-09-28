@@ -516,6 +516,7 @@ function CentreShell() {
             collapsed={collapsed}
             onToggle={() => setCollapsed((c) => !c)}
             centreName={centre.name}
+            centreRegion={centre.region}
             centreSlug={centreSlug}
             onLeaveCentre={() => navigate('/exec')}
           />
