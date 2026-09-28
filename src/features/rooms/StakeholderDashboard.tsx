@@ -27,9 +27,9 @@ function pct(n: number, total: number) {
 }
 
 function urgencyColour(days: number): string {
-  if (days < 0) return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400';
-  if (days <= 2)  return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400';
-  return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
+  if (days < 0) return 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-400';
+  if (days <= 2)  return 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-400';
+  return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-400';
 }
 
 function dayLabel(days: number): string {
@@ -292,7 +292,7 @@ export function StakeholderDashboard({
             Needs attention
           </h2>
           {needsAttention.length > 0 && (
-            <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+            <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/25 dark:text-red-400">
               {needsAttention.length}
             </span>
           )}
@@ -367,7 +367,7 @@ export function StakeholderDashboard({
             Graduating within 7 days
           </h2>
           {leavingSoon.length > 0 && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:bg-amber-900/25 dark:text-amber-300">
               {leavingSoon.length}
             </span>
           )}

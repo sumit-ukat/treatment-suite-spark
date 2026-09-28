@@ -785,7 +785,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
             High risk client
           </span>
           {form.highRisk ? (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-red-600 uppercase dark:bg-red-900/25 dark:text-red-400">
               Profile will be highlighted
             </span>
           ) : null}

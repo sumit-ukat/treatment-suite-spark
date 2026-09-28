@@ -84,7 +84,7 @@ export function ConcernSection({
             Concerns
           </span>
           {open.length > 0 ? (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
               {open.length} open
             </span>
           ) : null}
@@ -161,7 +161,7 @@ export function ConcernSection({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
                       {CATEGORY_LABELS[c.category as ConcernCategory] ?? c.category}
                     </span>
                     {c.is_resolved ? (

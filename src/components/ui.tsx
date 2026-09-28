@@ -193,10 +193,15 @@ export function StatTile({
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-[var(--color-ink)]';
 
+  // A subtle red wash + tinted border, reserved for the 'alert' tier only — the same restraint as
+  // the Overview page's stat cards (KpiTile) and the Treatment Board's cells: colour that's applied
+  // to every tone equally stops meaning "this one needs attention" and just becomes decoration.
   const shell = `rounded-xl border px-3.5 py-3 text-left transition ${
     active
       ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
-      : 'border-[var(--color-line)] bg-[var(--color-panel)]'
+      : tone === 'alert'
+        ? 'border-red-200/70 bg-gradient-to-br from-red-50/70 to-[var(--color-panel)] dark:border-red-900/50 dark:from-red-950/20'
+        : 'border-[var(--color-line)] bg-[var(--color-panel)]'
   } ${onClick ? 'hover:border-[var(--color-accent)]/60 cursor-pointer' : ''}`;
 
   const showAction = Boolean(onClick && actionLabel);

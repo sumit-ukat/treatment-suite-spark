@@ -23,9 +23,9 @@ function dischargeTimestamp(dateStr: string): Date {
 function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' | 'approved' | 'neutral' }) {
   const colours =
     variant === 'approved'
-      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
       : variant === 'pending'
-      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
       : 'bg-black/[0.06] text-[var(--color-ink-muted)] dark:bg-white/10';
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${colours}`}>

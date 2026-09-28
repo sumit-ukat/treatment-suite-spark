@@ -591,10 +591,10 @@ export function DetailPanel({
                         <div className="flex-1">
                           <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
                             r.category === 'risk'
-                              ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                              ? 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-300'
                               : r.category === 'medical'
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/25 dark:text-blue-300'
+                              : 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-300'
                           }`}>{CONCERN_LABEL[r.category]}</span>
                           {concernEditId === r.id ? (
                             <div className="mt-1">

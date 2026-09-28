@@ -205,7 +205,7 @@ export function ExtendStayCard({
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-[12px] font-semibold">Secondary programme</p>
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
                     Providence only · coming soon
                   </span>
                 </div>

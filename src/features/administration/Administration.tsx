@@ -204,7 +204,7 @@ function StaffView({ centreName, onInvite }: { centreName: string; onInvite: () 
           <div className="flex items-center gap-2 border-b border-[var(--color-line)] px-4 py-3">
             <MailPlus className="size-3.5 text-[var(--color-ink-muted)]" />
             <span className="text-[13px] font-semibold">Pending invites</span>
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
               {PENDING.length}
             </span>
           </div>
@@ -212,13 +212,13 @@ function StaffView({ centreName, onInvite }: { centreName: string; onInvite: () 
           <ul className="divide-y divide-[var(--color-line)]">
             {PENDING.map((inv) => (
               <li key={inv.id} className="flex items-center gap-4 px-4 py-3">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-[11px] font-bold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
                   {inv.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[13px] font-medium">{inv.name}</span>
-                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                    <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
                       ⚑ Invite pending
                     </span>
                   </div>

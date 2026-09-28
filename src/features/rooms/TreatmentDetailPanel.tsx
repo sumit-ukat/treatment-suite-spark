@@ -839,7 +839,7 @@ export function TreatmentDetailPanel({
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       <StatusBadge status={overallStatus} />
                       {o.hasRestrictedAlert ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold tracking-wide text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold tracking-wide text-red-600 uppercase dark:bg-red-900/25 dark:text-red-400">
                           &#9888; High risk
                         </span>
                       ) : null}
@@ -972,9 +972,9 @@ export function TreatmentDetailPanel({
                           <div className="flex items-start gap-1">
                             <div className="flex-1">
                               <span className={`mr-1.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase ${
-                                r.category === 'risk' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                                : r.category === 'medical' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                                r.category === 'risk' ? 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-300'
+                                : r.category === 'medical' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/25 dark:text-blue-300'
+                                : 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-300'
                               }`}>{CONCERN_LABEL[r.category]}</span>
                               {concernEditId === r.id ? (
                                 <div className="mt-1">
@@ -1204,7 +1204,7 @@ export function TreatmentDetailPanel({
                       </span>
                       <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                         needsAction.length > 0
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                          ? 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-400'
                           : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
                       }`}>
                         {needsAction.length}

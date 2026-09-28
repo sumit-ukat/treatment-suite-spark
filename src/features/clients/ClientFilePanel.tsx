@@ -225,7 +225,7 @@ export function ClientFilePanel({
                 Concerns
               </h3>
               {concerns && concerns.filter((c) => !c.is_resolved).length > 0 ? (
-                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
                   {concerns.filter((c) => !c.is_resolved).length} open
                 </span>
               ) : null}
@@ -307,7 +307,7 @@ export function ClientFilePanel({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 uppercase tracking-wide">
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-600 dark:bg-amber-950/40 dark:text-amber-300 uppercase tracking-wide">
                           {CATEGORY_LABELS[c.category as ConcernCategory] ?? c.category}
                         </span>
                         {c.is_resolved ? (
