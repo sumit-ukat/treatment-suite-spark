@@ -325,12 +325,12 @@ export function StakeholderDashboard({
                       <td className="px-3 py-2.5">
                         <div className="flex flex-wrap gap-1">
                           {o.hasRestrictedAlert ? (
-                            <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[9.5px] font-bold text-red-700 uppercase dark:bg-red-900/40 dark:text-red-400">
+                            <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9.5px] font-bold text-red-600 uppercase dark:bg-red-900/25 dark:text-red-400">
                               High risk
                             </span>
                           ) : null}
                           {o.hasOpenConcern ? (
-                            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-700 uppercase dark:bg-amber-900/40 dark:text-amber-400">
+                            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-600 uppercase dark:bg-amber-900/25 dark:text-amber-400">
                               Concern
                             </span>
                           ) : null}
@@ -338,7 +338,7 @@ export function StakeholderDashboard({
                       </td>
                       <td className="px-3 py-2.5">
                         {o.overdueCount > 0 ? (
-                          <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                          <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/25 dark:text-red-400">
                             {o.overdueCount} overdue
                           </span>
                         ) : (
