@@ -113,11 +113,14 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
   const cellCls = 'w-[126px] overflow-hidden border-b border-r border-[var(--color-line)] px-2.5 py-3 align-top last:border-r-0';
 
   if (!bed.occupant) {
-    return <td className={cellCls}><span className="text-[var(--color-ink-muted)]">—</span></td>;
+    return <td className={`${cellCls} bg-card`}><span className="text-[var(--color-ink-muted)]">—</span></td>;
   }
 
   const status = categoryStatus(bed.occupant, category);
   const { bg, text, Icon } = TONE_ICON[status.tone];
+  // bg-card only as a fallback (never alongside a tint class): a cell with nothing to flag must
+  // stay opaque so it doesn't transparently pick up whatever colour the row is washed with.
+  const bgCls = CELL_TINT[status.tone] || 'bg-card';
 
   return (
     <td
@@ -126,7 +129,7 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
       title={`Open ${CATEGORY_LABEL[category]} details`}
-      className={`${cellCls} ${CELL_TINT[status.tone]} cursor-pointer select-none transition hover:shadow-[inset_0_0_0_1px_var(--color-accent-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+      className={`${cellCls} ${bgCls} cursor-pointer select-none transition hover:shadow-[inset_0_0_0_1px_var(--color-accent-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
     >
       <div className="flex min-w-0 items-center gap-1.5">
         <span className={`grid size-5 shrink-0 place-items-center rounded-[5px] ${bg} ${text}`}>
@@ -462,20 +465,17 @@ export function TreatmentBoard({
                 );
               }
 
-              /* ── Occupied bed ── */
+              /* ── Occupied bed ──
+                 No row-level background wash: with several flagged cells often landing in the same
+                 row, tinting the whole row on top of that read as the entire row changing colour.
+                 The overdue-count badge on the client cell and each cell's own (now much lighter)
+                 tint carry the signal instead — see CategoryCell / CELL_TINT above. */
               const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
               const urgentDischarge = o.daysUntilDischarge <= 2;
-              const rowBg = o.overdueCount > 0
-                ? 'bg-red-50 dark:bg-red-950/30'
-                : o.dueTodayCount > 0
-                ? 'bg-amber-50 dark:bg-amber-950/25'
-                : o.isExtendedStay
-                ? 'bg-teal-50/70 dark:bg-teal-950/20'
-                : '';
-              const osc = `sticky z-10 ${rowBg || 'bg-card'} ${cb}`;
+              const osc = `sticky z-10 bg-card ${cb}`;
 
               return (
-                <tr key={bed.label} className={rowBg}>
+                <tr key={bed.label}>
                   {/* Frozen: Bed */}
                   <td className={`${osc} left-0 w-16 px-3 py-3`}>
                     <span className="nums rounded-md bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--color-accent)]">
@@ -536,7 +536,7 @@ export function TreatmentBoard({
                   </td>
 
                   {/* Programme: treatment day + planned discharge */}
-                  <td className={`${cb} w-[120px] overflow-hidden border-r border-[var(--color-line)] px-3 py-3 whitespace-nowrap`}>
+                  <td className={`${cb} w-[120px] overflow-hidden border-r border-[var(--color-line)] bg-card px-3 py-3 whitespace-nowrap`}>
                     <div className="nums text-[12.5px] font-medium text-[var(--color-ink)]">
                       Day {o.treatmentDay} <span className="text-[var(--color-ink-muted)]">of {o.durationDays}</span>
                     </div>
