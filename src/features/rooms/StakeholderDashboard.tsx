@@ -41,6 +41,12 @@ function dayLabel(days: number): string {
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
+/**
+ * Reference's stat-card treatment: every accent colours its icon *and* its number, but only the most
+ * urgent tier (red) also gets a card-level wash — a faint gradient and a tinted border — so that
+ * treatment stays reserved for "this genuinely needs attention" instead of colouring every card
+ * equally and losing the distinction.
+ */
 function KpiTile({
   icon: Icon,
   value,
@@ -59,13 +65,22 @@ function KpiTile({
     accent === 'amber'  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' :
     accent === 'green'  ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' :
                           'bg-[var(--color-accent-soft)] text-[var(--color-accent)]';
+  const numberColour =
+    accent === 'red'    ? 'text-red-600 dark:text-red-400' :
+    accent === 'amber'  ? 'text-amber-600 dark:text-amber-400' :
+    accent === 'green'  ? 'text-emerald-600 dark:text-emerald-400' :
+                          'text-[var(--color-ink)]';
+  const cardCls =
+    accent === 'red'
+      ? 'border-red-200/70 bg-gradient-to-br from-red-50/70 to-[var(--color-panel)] dark:border-red-900/50 dark:from-red-950/20'
+      : 'border-[var(--color-line)] bg-[var(--color-panel)]';
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-4">
+    <div className={`flex flex-col gap-3 rounded-xl border p-4 ${cardCls}`}>
       <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${iconColour}`}>
         <Icon className="size-4" />
       </div>
       <div>
-        <p className="nums text-[28px] font-bold leading-none tracking-tight">{value}</p>
+        <p className={`nums text-[28px] font-bold leading-none tracking-tight ${numberColour}`}>{value}</p>
         <p className="mt-1 text-[12px] font-medium text-[var(--color-ink)]">{label}</p>
         {sub ? <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{sub}</p> : null}
       </div>
