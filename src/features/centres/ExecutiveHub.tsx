@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Activity,
-  ArrowUpRight,
   BedDouble,
   Building2,
   CalendarCheck,
   ChevronDown,
   CircleAlert,
-  Clock,
   FileWarning,
-  LogOut,
   Percent,
   TrendingDown,
   TrendingUp,
   UserMinus,
-  UserX,
   Users,
   X,
 } from 'lucide-react';
@@ -627,12 +623,10 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
       </section>
 
-      {/* ── Business health — the commercial picture: census, capacity, pipeline. Kept apart from
-             ops so a reader can ask "are we full and running well commercially" without the clinical
-             risk numbers competing for attention in the same row. ── */}
+      {/* ── Estate overview — census, capacity, and key risk signals in one glance. ── */}
       <div className="mt-4">
         <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Business overview
+          Estate overview
         </h2>
         <MetricGrid
           cards={[
@@ -651,46 +645,12 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               accent: totals.available < 5 ? 'warn' : 'neutral',
             },
             {
-              label: 'Bed utilisation',
-              value: `${totals.occupancyPercent}%`,
-              hint: 'average across scope',
-              icon: <Percent className="size-4" />,
-              accent: totals.occupancyPercent >= 85 ? 'good' : 'neutral',
-            },
-            {
               label: 'Extended stays',
               value: totals.extendedStays,
               hint: 'clients on approved extensions',
               icon: <CalendarCheck className="size-4" />,
               accent: totals.extendedStays > 8 ? 'warn' : 'neutral',
             },
-            {
-              label: 'Upcoming Availability',
-              value: totals.dischargingThisWeek,
-              hint: 'graduating this week',
-              icon: <ArrowUpRight className="size-4" />,
-              accent: 'neutral',
-            },
-            {
-              label: 'Discharge',
-              value: totals.unplannedExits,
-              hint: 'early discharges',
-              icon: <LogOut className="size-4" />,
-              accent: totals.unplannedExits > 3 ? 'critical' : totals.unplannedExits > 0 ? 'warn' : 'good',
-            },
-          ]}
-        />
-      </div>
-
-      {/* ── Ops health — the clinical and compliance risk picture. Ordered by urgency: issues first,
-             then chronic backlog, then the two staffing-coverage gaps, then the two counts that need
-             the least immediate reaction. ── */}
-      <div className="mt-4">
-        <h2 className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Ops overview
-        </h2>
-        <MetricGrid
-          cards={[
             {
               label: 'Open issues',
               value: totals.overdue + totals.pastPlannedDischarge,
@@ -700,30 +660,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                 totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
                   ? 'critical'
                   : totals.overdue > 0
-                    ? 'warn'
-                    : 'good',
-            },
-            {
-              label: 'Issues >7 days',
-              value: totals.agedOverdue,
-              hint: 'unresolved for over a week',
-              icon: <Clock className="size-4" />,
-              accent:
-                totals.agedOverdue > 10
-                  ? 'critical'
-                  : totals.agedOverdue > 0
-                    ? 'warn'
-                    : 'good',
-            },
-            {
-              label: 'No therapist',
-              value: totals.missingTherapist,
-              hint: 'clients without assigned therapist',
-              icon: <UserX className="size-4" />,
-              accent:
-                totals.missingTherapist > 5
-                  ? 'critical'
-                  : totals.missingTherapist > 0
                     ? 'warn'
                     : 'good',
             },
@@ -745,18 +681,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
               hint: 'all centres · last 7 days',
               icon: <FileWarning className="size-4" />,
               accent: (groupIncidentCount ?? totals.incidentReports7Days) > 5 ? 'critical' : (groupIncidentCount ?? totals.incidentReports7Days) > 0 ? 'warn' : 'good',
-            },
-            {
-              label: 'On-time rate',
-              value: `${totals.onTimePercent}%`,
-              hint: 'actions completed to plan',
-              icon: <TrendingUp className="size-4" />,
-              accent:
-                totals.onTimePercent < ONTIME_ACT
-                  ? 'critical'
-                  : totals.onTimePercent < 90
-                    ? 'warn'
-                    : 'good',
             },
           ]}
         />

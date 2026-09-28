@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, History, Plus, Printer, Search, X } from 'lucide-react';
+import { History, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
@@ -9,44 +9,17 @@ import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
+import { CategoryDetailPanel } from './CategoryDetailPanel.tsx';
+import { CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-const COLUMNS = [
-  { code: 'family_contact_24h',          label: '24hr',           full: '24-hour family contact',                 group: 'contact'  },
-  { code: 'family_contact_week_1',        label: '1st Week',       full: 'Week 1 family contact',                  group: 'contact'  },
-  { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  },
-  { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  },
-  { code: 'satisfaction_survey_7day', label: '7-Day Survey',   full: '7-day satisfaction survey',  group: 'survey'      },
-  { code: 'family_visit',            label: 'Family Visit',   full: 'Family visit',               group: 'familyvisit' },
-  { code: 'life_story',        label: 'Life Story/Surrender', full: 'Life story / surrender',          group: 'lifestep' },
-  { code: 'step_1',           label: 'Step 1',               full: '12-Step programme — Step 1',      group: 'lifestep' },
-  { code: 'step_2',           label: 'Step 2',               full: '12-Step programme — Step 2',      group: 'lifestep' },
-  { code: 'step_3',           label: 'Step 3',               full: '12-Step programme — Step 3',      group: 'lifestep' },
-  { code: 'side_assignment',  label: 'Side Assignment',      full: 'Side assignment',                 group: 'lifestep' },
-  { code: 'ccp',              label: 'CCP',                  full: 'Care & Continuing Plan (CCP)',     group: 'lifestep' },
-  { code: 'session_intro',   label: 'Intro CP/121',    full: 'Introductory counselling session',  group: 'careplan' },
-  { code: 'session_week_1', label: 'Week 1 CP/121',   full: 'Week 1 CP/121 counselling session', group: 'careplan' },
-  { code: 'session_week_2', label: 'Week 2 CP/121',   full: 'Week 2 CP/121 counselling session', group: 'careplan' },
-  { code: 'session_week_3', label: 'Week 3 CP/121',   full: 'Week 3 CP/121 counselling session', group: 'careplan' },
-  { code: 'session_week_4', label: 'Week 4 CP/121',   full: 'Week 4 CP/121 counselling session', group: 'careplan' },
-] as const;
-
-const COL_GROUPS = [
-  { label: 'Admin',                   count: 10, cls: 'bg-amber-50  text-amber-800  dark:bg-amber-950/50  dark:text-amber-300',  bCls: 'border-amber-400/60  dark:border-amber-600/40'  },
-  { label: 'Contact/Comms',           count: 4,  cls: 'bg-sky-50    text-sky-800    dark:bg-sky-950/50    dark:text-sky-300',    bCls: 'border-sky-400/60    dark:border-sky-600/40'    },
-  { label: '7 Day Satisfaction',       count: 1,  cls: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300', bCls: 'border-yellow-400/60 dark:border-yellow-600/40' },
-  { label: 'Family Visit',            count: 1,  cls: 'bg-teal-50   text-teal-800   dark:bg-teal-950/50   dark:text-teal-300',   bCls: 'border-teal-400/60   dark:border-teal-600/40'   },
-  { label: 'Life Story & Step Works', count: 6,  cls: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300', bCls: 'border-violet-400/60 dark:border-violet-600/40' },
-  { label: 'Care Plan',               count: 5,  cls: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300', bCls: 'border-indigo-400/60 dark:border-indigo-600/40' },
-  { label: 'Doctor – Thursday',       count: 1,  cls: 'bg-rose-50   text-rose-800   dark:bg-rose-950/50   dark:text-rose-300',   bCls: 'border-rose-400/60   dark:border-rose-600/40'   },
-] as const;
+/** Left-to-right order of the board's 8 category columns. */
+const CATEGORY_ORDER: readonly CategoryKey[] = [
+  'admin', 'contact', 'survey', 'familyvisit', 'lifestep', 'careplan', 'doctor', 'custom',
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmt(d: Date): string {
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 function fmtStr(s: string): string {
   const [y, m, day] = s.split('-').map(Number);
@@ -59,60 +32,49 @@ function fmtTime(d: Date): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ─── Task cell ────────────────────────────────────────────────────────────────
+const CHIP_ICON: Record<Tone, string> = { good: '✓', alert: '▲', warn: '●', neutral: '', accent: '' };
+const BAR_CLS: Record<Tone, string> = {
+  good: 'bg-emerald-500', alert: 'bg-red-500', warn: 'bg-amber-500', neutral: 'bg-black/20 dark:bg-white/25', accent: 'bg-[var(--color-accent)]',
+};
 
-// Uses the same icon + tone vocabulary as the attention chips in BedList.
-function TaskCell({ bed, code, extraCls }: { bed: BoardBed; code: string; extraCls?: string }) {
-  const o = bed.occupant;
-  const td = `w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center${extraCls ? ` ${extraCls}` : ''}`;
+function fractionPct(fraction: string): number {
+  const [done, total] = fraction.split('/').map(Number);
+  if (!total) return 0;
+  return Math.min(100, Math.round((done! / total) * 100));
+}
 
-  if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
+// ─── Category cell — rolled-up status, clickable to open its detail panel ─────
 
-  const task = o.tasks.find((t) => t.code === code);
-  if (!task) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
+function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: CategoryKey; onOpen: () => void }) {
+  const cellCls = 'w-[112px] overflow-hidden border-b border-[var(--color-line)] px-3 py-2.5 align-top';
 
-  if (task.isNotApplicable) {
-    return (
-      <td className={td}>
-        <span className="text-[13px] text-[var(--color-ink-muted)]" title={task.notApplicableReason ?? 'Not applicable'}>×</span>
-      </td>
-    );
+  if (!bed.occupant) {
+    return <td className={cellCls}><span className="text-[var(--color-ink-muted)]">—</span></td>;
   }
-  if (task.isComplete) {
-    return (
-      <td className={td}>
-        <span title={task.completedBy ? `Done by ${task.completedBy}` : 'Done'}>
-          <Chip icon="✓" label="" tone="good" />
-        </span>
-      </td>
-    );
-  }
-  if (task.isOverdue) {
-    return (
-      <td className={td}>
-        <span title="Overdue — action needed">
-          <Chip icon="▲" label="" tone="alert" />
-        </span>
-      </td>
-    );
-  }
-  if (task.isDueToday) {
-    return (
-      <td className={td}>
-        <span title="Due today">
-          <Chip icon="●" label="" tone="warn" />
-        </span>
-      </td>
-    );
-  }
+
+  const status = categoryStatus(bed.occupant, category);
+
   return (
-    <td className={td}>
-      <span
-        className="text-[15px] leading-none text-[var(--color-ink-muted)]"
-        title={task.dueAt ? `Due ${fmt(task.dueAt)}` : 'Not yet due'}
-      >
-        —
-      </span>
+    <td
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+      title={`Open ${CATEGORY_LABEL[category]} details`}
+      className={`${cellCls} cursor-pointer select-none transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+    >
+      <Chip icon={CHIP_ICON[status.tone]} label={status.label} tone={status.tone} />
+      {status.sublabel ? (
+        <div className="mt-1 truncate text-[11px] text-[var(--color-ink-muted)]">{status.sublabel}</div>
+      ) : null}
+      {status.fraction ? (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="h-1 w-12 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
+            <div className={`h-full rounded-full ${BAR_CLS[status.tone]}`} style={{ width: `${fractionPct(status.fraction)}%` }} />
+          </div>
+          <span className="nums text-[10px] text-[var(--color-ink-muted)]">{status.fraction}</span>
+        </div>
+      ) : null}
     </td>
   );
 }
@@ -145,20 +107,15 @@ export function TreatmentBoard({
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
+  const [openCategory, setOpenCategory] = useState<{ bedLabel: string; category: CategoryKey } | null>(null);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
-  const [expandedSection, setExpandedSection] = useState<'admin' | 'contact' | 'lifestep' | 'careplan' | null>(null);
-  const expandCol = (s: 'admin' | 'contact' | 'lifestep' | 'careplan') =>
-    setExpandedSection((v) => (v === s ? null : s));
-  const adminExpanded    = expandedSection === 'admin';
-  const contactExpanded  = expandedSection === 'contact';
-  const lifeStepExpanded = expandedSection === 'lifestep';
-  const carePlanExpanded = expandedSection === 'careplan';
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
   }, [centreId]);
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
+  const selectedCategoryBed = openCategory ? beds.find((b) => b.label === openCategory.bedLabel) ?? null : null;
 
   // Keep top scrollbar phantom width in sync with real table scroll width.
   useEffect(() => {
@@ -215,7 +172,7 @@ export function TreatmentBoard({
   const toggle = (f: FilterId) => setActiveFilter((prev) => (prev === f ? 'all' : f));
 
   // Header cell — matches BedList's header label style
-  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap';
+  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2.5 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap';
 
   return (
     <div className="space-y-6 px-4 py-5 sm:px-5">
@@ -223,7 +180,7 @@ export function TreatmentBoard({
       {/* ── Page header — matches BoardPage's PageHeader ── */}
       <PageHeader
         title={`${centreName} treatment board`}
-        description={`Every bed and every clinical task in one view.${loadedAt ? ` Last updated at ${fmtTime(loadedAt)}.` : ''}${refreshing ? ' Updating…' : ''}`}
+        description={`Every bed scanned by care priority.${loadedAt ? ` Last updated at ${fmtTime(loadedAt)}.` : ''}${refreshing ? ' Updating…' : ''}`}
         actions={
           <>
             <label className="relative flex items-center">
@@ -387,264 +344,27 @@ export function TreatmentBoard({
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
       >
-        <table className="w-full border-separate border-spacing-0 text-[12.5px]">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-[12.5px]">
 
           <thead className="sticky top-0 z-20">
-            {/* Row 1 — category group spans */}
-            <tr>
-              <th
-                colSpan={3}
-                className="border-b border-r border-[var(--color-line)] bg-card px-3 py-2 text-left text-[10.5px] font-semibold tracking-[0.06em] uppercase text-[var(--color-ink-muted)]"
-              >
-                Client &amp; Placement
-              </th>
-              {COL_GROUPS.map((g) =>
-                g.label === 'Admin' ? (
-                  <th
-                    key="Admin"
-                    colSpan={adminExpanded ? 10 : 1}
-                    onClick={() => expandCol('admin')}
-                    title={adminExpanded ? 'Click to collapse Admin columns' : 'Click to expand Admin columns'}
-                    className="cursor-pointer select-none border-b border-x-2 border-amber-400/60 bg-amber-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-amber-800 transition hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/30"
-                  >
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {adminExpanded
-                        ? <ChevronDown className="size-3" />
-                        : <ChevronRight className="size-3" />}
-                      Admin
-                      {!adminExpanded && (
-                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+9 cols</span>
-                      )}
-                    </span>
-                  </th>
-                ) : g.label === 'Contact/Comms' ? (
-                  <th
-                    key="Contact/Comms"
-                    colSpan={contactExpanded ? 4 : 1}
-                    onClick={() => expandCol('contact')}
-                    title={contactExpanded ? 'Click to collapse Contact/Comms' : 'Click to expand Contact/Comms'}
-                    className="cursor-pointer select-none border-b border-x-2 border-sky-400/60 bg-sky-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-sky-800 transition hover:bg-sky-100 dark:border-sky-600/40 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-900/30"
-                  >
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {contactExpanded
-                        ? <ChevronDown className="size-3" />
-                        : <ChevronRight className="size-3" />}
-                      Contact/Comms
-                      {!contactExpanded && (
-                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+3 cols</span>
-                      )}
-                    </span>
-                  </th>
-                ) : g.label === 'Life Story & Step Works' ? (
-                  <th
-                    key="Life Story & Step Works"
-                    colSpan={lifeStepExpanded ? 6 : 1}
-                    onClick={() => expandCol('lifestep')}
-                    title={lifeStepExpanded ? 'Click to collapse Life Story & Step Works' : 'Click to expand Life Story & Step Works'}
-                    className="cursor-pointer select-none border-b border-x-2 border-violet-400/60 bg-violet-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/30"
-                  >
-                    <span className="inline-flex flex-col items-center justify-center gap-0.5">
-                      <span className="inline-flex items-center gap-1.5">
-                        {lifeStepExpanded
-                          ? <ChevronDown className="size-3" />
-                          : <ChevronRight className="size-3" />}
-                        Life Story
-                        {!lifeStepExpanded && (
-                          <span className="text-[9px] font-normal opacity-60">+5 cols</span>
-                        )}
-                      </span>
-                      <span>&amp; Step Works</span>
-                    </span>
-                  </th>
-                ) : g.label === 'Care Plan' ? (
-                  <th
-                    key="Care Plan"
-                    colSpan={carePlanExpanded ? 5 : 1}
-                    onClick={() => expandCol('careplan')}
-                    title={carePlanExpanded ? 'Click to collapse Care Plan' : 'Click to expand Care Plan'}
-                    className="cursor-pointer select-none border-b border-x-2 border-indigo-400/60 bg-indigo-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-indigo-800 transition hover:bg-indigo-100 dark:border-indigo-600/40 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
-                  >
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      {carePlanExpanded
-                        ? <ChevronDown className="size-3" />
-                        : <ChevronRight className="size-3" />}
-                      Care Plan
-                      {!carePlanExpanded && (
-                        <span className="ml-0.5 text-[9px] font-normal opacity-60">+4 cols</span>
-                      )}
-                    </span>
-                  </th>
-                ) : (
-                  <th
-                    key={g.label}
-                    colSpan={g.count}
-                    className={`border-b border-x-2 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase ${g.cls} ${g.bCls}`}
-                  >
-                    {g.label === '7 Day Satisfaction' ? (
-                      <span className="inline-flex flex-col items-center gap-0"><span>7 Day</span><span>Satisfaction</span></span>
-                    ) : g.label === 'Doctor – Thursday' ? (
-                      <span className="inline-flex flex-col items-center gap-0"><span>Doctor –</span><span>Thursday</span></span>
-                    ) : (
-                      g.label
-                    )}
-                  </th>
-                )
-              )}
-              <th
-                className="border-b border-x-2 border-purple-400/60 bg-purple-50 px-2 py-2 text-center text-[10px] font-semibold tracking-[0.06em] uppercase whitespace-nowrap text-purple-800 dark:border-purple-600/40 dark:bg-purple-950/50 dark:text-purple-300"
-              >
-                Custom
-              </th>
-            </tr>
-
-            {/* Row 2 — individual column headers */}
             <tr>
               <th className={`sticky left-0 z-30 w-16 ${th}`}>Bed</th>
               {/* Shadow on Client column marks the freeze boundary */}
-              <th className={`sticky left-16 z-30 min-w-[168px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
-                Client
+              <th className={`sticky left-16 z-30 w-[200px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
+                Client &amp; Placement
               </th>
-              <th className={th}>Admitted</th>
-              {/* Admin: Focal Therapist — always visible, clicking toggles the section */}
-              <th
-                onClick={() => expandCol('admin')}
-                title={adminExpanded ? 'Collapse Admin' : 'Expand Admin'}
-                className={`cursor-pointer select-none border-b border-[var(--color-line)] border-l-2 border-l-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap transition hover:bg-amber-100/60 dark:border-l-amber-500/50 dark:bg-amber-950/25 dark:hover:bg-amber-900/20 ${!adminExpanded ? 'border-r-2 border-r-amber-400/70 dark:border-r-amber-500/50' : ''}`}
-              >
-                <span className="inline-flex items-center gap-1">
-                  {adminExpanded
-                    ? <ChevronDown className="size-3 shrink-0 text-amber-500" />
-                    : <ChevronRight className="size-3 shrink-0 text-amber-500" />}
-                  Focal Therapist
-                </span>
-              </th>
-              {adminExpanded && (
-                <>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Substance</th>
-                  <th title="GP summary letter sent to GP" className="w-[58px] border-b border-[var(--color-line)] bg-amber-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-amber-950/25">GP Summary</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Treatment Duration</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Discharge Date</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Detox ends</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Group</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Doctor</th>
-                  <th className="border-b border-[var(--color-line)] bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:bg-amber-950/25">Buddy</th>
-                  <th className="border-b border-[var(--color-line)] border-r-2 border-r-amber-400/70 bg-amber-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:border-r-amber-500/50 dark:bg-amber-950/25">Peeps</th>
-                </>
-              )}
-              {COLUMNS.map((col) => {
-                if (col.group === 'contact') {
-                  const isFirst = col.code === 'family_contact_24h';
-                  const isLast  = col.code === 'family_contact_pre_discharge';
-                  if (!isFirst && !contactExpanded) return null;
-                  return (
-                    <th
-                      key={col.code}
-                      title={col.full}
-                      onClick={isFirst ? () => expandCol('contact') : undefined}
-                      className={[
-                        'w-[58px] border-b border-[var(--color-line)] bg-sky-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-sky-950/25',
-                        isFirst && 'cursor-pointer select-none border-l-2 border-l-sky-400/70 transition hover:bg-sky-100/60 dark:border-l-sky-500/50',
-                        isFirst && !contactExpanded && 'border-r-2 border-r-sky-400/70 dark:border-r-sky-500/50',
-                        isLast && contactExpanded && 'border-r-2 border-r-sky-400/70 dark:border-r-sky-500/50',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      {isFirst ? (
-                        <span className="inline-flex flex-col items-center gap-0.5">
-                          {contactExpanded
-                            ? <ChevronDown className="size-2.5 text-sky-500" />
-                            : <ChevronRight className="size-2.5 text-sky-500" />}
-                          {col.label}
-                        </span>
-                      ) : col.label}
-                    </th>
-                  );
-                }
-                if (col.group === 'lifestep') {
-                  const isFirst = col.code === 'life_story';
-                  const isLast  = col.code === 'ccp';
-                  if (!isFirst && !lifeStepExpanded) return null;
-                  return (
-                    <th
-                      key={col.code}
-                      title={col.full}
-                      onClick={isFirst ? () => expandCol('lifestep') : undefined}
-                      className={[
-                        'w-[58px] border-b border-[var(--color-line)] bg-violet-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-violet-950/25',
-                        isFirst && 'cursor-pointer select-none border-l-2 border-l-violet-400/70 transition hover:bg-violet-100/60 dark:border-l-violet-500/50',
-                        isFirst && !lifeStepExpanded && 'border-r-2 border-r-violet-400/70 dark:border-r-violet-500/50',
-                        isLast && lifeStepExpanded && 'border-r-2 border-r-violet-400/70 dark:border-r-violet-500/50',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      {isFirst ? (
-                        <span className="inline-flex flex-col items-center gap-0.5">
-                          {lifeStepExpanded
-                            ? <ChevronDown className="size-2.5 text-violet-500" />
-                            : <ChevronRight className="size-2.5 text-violet-500" />}
-                          {col.label}
-                        </span>
-                      ) : col.label}
-                    </th>
-                  );
-                }
-                if (col.group === 'careplan') {
-                  const isFirst = col.code === 'session_intro';
-                  const isLast  = col.code === 'session_week_4';
-                  if (!isFirst && !carePlanExpanded) return null;
-                  return (
-                    <th
-                      key={col.code}
-                      title={col.full}
-                      onClick={isFirst ? () => expandCol('careplan') : undefined}
-                      className={[
-                        'w-[58px] border-b border-[var(--color-line)] bg-indigo-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:bg-indigo-950/25',
-                        isFirst && 'cursor-pointer select-none border-l-2 border-l-indigo-400/70 transition hover:bg-indigo-100/60 dark:border-l-indigo-500/50',
-                        isFirst && !carePlanExpanded && 'border-r-2 border-r-indigo-400/70 dark:border-r-indigo-500/50',
-                        isLast && carePlanExpanded && 'border-r-2 border-r-indigo-400/70 dark:border-r-indigo-500/50',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      {isFirst ? (
-                        <span className="inline-flex flex-col items-center gap-0.5">
-                          {carePlanExpanded
-                            ? <ChevronDown className="size-2.5 text-indigo-500" />
-                            : <ChevronRight className="size-2.5 text-indigo-500" />}
-                          {col.label}
-                        </span>
-                      ) : col.label}
-                    </th>
-                  );
-                }
-                if (col.group === 'survey') {
-                  return (
-                    <th key={col.code} title={col.full}
-                      className="w-[58px] border-b border-[var(--color-line)] border-x-2 border-yellow-400/70 bg-yellow-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-yellow-600/40 dark:bg-yellow-950/25">
-                      {col.label}
-                    </th>
-                  );
-                }
-                if (col.group === 'familyvisit') {
-                  return (
-                    <th key={col.code} title={col.full}
-                      className="w-[58px] border-b border-[var(--color-line)] border-x-2 border-teal-400/70 bg-teal-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-teal-600/40 dark:bg-teal-950/25">
-                      {col.label}
-                    </th>
-                  );
-                }
-              })}
-              {/* Doctor – Thursday */}
-              <th className="border-b border-[var(--color-line)] border-x-2 border-rose-400/70 bg-rose-50/70 px-3 py-2 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap dark:border-rose-500/50 dark:bg-rose-950/25">
-                Reason / Assessment
-              </th>
-              {/* Custom / Extra */}
-              <th className="w-[64px] border-b border-[var(--color-line)] border-x-2 border-purple-400/70 bg-purple-50/70 px-1 py-2.5 text-center text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] dark:border-purple-600/40 dark:bg-purple-950/25">
-                Extra
-              </th>
+              <th className={`w-[120px] ${th}`}>Programme</th>
+              {CATEGORY_ORDER.map((key) => (
+                <th key={key} className={`w-[112px] whitespace-normal ${th}`} style={{ whiteSpace: 'normal' }}>
+                  {CATEGORY_LABEL[key]}
+                </th>
+              ))}
             </tr>
           </thead>
 
           <tbody>
             {visible.map((bed) => {
               const o = bed.occupant;
-              // Shared cell border — horizontal divider only, matching BedList's divide-y
               const cb = 'border-b border-[var(--color-line)]';
               const stickyCell = `sticky z-10 bg-card ${cb}`;
 
@@ -657,16 +377,12 @@ export function TreatmentBoard({
                         {bed.label}
                       </span>
                     </td>
-                    <td className={`${stickyCell} left-16 min-w-[168px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
+                    <td className={`${stickyCell} left-16 w-[200px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
-                    <td className={`${cb} px-3 py-3`}>
-                      <span className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
-                        Available
-                      </span>
-                    </td>
-                    {Array.from({ length: (adminExpanded ? 10 : 1) + (contactExpanded ? 4 : 1) + 2 + (lifeStepExpanded ? 6 : 1) + (carePlanExpanded ? 5 : 1) + 1 }).map((_, i) => (
-                      <td key={i} className={`${cb} px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                    <td className={`${cb} w-[120px] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                    {CATEGORY_ORDER.map((key) => (
+                      <td key={key} className={`${cb} w-[112px] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     ))}
                   </tr>
                 );
@@ -685,11 +401,7 @@ export function TreatmentBoard({
               const osc = `sticky z-10 ${rowBg || 'bg-card'} ${cb}`;
 
               return (
-                <tr
-                  key={bed.label}
-                  className={`cursor-pointer transition-colors hover:bg-[var(--color-accent-soft)] ${rowBg}`}
-                  onClick={() => setOpenBedLabel(bed.label)}
-                >
+                <tr key={bed.label} className={rowBg}>
                   {/* Frozen: Bed */}
                   <td className={`${osc} left-0 w-16 px-3 py-3`}>
                     <span className="nums rounded-md bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-center text-[11px] font-bold text-[var(--color-accent)]">
@@ -697,9 +409,14 @@ export function TreatmentBoard({
                     </span>
                   </td>
 
-                  {/* Frozen: Client — shadow marks freeze boundary */}
+                  {/* Frozen: Client — the only cell that opens the full client file */}
                   <td
-                    className={`${osc} relative left-16 min-w-[168px] px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] ${
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpenBedLabel(bed.label)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
+                    title="Open full client file"
+                    className={`${osc} relative left-16 w-[200px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
@@ -708,24 +425,7 @@ export function TreatmentBoard({
                         ? 'border-r-[3px] border-r-teal-400 dark:border-r-teal-500'
                         : 'border-r border-[var(--color-line)]'
                     }`}
-                    title={o.hasRestrictedAlert ? 'High risk — see client profile' : o.hasOpenConcern ? 'Open concern logged — see client profile' : undefined}
                   >
-                    {o.hasRestrictedAlert ? (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-red-50/70 to-transparent dark:from-red-950/25"
-                      />
-                    ) : o.hasOpenConcern ? (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-50/70 to-transparent dark:from-amber-950/25"
-                      />
-                    ) : o.isExtendedStay ? (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-teal-50/70 to-transparent dark:from-teal-950/25"
-                      />
-                    ) : null}
                     <div className="relative flex items-center gap-2">
                       <PhotoBadge occupant={o} size="sm" />
                       <div className="min-w-0">
@@ -737,175 +437,35 @@ export function TreatmentBoard({
                             <Chip icon="⚑" label="Alert" tone="alert" />
                           )}
                         </div>
-                        <div className="nums text-[11px] text-[var(--color-ink-muted)]">{o.reference}</div>
-                        {(() => {
-                          const gpTask = o.tasks.find((t) => t.code === 'gp_summary');
-                          if (!gpTask || gpTask.isComplete || gpTask.isNotApplicable) return null;
-                          if (gpTask.isOverdue) return <Chip icon="⚕" label="GP overdue" tone="alert" />;
-                          if (o.treatmentDay >= 2) return <Chip icon="⚕" label={`GP · day ${o.treatmentDay}`} tone="warn" />;
-                          return null;
-                        })()}
+                        <div className="nums text-[11px] text-[var(--color-ink-muted)]">
+                          {o.therapist ?? 'No therapist assigned'}
+                        </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Admitted */}
-                  <td className={`${cb} px-3 py-3 whitespace-nowrap text-[var(--color-ink-muted)]`}>
-                    {fmt(o.admittedAt)}
+                  {/* Programme: treatment day + planned discharge */}
+                  <td className={`${cb} w-[120px] overflow-hidden px-3 py-3 whitespace-nowrap`}>
+                    <div className="nums text-[12.5px] font-medium text-[var(--color-ink)]">
+                      Day {o.treatmentDay} <span className="text-[var(--color-ink-muted)]">of {o.durationDays}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
+                      <div className="h-full rounded-full bg-[var(--color-accent)]" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className={`nums mt-1 text-[10.5px] ${urgentDischarge ? 'font-semibold text-red-600 dark:text-red-400' : 'text-[var(--color-ink-muted)]'}`}>
+                      {fmtStr(o.plannedDischargeDate)}
+                    </div>
                   </td>
 
-                  {/* Admin: Focal Therapist — always visible */}
-                  <td className={`${cb} border-l-2 border-l-amber-300/60 bg-amber-50/30 px-3 py-3 whitespace-nowrap dark:border-l-amber-600/30 dark:bg-amber-950/10 ${!adminExpanded ? 'border-r-2 border-r-amber-300/60 dark:border-r-amber-600/30' : ''}`}>
-                    {o.therapist ? (
-                      <span className="text-[12.5px]">{o.therapist}</span>
-                    ) : (
-                      <span className="text-[12.5px] text-amber-600 dark:text-amber-400">Not assigned</span>
-                    )}
-                  </td>
-
-                  {adminExpanded && (
-                    <>
-                      {/* Admin: Substance */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
-
-                      {/* Admin: GP Summary */}
-                      <TaskCell bed={bed} code="gp_summary" />
-
-                      {/* Admin: Treatment Duration */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 whitespace-nowrap dark:bg-amber-950/10`}>
-                        <span className="nums text-[12.5px]">
-                          {o.treatmentDay}
-                          <span className="text-[var(--color-ink-muted)]"> / {o.durationDays}</span>
-                        </span>
-                        <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
-                          <div
-                            className="h-full rounded-full bg-[var(--color-accent)]"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </td>
-
-                      {/* Admin: Discharge Date */}
-                      <td
-                        className={`${cb} nums bg-amber-50/30 px-3 py-3 whitespace-nowrap text-[12.5px] dark:bg-amber-950/10 ${
-                          urgentDischarge
-                            ? 'font-semibold text-red-600 dark:text-red-400'
-                            : 'text-[var(--color-ink-muted)]'
-                        }`}
-                      >
-                        {fmtStr(o.plannedDischargeDate)}
-                      </td>
-
-                      {/* Admin: Detox ends */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
-
-                      {/* Admin: Group */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-center text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>
-                        {o.group || '—'}
-                      </td>
-
-                      {/* Admin: Doctor */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
-
-                      {/* Admin: Buddy */}
-                      <td className={`${cb} bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:bg-amber-950/10`}>—</td>
-
-                      {/* Admin: Peeps */}
-                      <td className={`${cb} border-r-2 border-r-amber-300/60 bg-amber-50/30 px-3 py-3 text-[var(--color-ink-muted)] dark:border-r-amber-600/30 dark:bg-amber-950/10`}>—</td>
-                    </>
-                  )}
-
-                  {/* Task cells */}
-                  {COLUMNS.map((col) => {
-                    if (col.group === 'contact'  && col.code !== 'family_contact_24h' && !contactExpanded)  return null;
-                    if (col.group === 'lifestep' && col.code !== 'life_story'         && !lifeStepExpanded) return null;
-                    if (col.group === 'careplan' && col.code !== 'session_intro'      && !carePlanExpanded) return null;
-
-                    let extraCls = '';
-                    if (col.group === 'contact') {
-                      const isFirst = col.code === 'family_contact_24h';
-                      const isLast  = col.code === 'family_contact_pre_discharge';
-                      const needsRight = (isFirst && !contactExpanded) || (isLast && contactExpanded);
-                      extraCls = [
-                        'bg-sky-50/30 dark:bg-sky-950/10',
-                        isFirst    ? 'border-l-2 border-l-sky-300/60 dark:border-l-sky-600/30' : '',
-                        needsRight ? 'border-r-2 border-r-sky-300/60 dark:border-r-sky-600/30' : '',
-                      ].filter(Boolean).join(' ');
-                    } else if (col.group === 'survey') {
-                      extraCls = 'border-x-2 border-yellow-300/60 bg-yellow-50/30 dark:border-yellow-600/30 dark:bg-yellow-950/10';
-                    } else if (col.group === 'familyvisit') {
-                      extraCls = 'border-x-2 border-teal-300/60 bg-teal-50/30 dark:border-teal-600/30 dark:bg-teal-950/10';
-                    } else if (col.group === 'lifestep') {
-                      const isFirst = col.code === 'life_story';
-                      const isLast  = col.code === 'ccp';
-                      const needsRight = (isFirst && !lifeStepExpanded) || (isLast && lifeStepExpanded);
-                      extraCls = [
-                        'bg-violet-50/30 dark:bg-violet-950/10',
-                        isFirst    ? 'border-l-2 border-l-violet-300/60 dark:border-l-violet-600/30' : '',
-                        needsRight ? 'border-r-2 border-r-violet-300/60 dark:border-r-violet-600/30' : '',
-                      ].filter(Boolean).join(' ');
-                    } else if (col.group === 'careplan') {
-                      const isFirst = col.code === 'session_intro';
-                      const isLast  = col.code === 'session_week_4';
-                      const needsRight = (isFirst && !carePlanExpanded) || (isLast && carePlanExpanded);
-                      extraCls = [
-                        'bg-indigo-50/30 dark:bg-indigo-950/10',
-                        isFirst    ? 'border-l-2 border-l-indigo-300/60 dark:border-l-indigo-600/30' : '',
-                        needsRight ? 'border-r-2 border-r-indigo-300/60 dark:border-r-indigo-600/30' : '',
-                      ].filter(Boolean).join(' ');
-                    }
-
-                    if (!o.programmeModules.includes(col.group)) {
-                      return (
-                        <td
-                          key={col.code}
-                          title="Not included in this client's treatment programme"
-                          className={`w-[58px] border-b border-[var(--color-line)] px-1 py-2.5 text-center opacity-30${extraCls ? ` ${extraCls}` : ''}`}
-                        >
-                          <span className="text-[var(--color-ink-muted)]">—</span>
-                        </td>
-                      );
-                    }
-
-                    return <TaskCell key={col.code} bed={bed} code={col.code} {...(extraCls ? { extraCls } : {})} />;
-                  })}
-
-                  {/* Doctor – Thursday: assessment reason */}
-                  <td className={`${cb} border-x-2 border-rose-300/60 bg-rose-50/30 px-3 py-3 text-[12.5px] text-[var(--color-ink-muted)] dark:border-rose-600/30 dark:bg-rose-950/10`}>
-                    —
-                  </td>
-
-                  {/* Extra / Custom assignments */}
-                  {(() => {
-                    const td = `w-[64px] border-b border-x-2 border-purple-300/60 bg-purple-50/20 border-[var(--color-line)] px-1 py-2.5 text-center dark:border-purple-600/30 dark:bg-purple-950/10`;
-                    if (!o) return <td className={td}><span className="text-[var(--color-ink-muted)]">—</span></td>;
-                    const manual = o.tasks.filter((t) => t.isManual);
-                    if (manual.length === 0) return <td className={td}><span className="opacity-30 text-[var(--color-ink-muted)]">—</span></td>;
-                    const overdueCount = manual.filter((t) => t.isOverdue).length;
-                    const todayCount   = manual.filter((t) => t.isDueToday).length;
-                    const doneCount    = manual.filter((t) => t.isComplete).length;
-                    const label = manual.map((t) => t.title).join(', ');
-                    if (overdueCount > 0) return (
-                      <td className={td} title={label}>
-                        <Chip icon="▲" label={String(overdueCount)} tone="alert" />
-                      </td>
-                    );
-                    if (todayCount > 0) return (
-                      <td className={td} title={label}>
-                        <Chip icon="●" label={String(todayCount)} tone="warn" />
-                      </td>
-                    );
-                    if (doneCount === manual.length) return (
-                      <td className={td} title={label}>
-                        <Chip icon="✓" label="" tone="good" />
-                      </td>
-                    );
-                    return (
-                      <td className={td} title={label}>
-                        <span className="text-[12px] font-medium text-[var(--color-ink-muted)]">{manual.length}</span>
-                      </td>
-                    );
-                  })()}
+                  {/* 8 category cells */}
+                  {CATEGORY_ORDER.map((key) => (
+                    <CategoryCell
+                      key={key}
+                      bed={bed}
+                      category={key}
+                      onOpen={() => setOpenCategory({ bedLabel: bed.label, category: key })}
+                    />
+                  ))}
                 </tr>
               );
             })}
@@ -913,7 +473,7 @@ export function TreatmentBoard({
         </table>
       </div>
 
-      {/* ── Treatment detail panel with prev/next navigation ── */}
+      {/* ── Full client file, opened from the Client & Placement cell ── */}
       {selected ? (() => {
         const occupiedVisible = visible.filter((b) => b.occupant !== null);
         const idx = occupiedVisible.findIndex((b) => b.label === openBedLabel);
@@ -931,6 +491,18 @@ export function TreatmentBoard({
         );
       })() : null}
 
+      {/* ── Category-scoped detail, opened from a status cell ── */}
+      {openCategory && selectedCategoryBed ? (
+        <CategoryDetailPanel
+          key={`${openCategory.bedLabel}-${openCategory.category}`}
+          bed={selectedCategoryBed}
+          category={openCategory.category}
+          onClose={() => setOpenCategory(null)}
+          onChanged={() => refresh()}
+          readOnly={!!asOf}
+        />
+      ) : null}
+
       {/* ── Legend ── */}
       <div className="rounded-2xl border bg-card p-5 shadow-soft">
         <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]">
@@ -939,10 +511,10 @@ export function TreatmentBoard({
         <div className="flex flex-wrap gap-x-5 gap-y-2.5 text-[12px] text-[var(--color-ink)]">
           {(
             [
-              { icon: '✓', tone: 'good'    as Tone, label: 'Done — this task has been completed'              },
-              { icon: '▲', tone: 'alert'   as Tone, label: 'Overdue — this task was due and has not been done' },
-              { icon: '●', tone: 'warn'    as Tone, label: 'Due today — this task must be done today'          },
-              { icon: '—', tone: 'neutral' as Tone, label: 'Still to come — not due yet'                       },
+              { icon: '✓', tone: 'good'    as Tone, label: 'Done — every task in this category is complete'         },
+              { icon: '▲', tone: 'alert'   as Tone, label: 'Overdue — one or more tasks were due and are unfinished' },
+              { icon: '●', tone: 'warn'    as Tone, label: 'Due — one or more tasks are due today'                   },
+              { icon: '',  tone: 'neutral' as Tone, label: 'No actions — nothing currently due in this category'    },
             ] satisfies Array<{ icon: string; tone: Tone; label: string }>
           ).map(({ icon, tone, label }) => (
             <div key={label} className="flex items-center gap-2">
@@ -951,18 +523,13 @@ export function TreatmentBoard({
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--color-ink-muted)]">×</span>
-            Not applicable — this task is not part of this programme
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] opacity-30 text-[var(--color-ink-muted)]">—</span>
-            Faded column — this module was not selected for this client&apos;s programme
-          </div>
-          <div className="flex items-center gap-2">
             <span className="size-2 shrink-0 rounded-full bg-red-500" />
             Red dot — safeguarding concern flagged for this client
           </div>
         </div>
+        <p className="mt-3 text-[11px] text-[var(--color-ink-muted)]">
+          Select a status cell to open its internal details. Client details remain visible while you scroll.
+        </p>
       </div>
 
     </div>

@@ -1052,7 +1052,7 @@ function PhotoUpload({
  * "Due day N" (rather than an absolute date) matches the source layout — computed from the real
  * admission date and the task's real due date, not a separate stored field.
  */
-function TaskRow({
+export function TaskRow({
   task: t,
   admittedAt,
   onChanged,
