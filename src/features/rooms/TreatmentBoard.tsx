@@ -62,10 +62,13 @@ const TONE_ICON: Record<Tone, { bg: string; text: string; Icon: typeof Check }> 
 };
 
 /** Cell background tint by tone — reference's care-lane-cell.overdue/.due/.done treatment. */
+/** Deliberately faint — a hint, not a wash. Most rows have several non-neutral cells at once, so
+ * anything much stronger than this reads as the whole grid changing colour rather than one cell
+ * flagging something; the icon + label already carry the actual signal. */
 const CELL_TINT: Record<Tone, string> = {
-  good: 'bg-emerald-50 dark:bg-emerald-950/20',
-  alert: 'bg-[var(--color-overdue-soft)]',
-  warn: 'bg-[var(--color-attention-soft)]',
+  good: 'bg-emerald-50/40 dark:bg-emerald-950/10',
+  alert: 'bg-[var(--color-overdue-soft)]/35',
+  warn: 'bg-[var(--color-attention-soft)]/35',
   neutral: '',
   accent: '',
 };
