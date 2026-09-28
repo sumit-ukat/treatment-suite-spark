@@ -1,16 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, Plus, Printer, Search, X } from 'lucide-react';
+import { ArrowRight, Check, CircleAlert, Clock3, History, Minus, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
-import { Chip, StatTile, type Tone } from '../../components/ui.tsx';
+import { Chip, type Tone } from '../../components/ui.tsx';
 import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
 import { CategoryDetailPanel } from './CategoryDetailPanel.tsx';
 import { CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
+
+// Soft card radius/shadow used across the reskinned board — kept local to this screen (not the
+// shared --radius/--shadow-soft tokens) since the reskin is rolling out here first.
+const CARD_RADIUS = 'rounded-[10px]';
+const CARD_SHADOW = 'shadow-[0_2px_4px_rgba(32,37,53,0.04),0_1px_2px_rgba(32,37,53,0.03)] dark:shadow-none';
+
+/** Per-category header tint, purely decorative variety — same idea as the reference board's lane
+ * colours, remapped onto this app's own token palette instead of introducing new hues. */
+const CATEGORY_TINT: Record<CategoryKey, { bg: string; text: string }> = {
+  admin: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
+  contact: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
+  survey: { bg: 'bg-[var(--color-attention-soft)]', text: 'text-[var(--color-attention)]' },
+  familyvisit: { bg: 'bg-[var(--color-ontrack-soft)]', text: 'text-[var(--color-ontrack)]' },
+  lifestep: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
+  careplan: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
+  doctor: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
+  custom: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
+};
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
@@ -32,10 +50,52 @@ function fmtTime(d: Date): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-const CHIP_ICON: Record<Tone, string> = { good: '✓', alert: '▲', warn: '●', neutral: '', accent: '' };
+/** Icon-box tone: background, icon colour and the lucide glyph — mirrors the reference board's
+ * state-icon treatment (done/overdue/due/neutral) instead of a pill chip. */
+const TONE_ICON: Record<Tone, { bg: string; text: string; Icon: typeof Check }> = {
+  good: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-600 dark:text-emerald-400', Icon: Check },
+  alert: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]', Icon: CircleAlert },
+  warn: { bg: 'bg-[var(--color-attention-soft)]', text: 'text-[var(--color-attention)]', Icon: Clock3 },
+  neutral: { bg: 'bg-black/[0.05] dark:bg-white/[0.08]', text: 'text-[var(--color-ink-muted)]', Icon: Minus },
+  accent: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]', Icon: Minus },
+};
+
+/** Cell background tint by tone — reference's care-lane-cell.overdue/.due/.done treatment. */
+const CELL_TINT: Record<Tone, string> = {
+  good: 'bg-emerald-50/60 dark:bg-emerald-950/15',
+  alert: 'bg-[var(--color-overdue-soft)]/60',
+  warn: 'bg-[var(--color-attention-soft)]/50',
+  neutral: '',
+  accent: '',
+};
+
 const BAR_CLS: Record<Tone, string> = {
   good: 'bg-emerald-500', alert: 'bg-red-500', warn: 'bg-amber-500', neutral: 'bg-black/20 dark:bg-white/25', accent: 'bg-[var(--color-accent)]',
 };
+
+/** Reference board's `.board-stat` — a single bordered row of flat, divided stat cells, replacing
+ * individually-bordered StatTile cards for this denser reskinned board. */
+function BoardStat({ label, value, tone, active, onClick }: {
+  label: string; value: number; tone?: Tone | undefined; active?: boolean | undefined; onClick?: (() => void) | undefined;
+}) {
+  const valueTone =
+    tone === 'alert' ? 'text-[var(--color-overdue)]' : tone === 'warn' ? 'text-[var(--color-attention)]' : 'text-[var(--color-ink)]';
+  const shared = `min-w-0 border-l border-[var(--color-line)] px-3.5 text-left first:border-l-0 ${
+    active ? 'bg-[var(--color-accent-soft)] shadow-[inset_0_-2px_0_var(--color-accent)]' : ''
+  }`;
+  const inner = (
+    <>
+      <span className="block min-h-[28px] text-[11px] leading-snug text-[var(--color-ink-muted)]">{label}</span>
+      <span className={`nums mt-[5px] block text-[24px] font-semibold ${valueTone}`}>{value}</span>
+    </>
+  );
+  if (!onClick) return <div className={shared}>{inner}</div>;
+  return (
+    <button type="button" onClick={onClick} className={`${shared} cursor-pointer transition hover:bg-[var(--color-accent-soft)]/40`}>
+      {inner}
+    </button>
+  );
+}
 
 function fractionPct(fraction: string): number {
   const [done, total] = fraction.split('/').map(Number);
@@ -46,13 +106,14 @@ function fractionPct(fraction: string): number {
 // ─── Category cell — rolled-up status, clickable to open its detail panel ─────
 
 function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: CategoryKey; onOpen: () => void }) {
-  const cellCls = 'w-[112px] overflow-hidden border-b border-[var(--color-line)] px-3 py-2.5 align-top';
+  const cellCls = 'w-[126px] overflow-hidden border-b border-r border-[var(--color-line)] px-2.5 py-3 align-top last:border-r-0';
 
   if (!bed.occupant) {
     return <td className={cellCls}><span className="text-[var(--color-ink-muted)]">—</span></td>;
   }
 
   const status = categoryStatus(bed.occupant, category);
+  const { bg, text, Icon } = TONE_ICON[status.tone];
 
   return (
     <td
@@ -61,18 +122,23 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
       title={`Open ${CATEGORY_LABEL[category]} details`}
-      className={`${cellCls} cursor-pointer select-none transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+      className={`${cellCls} ${CELL_TINT[status.tone]} cursor-pointer select-none transition hover:shadow-[inset_0_0_0_1px_var(--color-accent-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
     >
-      <Chip icon={CHIP_ICON[status.tone]} label={status.label} tone={status.tone} />
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className={`grid size-5 shrink-0 place-items-center rounded-[5px] ${bg} ${text}`}>
+          <Icon className="size-3" />
+        </span>
+        <span className="truncate text-[10.5px] font-semibold text-[var(--color-ink)]">{status.label}</span>
+      </div>
       {status.sublabel ? (
-        <div className="mt-1 truncate text-[11px] text-[var(--color-ink-muted)]">{status.sublabel}</div>
+        <div className="mt-1.5 truncate text-[10px] text-[var(--color-ink-muted)]">{status.sublabel}</div>
       ) : null}
       {status.fraction ? (
-        <div className="mt-1.5 flex items-center gap-1.5">
-          <div className="h-1 w-12 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
+        <div className="mt-2 flex items-center gap-1.5">
+          <div className="h-[3px] w-full max-w-12 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
             <div className={`h-full rounded-full ${BAR_CLS[status.tone]}`} style={{ width: `${fractionPct(status.fraction)}%` }} />
           </div>
-          <span className="nums text-[10px] text-[var(--color-ink-muted)]">{status.fraction}</span>
+          <span className="nums shrink-0 text-[9.5px] text-[var(--color-ink-muted)]">{status.fraction}</span>
         </div>
       ) : null}
     </td>
@@ -171,8 +237,8 @@ export function TreatmentBoard({
 
   const toggle = (f: FilterId) => setActiveFilter((prev) => (prev === f ? 'all' : f));
 
-  // Header cell — matches BedList's header label style
-  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2.5 text-left text-[9px] font-semibold tracking-[0.04em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap';
+  // Header cell — dense, uppercase, letter-spaced, matching the reference board's matrix-head
+  const th = 'border-b border-[var(--color-line)] bg-card px-3 py-2.5 text-left text-[10px] font-semibold tracking-[0.06em] uppercase leading-tight text-[var(--color-ink-muted)] whitespace-nowrap';
 
   return (
     <div className="space-y-6 px-4 py-5 sm:px-5">
@@ -193,14 +259,14 @@ export function TreatmentBoard({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search client name or bed"
-                className="h-9 w-[220px] rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+                className="h-9 w-[220px] rounded-[7px] border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
             </label>
             {!asOf ? (
               <button
                 type="button"
                 onClick={() => navigate('../admissions')}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 text-[12.5px] font-semibold text-white transition hover:opacity-90"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-[7px] bg-[var(--color-accent)] px-3 text-[12px] font-semibold text-white transition hover:opacity-90"
               >
                 <Plus className="size-4" /> Admit client
               </button>
@@ -209,7 +275,7 @@ export function TreatmentBoard({
               type="button"
               title="View board on a past date"
               onClick={() => setShowDatePicker((v) => !v)}
-              className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium transition ${
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-[7px] border px-3 text-[12px] font-medium transition ${
                 asOf
                   ? 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
                   : 'border-[var(--color-line)] bg-card text-[var(--color-ink)] hover:bg-[var(--color-accent-soft)]'
@@ -221,7 +287,7 @@ export function TreatmentBoard({
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-card px-3 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-[7px] border border-[var(--color-line)] bg-card px-3 text-[12px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
               >
                 <Printer className="size-3.5" /> Print
               </button>
@@ -261,64 +327,58 @@ export function TreatmentBoard({
         </div>
       ) : null}
 
-      {/* ── Summary tiles — StatTile matches GroupDashboard / BoardPage ── */}
-      <div className="grid grid-cols-4 gap-3 print:hidden lg:grid-cols-8">
-        <StatTile
+      {/* ── Summary tiles — a single divided row, matching the reference board's density ── */}
+      <div className={`grid grid-cols-4 border border-[var(--color-line)] bg-card py-[17px] ${CARD_RADIUS} ${CARD_SHADOW} print:hidden lg:grid-cols-8`}>
+        <BoardStat
           label="Clients"
           value={counts.clients}
-          tone="accent"
           active={activeFilter === 'all'}
           onClick={() => setActiveFilter('all')}
         />
-        <StatTile
+        <BoardStat
           label="Beds free"
           value={counts.available}
           active={activeFilter === 'available'}
           onClick={() => toggle('available')}
         />
-        <StatTile
+        <BoardStat
           label="Overdue tasks"
           value={counts.overdue}
-          icon="▲"
           tone="alert"
           active={activeFilter === 'overdue'}
           onClick={() => toggle('overdue')}
         />
-        <StatTile
+        <BoardStat
           label="Tasks due today"
           value={counts.dueToday}
-          icon="●"
           tone="warn"
           active={activeFilter === 'due_today'}
           onClick={() => toggle('due_today')}
         />
-        <StatTile
+        <BoardStat
           label="Discharging this week"
           value={counts.dischargeSoon}
-          icon="↗"
           tone="warn"
           active={activeFilter === 'discharge_soon'}
           onClick={() => toggle('discharge_soon')}
         />
-        <StatTile
+        <BoardStat
           label="No therapist assigned"
           value={counts.noTherapist}
           active={activeFilter === 'no_therapist'}
           onClick={() => toggle('no_therapist')}
         />
-        <StatTile
+        <BoardStat
           label="Open concerns"
           value={counts.openConcerns}
-          icon="⚑"
           tone="warn"
           active={activeFilter === 'open_concerns'}
           onClick={() => toggle('open_concerns')}
         />
         {incidentCount !== null && (
-          <StatTile
+          <BoardStat
             label="Incident reports (7d)"
             value={incidentCount}
-            icon="▲"
             tone={incidentCount > 0 ? 'alert' : 'neutral'}
           />
         )}
@@ -328,7 +388,7 @@ export function TreatmentBoard({
       {/* Top scrollbar — mirrors the bottom one so users can scroll without reaching the foot */}
       <div
         ref={topScrollRef}
-        className="overflow-x-auto rounded-t-xl"
+        className="overflow-x-auto rounded-t-[10px]"
         style={{ height: 12 }}
         onScroll={(e) => {
           if (tableWrapRef.current) tableWrapRef.current.scrollLeft = e.currentTarget.scrollLeft;
@@ -339,7 +399,7 @@ export function TreatmentBoard({
 
       <div
         ref={tableWrapRef}
-        className="overflow-x-auto rounded-b-xl border border-[var(--color-line)] bg-card"
+        className={`overflow-x-auto rounded-b-[10px] border border-[var(--color-line)] bg-card ${CARD_SHADOW}`}
         onScroll={(e) => {
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
@@ -353,12 +413,22 @@ export function TreatmentBoard({
               <th className={`sticky left-16 z-30 w-[200px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
                 Client &amp; Placement
               </th>
-              <th className={`w-[120px] ${th}`}>Programme</th>
-              {CATEGORY_ORDER.map((key) => (
-                <th key={key} className={`w-[112px] whitespace-normal ${th}`} style={{ whiteSpace: 'normal' }}>
-                  {CATEGORY_LABEL[key]}
-                </th>
-              ))}
+              <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
+              {CATEGORY_ORDER.map((key) => {
+                const tint = CATEGORY_TINT[key];
+                return (
+                  <th
+                    key={key}
+                    className={`w-[126px] whitespace-normal border-r border-[var(--color-line)] last:border-r-0 ${tint.bg} ${th}`}
+                    style={{ whiteSpace: 'normal' }}
+                  >
+                    <span className={tint.text}>{CATEGORY_LABEL[key]}</span>
+                    <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-[var(--color-ink-muted)]">
+                      Open details
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
@@ -380,9 +450,9 @@ export function TreatmentBoard({
                     <td className={`${stickyCell} left-16 w-[200px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
-                    <td className={`${cb} w-[120px] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                    <td className={`${cb} w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     {CATEGORY_ORDER.map((key) => (
-                      <td key={key} className={`${cb} w-[112px] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                      <td key={key} className={`${cb} w-[126px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)] last:border-r-0`}>—</td>
                     ))}
                   </tr>
                 );
@@ -428,7 +498,7 @@ export function TreatmentBoard({
                   >
                     <div className="relative flex items-center gap-2">
                       <PhotoBadge occupant={o} size="sm" />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate text-[13px] font-medium text-[var(--color-ink)]">
                             {o.displayName}
@@ -441,11 +511,12 @@ export function TreatmentBoard({
                           {o.therapist ?? 'No therapist assigned'}
                         </div>
                       </div>
+                      <ArrowRight className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
                     </div>
                   </td>
 
                   {/* Programme: treatment day + planned discharge */}
-                  <td className={`${cb} w-[120px] overflow-hidden px-3 py-3 whitespace-nowrap`}>
+                  <td className={`${cb} w-[120px] overflow-hidden border-r border-[var(--color-line)] px-3 py-3 whitespace-nowrap`}>
                     <div className="nums text-[12.5px] font-medium text-[var(--color-ink)]">
                       Day {o.treatmentDay} <span className="text-[var(--color-ink-muted)]">of {o.durationDays}</span>
                     </div>
@@ -504,25 +575,29 @@ export function TreatmentBoard({
       ) : null}
 
       {/* ── Legend ── */}
-      <div className="rounded-2xl border bg-card p-5 shadow-soft">
+      <div className={`border border-[var(--color-line)] bg-card p-5 ${CARD_RADIUS} ${CARD_SHADOW}`}>
         <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]">
           What the icons and colours mean
         </p>
         <div className="flex flex-wrap gap-x-5 gap-y-2.5 text-[12px] text-[var(--color-ink)]">
           {(
             [
-              { icon: '✓', tone: 'good'    as Tone, label: 'Done — every task in this category is complete'         },
-              { icon: '▲', tone: 'alert'   as Tone, label: 'Overdue — one or more tasks were due and are unfinished' },
-              { icon: '●', tone: 'warn'    as Tone, label: 'Due — one or more tasks are due today'                   },
-              { icon: '',  tone: 'neutral' as Tone, label: 'On track — assigned but not yet due'                    },
-              { icon: '',  tone: 'neutral' as Tone, label: 'No actions — nothing assigned in this category'         },
-            ] satisfies Array<{ icon: string; tone: Tone; label: string }>
-          ).map(({ icon, tone, label }) => (
-            <div key={label} className="flex items-center gap-2">
-              <Chip icon={icon} label="" tone={tone} />
-              {label}
-            </div>
-          ))}
+              { tone: 'good'    as Tone, label: 'Done — every task in this category is complete'         },
+              { tone: 'alert'   as Tone, label: 'Overdue — one or more tasks were due and are unfinished' },
+              { tone: 'warn'    as Tone, label: 'Due — one or more tasks are due today'                   },
+              { tone: 'neutral' as Tone, label: 'On track / No actions — assigned but not due, or nothing assigned' },
+            ] satisfies Array<{ tone: Tone; label: string }>
+          ).map(({ tone, label }) => {
+            const { bg, text, Icon } = TONE_ICON[tone];
+            return (
+              <div key={label} className="flex items-center gap-2">
+                <span className={`grid size-5 shrink-0 place-items-center rounded-[5px] ${bg} ${text}`}>
+                  <Icon className="size-3" />
+                </span>
+                {label}
+              </div>
+            );
+          })}
           <div className="flex items-center gap-2">
             <span className="size-2 shrink-0 rounded-full bg-red-500" />
             Red dot — safeguarding concern flagged for this client

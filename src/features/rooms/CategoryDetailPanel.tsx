@@ -48,31 +48,31 @@ export function CategoryDetailPanel({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`${o.displayName} — ${label}`}
-        className="fixed top-0 right-0 z-50 flex h-full w-full max-w-[480px] flex-col bg-card shadow-2xl"
+        aria-label={`${o.displayName} â€” ${label}`}
+        className="fixed top-0 right-0 z-50 flex h-full w-full max-w-[520px] flex-col bg-card shadow-2xl"
         style={{ animation: 'cdp-slide-in 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both' }}
       >
         {/* Header */}
-        <div className="flex items-start gap-3 border-b border-[var(--color-line)] p-5 shrink-0">
+        <div className="flex items-start gap-3 border-b border-[var(--color-line)] px-6 pt-7 pb-5 shrink-0">
           <PhotoBadge occupant={o} size="md" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-[16px] font-semibold text-[var(--color-ink)]">
+            <h2 className="truncate font-display text-[20px] font-semibold tracking-[-0.01em] text-[var(--color-ink)]">
               {o.displayName}
             </h2>
-            <p className="text-[12px] text-[var(--color-ink-muted)]">Room {bed.label} · {label}</p>
+            <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">Room {bed.label} Â· {label}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="ml-1 shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+            className="ml-1 shrink-0 rounded-[6px] p-1.5 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
           >
             <X className="size-4" />
           </button>
         </div>
 
         {/* Facts row */}
-        <div className="grid grid-cols-2 gap-4 border-b border-[var(--color-line)] px-5 py-4 text-[12.5px] shrink-0">
+        <div className="grid grid-cols-2 gap-4 border-b border-[var(--color-line)] px-6 py-5 text-[12px] shrink-0">
           <Fact label="Therapist" value={o.therapist ?? 'Not assigned'} />
           <Fact label="Client status" value="Admitted" />
           <Fact label="Admission date" value={formatDate(o.admittedAt)} />
@@ -80,20 +80,20 @@ export function CategoryDetailPanel({
         </div>
 
         {/* Status bar */}
-        <div className="flex items-center justify-between gap-3 bg-[var(--color-surface)] px-5 py-3 shrink-0">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-surface)_65%,var(--color-panel))] px-6 py-3.5 shrink-0">
           <div className="min-w-0">
-            <div className="text-[13.5px] font-semibold text-[var(--color-ink)]">{label}</div>
-            <div className="text-[11.5px] text-[var(--color-ink-muted)]">
+            <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--color-ink)] uppercase">{label}</div>
+            <div className="mt-0.5 text-[10.5px] text-[var(--color-ink-muted)]">
               {status.totalCount} internal {status.totalCount === 1 ? 'detail' : 'details'}
             </div>
           </div>
           {status.attentionCount > 0 ? (
-            <Chip icon="⚠" label={`${status.attentionCount} need attention`} tone="warn" />
+            <Chip icon="âš " label={`${status.attentionCount} need attention`} tone="warn" />
           ) : null}
         </div>
 
-        {/* Content — scrollable */}
-        <div className="flex-1 overflow-y-auto p-5">
+        {/* Content â€” scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
           <CategoryContent
             o={o}
             category={category}
@@ -117,7 +117,7 @@ export function CategoryDetailPanel({
   );
 }
 
-/* ─── Content router ─────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Content router â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function CategoryContent({
   o,
@@ -172,7 +172,7 @@ function CategoryContent({
   return <ModuleTaskSection o={o} category={category} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />;
 }
 
-/* ─── Module task section (contact / survey / familyvisit / lifestep / careplan) ─── */
+/* â”€â”€â”€ Module task section (contact / survey / familyvisit / lifestep / careplan) â”€â”€â”€ */
 
 /** Maps our board category key to the closest valid `addManualTask` category. */
 function toTaskCategory(cat: CategoryKey): 'milestone' | 'session' | 'admin' {
@@ -266,7 +266,7 @@ function AssignRow({
 
   if (!open) {
     return (
-      <li className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-[var(--color-line)] px-3 py-2.5">
+      <li className="flex items-center justify-between gap-3 rounded-[8px] border border-dashed border-[var(--color-line)] px-3 py-2.5">
         <span className="text-[12.5px] text-[var(--color-ink-muted)]">{taskDef.full}</span>
         {canEdit ? (
           <button
@@ -284,7 +284,7 @@ function AssignRow({
   }
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] px-3 py-3">
+    <li className="flex flex-col gap-2 rounded-[8px] border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] px-3 py-3">
       <span className="text-[12.5px] font-medium text-[var(--color-ink)]">{taskDef.full}</span>
       <div className="flex items-center gap-2">
         <label className="flex-1 text-[10.5px] text-[var(--color-ink-muted)]">
@@ -305,7 +305,7 @@ function AssignRow({
           onClick={assign}
           className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50"
         >
-          {busy ? 'Assigning…' : 'Assign'}
+          {busy ? 'Assigningâ€¦' : 'Assign'}
         </button>
         <button
           type="button"
@@ -320,7 +320,7 @@ function AssignRow({
   );
 }
 
-/* ─── Manual task section (Doctor – Thursday / Custom) ───────────────────── */
+/* â”€â”€â”€ Manual task section (Doctor â€“ Thursday / Custom) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function ManualTaskSection({
   o,
@@ -398,14 +398,14 @@ function ManualTaskSection({
       )}
 
       {addOpen && (
-        <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] px-3 py-3">
+        <div className="flex flex-col gap-2 rounded-[8px] border border-[var(--color-accent)]/30 bg-[var(--color-accent-soft)] px-3 py-3">
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Task name
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Complete housing form…"
+              placeholder="e.g. Complete housing formâ€¦"
               autoFocus
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-card px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
             />
@@ -427,7 +427,7 @@ function ManualTaskSection({
               onClick={addTask}
               className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50"
             >
-              {busy ? 'Adding…' : 'Add task'}
+              {busy ? 'Addingâ€¦' : 'Add task'}
             </button>
             <button
               type="button"
@@ -444,7 +444,7 @@ function ManualTaskSection({
   );
 }
 
-/* ─── Shared small components ────────────────────────────────────────────── */
+/* â”€â”€â”€ Shared small components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -455,18 +455,22 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Field({ label, children, highlight }: { label: string; children: React.ReactNode; highlight?: boolean }) {
+/** A boxed label/value cell in a bordered grid â€” the 1px `bg-[var(--color-line)]` gap between
+ * sibling cells (set by the parent grid) draws the dividing lines without per-cell border logic. */
+function Field({ label, children, highlight, wide }: {
+  label: string; children: React.ReactNode; highlight?: boolean; wide?: boolean;
+}) {
   return (
-    <div className={`rounded-lg px-3 py-2.5 ${highlight ? 'bg-amber-50 dark:bg-amber-950/20' : ''}`}>
-      <div className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">{label}</div>
-      <div className={`mt-1 text-[12.5px] ${highlight ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-[var(--color-ink)]'}`}>
+    <div className={`bg-card px-3.5 py-3 ${wide ? 'col-span-2' : ''} ${highlight ? 'bg-amber-50 dark:bg-amber-950/20' : ''}`}>
+      <div className="text-[9px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">{label}</div>
+      <div className={`mt-1 text-[11.5px] font-medium ${highlight ? 'text-amber-700 dark:text-amber-300' : 'text-[var(--color-ink)]'}`}>
         {children}
       </div>
     </div>
   );
 }
 
-/* ─── Admin fields ───────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Admin fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function AdminFields({
   o,
@@ -527,22 +531,22 @@ function AdminFields({
         <div className="grid grid-cols-2 gap-2.5">
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Focal therapist
-            <input type="text" value={form.therapist} onChange={(e) => setForm((f) => ({ ...f, therapist: e.target.value }))} placeholder="Name…"
+            <input type="text" value={form.therapist} onChange={(e) => setForm((f) => ({ ...f, therapist: e.target.value }))} placeholder="Nameâ€¦"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Buddy
-            <input type="text" value={form.buddy} onChange={(e) => setForm((f) => ({ ...f, buddy: e.target.value }))} placeholder="Name…"
+            <input type="text" value={form.buddy} onChange={(e) => setForm((f) => ({ ...f, buddy: e.target.value }))} placeholder="Nameâ€¦"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Group
-            <input type="text" value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))} placeholder="e.g. A…"
+            <input type="text" value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))} placeholder="e.g. Aâ€¦"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Substance
-            <input type="text" value={form.substance} onChange={(e) => setForm((f) => ({ ...f, substance: e.target.value }))} placeholder="e.g. Alcohol…"
+            <input type="text" value={form.substance} onChange={(e) => setForm((f) => ({ ...f, substance: e.target.value }))} placeholder="e.g. Alcoholâ€¦"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
         </div>
@@ -554,7 +558,7 @@ function AdminFields({
         <div className="flex items-center gap-2">
           <button type="button" disabled={busy} onClick={save}
             className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50">
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? 'Savingâ€¦' : 'Save'}
           </button>
           <button type="button" disabled={busy} onClick={() => setEditMode(false)}
             className="rounded-md px-3 py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
@@ -579,9 +583,9 @@ function AdminFields({
           <Pencil className="size-3" /> Edit
         </button>
       ) : null}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-[var(--color-line)] bg-[var(--color-line)]">
         <Field label="Focal Therapist" highlight={!o.therapist}>{o.therapist ?? 'Not assigned'}</Field>
-        <Field label="Substance">{o.substance || '—'}</Field>
+        <Field label="Substance">{o.substance || 'â€”'}</Field>
         <Field label="Treatment Duration">
           {o.treatmentDay} / {o.durationDays} days
           <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
@@ -590,10 +594,10 @@ function AdminFields({
         </Field>
         <Field label="Discharge Date">{formatDate(o.plannedDischargeDate)}</Field>
         <Field label="Detox Ends">Not set</Field>
-        <Field label="Group">{o.group || '—'}</Field>
+        <Field label="Group">{o.group || 'â€”'}</Field>
         <Field label="Doctor">Not set</Field>
-        <Field label="Buddy">{o.buddy || '—'}</Field>
-        <Field label="Peeps" highlight={o.peeps}>{o.peeps ? 'Yes' : 'No'}</Field>
+        <Field label="Buddy">{o.buddy || 'â€”'}</Field>
+        <Field label="Peeps" highlight={o.peeps} wide>{o.peeps ? 'Yes' : 'No'}</Field>
       </div>
       {gp ? (
         <div className="mt-1 border-t border-[var(--color-line)] pt-3">
