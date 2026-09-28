@@ -10,7 +10,6 @@ import {
   Percent,
   TrendingDown,
   TrendingUp,
-  UserMinus,
   Users,
   X,
 } from 'lucide-react';
@@ -668,18 +667,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                 totals.pastPlannedDischarge > 0 || totals.overdue >= OVERDUE_ACT
                   ? 'critical'
                   : totals.overdue > 0
-                    ? 'warn'
-                    : 'good',
-            },
-            {
-              label: 'No buddy',
-              value: totals.missingBuddy,
-              hint: 'clients without assigned buddy',
-              icon: <UserMinus className="size-4" />,
-              accent:
-                totals.missingBuddy > 5
-                  ? 'critical'
-                  : totals.missingBuddy > 0
                     ? 'warn'
                     : 'good',
             },
