@@ -105,14 +105,28 @@ export function BedLabel({
 }
 
 /**
- * Overall status, in one colour rather than four separate numbers — for scanning a grid of a dozen
- * cards at once, before dropping into any one card's own detail. Same priority order the bottom-row
- * chips already use, so the dot never disagrees with the chips beneath it.
+ * One prioritised line, not several. A card used to stack a top-border stripe, a colour wash behind
+ * it, a floating corner badge, a status dot, red/amber text in three separate stat fields, a
+ * bottom-row summary AND a GP-specific banner — six-odd signals for what is fundamentally one fact
+ * ("this client needs attention, and here is the single most important reason why"). Collapsing that
+ * into one line here is what the rest of this component now renders instead of choosing per-field.
  */
-const STATUS_DOT_TONE: Record<'alert' | 'warn' | 'good', string> = {
-  alert: 'bg-red-500 dark:bg-red-400',
-  warn: 'bg-amber-500 dark:bg-amber-400',
-  good: 'bg-emerald-500 dark:bg-emerald-400',
+function statusLine(o: Occupant, dischargePassed: boolean, dischargeToday: boolean): { tone: 'alert' | 'warn' | 'good'; label: string } {
+  const gpTask = o.tasks.find((t) => t.code === 'gp_summary');
+  const gpOverdue = !!gpTask && gpTask.isOverdue && !gpTask.isComplete && !gpTask.isNotApplicable;
+
+  if (dischargePassed) return { tone: 'alert', label: `Discharge passed · ${o.treatmentDay - o.durationDays}d over` };
+  if (gpOverdue) return { tone: 'alert', label: 'GP summary overdue' };
+  if (o.overdueCount > 0) return { tone: 'alert', label: `${o.overdueCount} overdue` };
+  if (dischargeToday) return { tone: 'warn', label: 'Discharging today' };
+  if (o.dueTodayCount > 0) return { tone: 'warn', label: `${o.dueTodayCount} due today` };
+  return { tone: 'good', label: 'On track' };
+}
+
+const STATUS_TONE_CLS: Record<'alert' | 'warn' | 'good', string> = {
+  alert: 'text-red-600 dark:text-red-400',
+  warn: 'text-amber-600 dark:text-amber-400',
+  good: 'text-emerald-600 dark:text-emerald-400',
 };
 
 export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => void }) {
@@ -122,29 +136,18 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
   const progress = Math.round((o.completedCount / o.totalCount) * 100);
   const dischargePassed = o.daysUntilDischarge < 0;
   const dischargeToday = o.daysUntilDischarge === 0;
-  const dischargeSoon = o.daysUntilDischarge > 0 && o.daysUntilDischarge <= 3;
-  const daysOverrun = o.treatmentDay - o.durationDays;
 
-  const dischargeTone = dischargePassed
-    ? 'text-red-600 dark:text-red-400'
-    : dischargeToday || dischargeSoon
-      ? 'text-amber-600 dark:text-amber-400'
-      : '';
-
-  const overdueOrPastDue = dischargePassed || o.overdueCount > 0;
-  const dueSoon = !overdueOrPastDue && (dischargeToday || o.dueTodayCount > 0);
-  const statusTone: 'alert' | 'warn' | 'good' = overdueOrPastDue ? 'alert' : dueSoon ? 'warn' : 'good';
-  const statusLabel = overdueOrPastDue ? 'Needs attention' : dueSoon ? 'Due soon' : 'On track';
-  // Just the counts already shown as chips below, added up — a corner badge for "how many things",
-  // not a new judgement about what matters. Restricted alerts stay out of it: that flag is deliberately
-  // kept separate and undiluted, not folded into a generic number.
+  const status = statusLine(o, dischargePassed, dischargeToday);
+  // Just the counts already folded into the status line above, added up — a corner badge for "how
+  // many things", not a second judgement about what matters. Restricted alerts stay out of it: that
+  // flag is deliberately kept separate and undiluted, carried by the border stripe + icon instead.
   const attentionCount = o.overdueCount + o.dueTodayCount + (dischargePassed ? 1 : 0);
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={`group relative flex w-full flex-col gap-5 rounded-2xl border bg-card p-5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+      className={`group relative flex w-full flex-col gap-4 rounded-2xl border bg-card p-5 text-left shadow-soft transition duration-150 hover:-translate-y-px hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
         o.hasRestrictedAlert
           ? 'border-t-[3px] border-t-red-400 hover:border-[var(--color-accent)]/55 hover:border-t-red-400 dark:border-t-red-500 dark:hover:border-t-red-500'
           : o.hasOpenConcern
@@ -154,42 +157,11 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           : 'hover:border-[var(--color-accent)]/55'
       }`}
     >
-      {o.hasRestrictedAlert ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-red-50/80 to-transparent dark:from-red-950/30"
-        />
-      ) : o.hasOpenConcern ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-amber-50/70 to-transparent dark:from-amber-950/25"
-        />
-      ) : o.isExtendedStay ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-2xl bg-gradient-to-b from-teal-50/70 to-transparent dark:from-teal-950/25"
-        />
-      ) : null}
-      {attentionCount > 0 ? (
-        <span
-          aria-hidden="true"
-          title={`${attentionCount} item${attentionCount === 1 ? '' : 's'} need attention`}
-          className="absolute -top-1.5 -right-1.5 grid min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[10px] leading-[18px] font-bold text-white ring-2 ring-[var(--color-panel)]"
-        >
-          {attentionCount}
-        </span>
-      ) : null}
       <div className="flex items-start gap-3">
         <PhotoBadge occupant={o} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <BedLabel label={bed.label} shared={bed.shared} />
-            <span
-              aria-hidden="true"
-              title={statusLabel}
-              className={`size-2 shrink-0 rounded-full ${STATUS_DOT_TONE[statusTone]}`}
-            />
-            <span className="sr-only">{statusLabel}</span>
             {o.hasRestrictedAlert ? (
               <span
                 className="ml-auto shrink-0 text-[13px] text-red-600 dark:text-red-400"
@@ -205,27 +177,30 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           </div>
           <div className="nums mt-0.5 text-[11.5px] text-[var(--color-ink-muted)]">{o.reference}</div>
         </div>
+        {/* One count, in the header row rather than floating over the corner — same information the
+            old absolute-positioned badge gave, without a fourth overlapping visual layer. */}
+        {attentionCount > 0 ? (
+          <span
+            title={`${attentionCount} item${attentionCount === 1 ? '' : 's'} need attention`}
+            className="nums shrink-0 rounded-full bg-red-600 px-1.5 py-0.5 text-[10.5px] leading-none font-bold text-white"
+          >
+            {attentionCount}
+          </span>
+        ) : null}
       </div>
 
+      {/* Facts, plain — the status line below is where colour and judgement live, once. */}
       <dl className="nums grid grid-cols-3 gap-x-3 text-xs">
         <div>
           <dt className="text-[11px] text-[var(--color-ink-muted)]">Day</dt>
           <dd className="font-medium">
-            {dischargePassed ? (
-              <span className="text-red-600 dark:text-red-400">
-                {o.treatmentDay} &middot; {daysOverrun}d over
-              </span>
-            ) : (
-              <>
-                {o.treatmentDay}
-                <span className="text-[var(--color-ink-muted)]"> of {o.durationDays}</span>
-              </>
-            )}
+            {o.treatmentDay}
+            <span className="text-[var(--color-ink-muted)]"> of {o.durationDays}</span>
           </dd>
         </div>
         <div>
           <dt className="text-[11px] text-[var(--color-ink-muted)]">Discharge</dt>
-          <dd className={`font-medium ${dischargeTone}`}>{formatDate(o.plannedDischargeDate)}</dd>
+          <dd className="font-medium">{formatDate(o.plannedDischargeDate)}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-[11px] text-[var(--color-ink-muted)]">Therapist</dt>
@@ -251,46 +226,16 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
         />
       </div>
 
+      {/* The one status line — priority-ordered in statusLine() above, so it never disagrees with
+          the border stripe or the corner count. */}
       <div className="flex items-center gap-2 text-[11.5px]">
-        {dischargePassed ? (
-          <span className="font-medium text-red-600 dark:text-red-400">Discharge passed</span>
-        ) : dischargeToday ? (
-          <span className="font-medium text-amber-600 dark:text-amber-400">Discharging today</span>
-        ) : null}
-        {o.overdueCount > 0 ? (
-          <span className="font-medium text-red-600 dark:text-red-400">
-            {dischargePassed ? '·' : ''} {o.overdueCount} overdue
-          </span>
-        ) : o.dueTodayCount > 0 ? (
-          <span className="font-medium text-amber-600 dark:text-amber-400">{o.dueTodayCount} due today</span>
-        ) : (
-          <span className="text-emerald-600 dark:text-emerald-400">On track</span>
-        )}
+        <span className={`font-medium ${STATUS_TONE_CLS[status.tone]}`}>{status.label}</span>
         {o.isExtendedStay ? (
           <span className="ml-auto text-[11px] font-medium text-teal-600 dark:text-teal-400">
             +{o.extensionDays ?? '?'}d ext.
           </span>
         ) : null}
       </div>
-      {(() => {
-        const gpTask = o.tasks.find((t) => t.code === 'gp_summary');
-        if (!gpTask || gpTask.isComplete || gpTask.isNotApplicable) return null;
-        const isRed = gpTask.isOverdue;
-        const isAmber = !isRed && o.treatmentDay >= 2;
-        if (!isRed && !isAmber) return null;
-        return (
-          <div
-            className={`-mx-5 -mb-5 flex items-center gap-1.5 rounded-b-2xl border-t px-4 py-2 text-[10.5px] font-semibold ${
-              isRed
-                ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'
-                : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/25 dark:text-amber-300'
-            }`}
-          >
-            <span aria-hidden="true">⚕</span>
-            {isRed ? 'GP summary overdue' : 'GP summary due · day 3'}
-          </div>
-        );
-      })()}
     </button>
   );
 }
