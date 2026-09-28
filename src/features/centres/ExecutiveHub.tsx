@@ -247,31 +247,36 @@ interface MetricCardSpec {
   accent: MetricAccent;
 }
 
-/** Shared rendering for the business and ops card rows — same visual language, different data. */
+/**
+ * Shared rendering for the business and ops card rows — same visual language, different data.
+ *
+ * Restrained on purpose: only 'critical' gets a card-level treatment (a faint wash + tinted border,
+ * matching KpiTile on the Overview page and the reference's own stat-card system) — everything else
+ * is a plain card with just its number coloured. A solid full-saturation bar on every non-neutral
+ * card (the previous version) meant "warn" and even "good" looked as loud as "critical", so nothing
+ * actually stood out.
+ */
 function MetricGrid({ cards }: { cards: readonly MetricCardSpec[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map(({ label, value, hint, icon, accent }) => {
-        const topBar =
-          accent === 'critical'
-            ? 'bg-overdue'
-            : accent === 'warn'
-              ? 'bg-attention'
-              : accent === 'good'
-                ? 'bg-ontrack'
-                : 'bg-border';
         const numColor =
           accent === 'critical'
             ? 'text-overdue'
             : accent === 'warn'
               ? 'text-attention'
-              : 'text-foreground';
+              : accent === 'good'
+                ? 'text-ontrack'
+                : 'text-foreground';
+        const cardCls =
+          accent === 'critical'
+            ? 'border-red-200/70 bg-gradient-to-br from-red-50/70 to-card dark:border-red-900/50 dark:from-red-950/20'
+            : 'border-[var(--color-line)] bg-card';
         return (
           <div
             key={label}
-            className="relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-card p-4 shadow-soft"
+            className={`rounded-2xl border p-4 shadow-soft ${cardCls}`}
           >
-            <div className={`absolute inset-x-0 top-0 h-1 ${topBar}`} aria-hidden />
             <div className="flex items-start justify-between gap-2">
               <p className="text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase">
                 {label}
@@ -560,10 +565,13 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </div>
       </div>
 
-      {/* ── The verdict band. One sentence, then the four numbers that justify it. ── */}
+      {/* ── The verdict band. One sentence, then the four numbers that justify it.
+             Only the 'act' tier gets a coloured border — 'watch' and 'clear' both getting one too
+             (the previous border-attention/40 and border-ontrack/40) meant every state looked like it
+             needed the reader's attention equally, which defeats the point of colouring this one. ── */}
       <section
         aria-label="Group verdict"
-        className={`mt-4 overflow-hidden rounded-2xl border bg-card shadow-soft ${vStyle.line}`}
+        className={`mt-4 overflow-hidden rounded-2xl border bg-card shadow-soft ${verdict.tier === 'act' ? vStyle.line : 'border-[var(--color-line)]'}`}
       >
         <div className="grid gap-5 p-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center lg:gap-7 lg:p-6">
           <div className="flex items-center gap-5">
