@@ -133,7 +133,7 @@ export function Sidebar({
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-panel)] transition-[width] duration-200 ${
+      className={`flex h-full shrink-0 flex-col border-r border-[var(--color-line)] bg-[var(--color-panel)] transition-[width] duration-200 ${
         collapsed ? 'w-[68px]' : 'w-[240px]'
       }`}
     >
