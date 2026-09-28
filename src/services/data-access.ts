@@ -599,7 +599,7 @@ export const tasks = {
   async addManualTask(input: {
     admissionId: string;
     title: string;
-    category: 'milestone' | 'session' | 'admin';
+    category: 'milestone' | 'session' | 'admin' | 'medical';
     dueAt?: string | undefined;
     description?: string | undefined;
   }): Promise<string> {

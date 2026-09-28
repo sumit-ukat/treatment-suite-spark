@@ -46,11 +46,18 @@ export const COLUMNS = [
 
 const CATEGORY_TASK_TITLES = new Set<string>(COLUMNS.map((c) => c.full));
 
+/** Manual tasks assigned from the Doctor – Thursday panel use category 'medical' — the only manual
+ * tasks that do, since the Custom panel always assigns 'milestone' (see addTask in CustomSection). */
+export function isDoctorTask(task: BoardTask): boolean {
+  return task.isManual && task.category === 'medical';
+}
+
 /** A manual task only counts as "Custom" if it isn't one of the named category tasks assigned via
  * that category's own Assign button (those are matched into their category panel by title, since
- * manual tasks have no code — see ModuleTaskSection). Otherwise it would show up twice. */
+ * manual tasks have no code — see ModuleTaskSection), and isn't a Doctor task either. Otherwise it
+ * would show up twice. */
 export function isCustomTask(task: BoardTask): boolean {
-  return task.isManual && !CATEGORY_TASK_TITLES.has(task.title);
+  return task.isManual && !CATEGORY_TASK_TITLES.has(task.title) && !isDoctorTask(task);
 }
 
 export interface CategoryStatus {
@@ -115,8 +122,8 @@ export function categoryStatus(occupant: Occupant, category: CategoryKey): Categ
   }
 
   if (category === 'doctor') {
-    // No field or task anywhere backs "Doctor – Thursday" today — an honest empty state, not a guess.
-    return { tone: 'neutral', label: 'No actions', attentionCount: 0, totalCount: 0 };
+    // No template-backed field or task exists for this category — only what staff manually assign.
+    return rollupTasks(occupant.tasks.filter(isDoctorTask));
   }
 
   if (category === 'admin') {

@@ -8,7 +8,8 @@ import { formatDate } from '../../lib/format.js';
 import { admissions, tasks as taskService } from '../../services/data-access.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TaskRow } from './DetailPanel.tsx';
-import { CATEGORY_LABEL, categoryStatus, COLUMNS, isCustomTask, type CategoryKey } from './category-status.js';
+import type { BoardTask } from './board-data.js';
+import { CATEGORY_LABEL, categoryStatus, COLUMNS, isCustomTask, isDoctorTask, type CategoryKey } from './category-status.js';
 
 export function CategoryDetailPanel({
   bed,
@@ -135,14 +136,28 @@ function CategoryContent({
 
   if (category === 'doctor') {
     return (
-      <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-        No internal fields recorded yet for this category.
-      </p>
+      <ManualTaskSection
+        o={o}
+        onChanged={onChanged}
+        filterFn={isDoctorTask}
+        taskCategory="medical"
+        emptyMessage="No items assigned for this category yet."
+        {...(readOnly ? { readOnly } : {})}
+      />
     );
   }
 
   if (category === 'custom') {
-    return <CustomSection o={o} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />;
+    return (
+      <ManualTaskSection
+        o={o}
+        onChanged={onChanged}
+        filterFn={isCustomTask}
+        taskCategory="milestone"
+        emptyMessage="No custom assignments for this client."
+        {...(readOnly ? { readOnly } : {})}
+      />
+    );
   }
 
   // Module-backed categories: contact / survey / familyvisit / lifestep / careplan
@@ -305,16 +320,22 @@ function AssignRow({
   );
 }
 
-/* ─── Custom task section ────────────────────────────────────────────────── */
+/* ─── Manual task section (Doctor – Thursday / Custom) ───────────────────── */
 
-function CustomSection({
+function ManualTaskSection({
   o,
   onChanged,
   readOnly,
+  filterFn,
+  taskCategory,
+  emptyMessage,
 }: {
   o: NonNullable<BoardBed['occupant']>;
   onChanged?: (() => void) | undefined;
   readOnly?: boolean;
+  filterFn: (t: BoardTask) => boolean;
+  taskCategory: 'milestone' | 'medical';
+  emptyMessage: string;
 }) {
   const { can } = useAuth();
   const canEdit = !!o.admissionId && can('admissions.edit') && !readOnly;
@@ -324,7 +345,7 @@ function CustomSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const manualTasks = o.tasks.filter(isCustomTask);
+  const manualTasks = o.tasks.filter(filterFn);
 
   async function addTask() {
     if (!o.admissionId || !name.trim()) return;
@@ -334,7 +355,7 @@ function CustomSection({
       await taskService.addManualTask({
         admissionId: o.admissionId,
         title: name.trim(),
-        category: 'milestone',
+        category: taskCategory,
         ...(dueDate ? { dueAt: new Date(dueDate).toISOString() } : {}),
       });
       onChanged?.();
@@ -363,7 +384,7 @@ function CustomSection({
           ))}
         </ul>
       ) : (
-        <p className="text-[12.5px] text-[var(--color-ink-muted)]">No custom assignments for this client.</p>
+        <p className="text-[12.5px] text-[var(--color-ink-muted)]">{emptyMessage}</p>
       )}
 
       {canEdit && !addOpen && (
