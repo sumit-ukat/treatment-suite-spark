@@ -184,7 +184,7 @@ function ModuleTaskSection({
   return (
     <ul className="flex flex-col gap-2">
       {categoryColumns.map((col) => {
-        const existing = o.tasks.find((t) => t.code === col.code);
+        const existing = o.tasks.find((t) => t.code === col.code || (t.isManual && t.title === col.full));
         if (existing) {
           return (
             <TaskRow
