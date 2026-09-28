@@ -17,17 +17,18 @@ import { CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-sta
 const CARD_RADIUS = 'rounded-[10px]';
 const CARD_SHADOW = 'shadow-[0_2px_4px_rgba(32,37,53,0.04),0_1px_2px_rgba(32,37,53,0.03)] dark:shadow-none';
 
-/** Per-category header tint, purely decorative variety — same idea as the reference board's lane
- * colours, remapped onto this app's own token palette instead of introducing new hues. */
+/** Per-category header tint — matches the reference board's own `operationalGroups` tone
+ * assignment exactly (admin/careplan=violet, contact/doctor=red, survey/custom=light blue,
+ * familyvisit=green, lifestep=amber), remapped onto this app's own token palette. */
 const CATEGORY_TINT: Record<CategoryKey, { bg: string; text: string }> = {
   admin: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
-  contact: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
-  survey: { bg: 'bg-[var(--color-attention-soft)]', text: 'text-[var(--color-attention)]' },
-  familyvisit: { bg: 'bg-[var(--color-ontrack-soft)]', text: 'text-[var(--color-ontrack)]' },
-  lifestep: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
-  careplan: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
+  contact: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
+  survey: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
+  familyvisit: { bg: 'bg-emerald-50 dark:bg-emerald-950/25', text: 'text-emerald-700 dark:text-emerald-400' },
+  lifestep: { bg: 'bg-[var(--color-attention-soft)]', text: 'text-[var(--color-attention)]' },
+  careplan: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
   doctor: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
-  custom: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
+  custom: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
 };
 
 // ─── Column definitions ───────────────────────────────────────────────────────
@@ -62,9 +63,9 @@ const TONE_ICON: Record<Tone, { bg: string; text: string; Icon: typeof Check }> 
 
 /** Cell background tint by tone — reference's care-lane-cell.overdue/.due/.done treatment. */
 const CELL_TINT: Record<Tone, string> = {
-  good: 'bg-emerald-50/60 dark:bg-emerald-950/15',
-  alert: 'bg-[var(--color-overdue-soft)]/60',
-  warn: 'bg-[var(--color-attention-soft)]/50',
+  good: 'bg-emerald-50 dark:bg-emerald-950/20',
+  alert: 'bg-[var(--color-overdue-soft)]',
+  warn: 'bg-[var(--color-attention-soft)]',
   neutral: '',
   accent: '',
 };
@@ -511,6 +512,12 @@ export function TreatmentBoard({
                           {o.therapist ?? 'No therapist assigned'}
                         </div>
                       </div>
+                      {o.overdueCount > 0 ? (
+                        <span className="nums ml-auto flex shrink-0 items-center gap-1 rounded-[5px] bg-[var(--color-overdue-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-overdue)]">
+                          <CircleAlert className="size-3" />
+                          {o.overdueCount}
+                        </span>
+                      ) : null}
                       <ArrowRight className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
                     </div>
                   </td>
