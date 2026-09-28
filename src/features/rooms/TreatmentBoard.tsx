@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, CircleAlert, Clock3, History, Minus, Plus, Printer, Search, X } from 'lucide-react';
+import { ArrowRight, Check, CircleAlert, Clock3, Flag, History, Minus, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
-import { Chip, type Tone } from '../../components/ui.tsx';
+import { type Tone } from '../../components/ui.tsx';
 import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
@@ -411,7 +411,7 @@ export function TreatmentBoard({
             <tr>
               <th className={`sticky left-0 z-30 w-16 ${th}`}>Bed</th>
               {/* Shadow on Client column marks the freeze boundary */}
-              <th className={`sticky left-16 z-30 w-[200px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
+              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
                 Client &amp; Placement
               </th>
               <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
@@ -448,7 +448,7 @@ export function TreatmentBoard({
                         {bed.label}
                       </span>
                     </td>
-                    <td className={`${stickyCell} left-16 w-[200px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
+                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
                     <td className={`${cb} w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
@@ -487,7 +487,7 @@ export function TreatmentBoard({
                     onClick={() => setOpenBedLabel(bed.label)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
                     title="Open full client file"
-                    className={`${osc} relative left-16 w-[200px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
@@ -499,21 +499,31 @@ export function TreatmentBoard({
                   >
                     <div className="relative flex items-center gap-2">
                       <PhotoBadge occupant={o} size="sm" />
+                      {/* min-w-0 here (not just on the outer flex-1) is what lets the name below
+                          actually truncate instead of being squeezed off by its siblings. */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-[13px] font-medium text-[var(--color-ink)]">
+                        <div className="flex min-w-0 items-center gap-1">
+                          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--color-ink)]">
                             {o.displayName}
                           </span>
                           {o.hasRestrictedAlert && (
-                            <Chip icon="⚑" label="Alert" tone="alert" />
+                            <span
+                              title="Restricted alert"
+                              className="flex shrink-0 items-center rounded-[4px] bg-red-500/15 p-1 text-red-700 dark:text-red-300"
+                            >
+                              <Flag className="size-2.5 fill-current" />
+                            </span>
                           )}
                         </div>
-                        <div className="nums text-[11px] text-[var(--color-ink-muted)]">
+                        <div className="nums truncate text-[11px] text-[var(--color-ink-muted)]">
                           {o.therapist ?? 'No therapist assigned'}
                         </div>
                       </div>
                       {o.overdueCount > 0 ? (
-                        <span className="nums ml-auto flex shrink-0 items-center gap-1 rounded-[5px] bg-[var(--color-overdue-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-overdue)]">
+                        <span
+                          title={`${o.overdueCount} overdue task${o.overdueCount === 1 ? '' : 's'}`}
+                          className="nums flex shrink-0 items-center gap-1 rounded-[5px] bg-[var(--color-overdue-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-overdue)]"
+                        >
                           <CircleAlert className="size-3" />
                           {o.overdueCount}
                         </span>
