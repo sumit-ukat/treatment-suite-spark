@@ -26,8 +26,6 @@ import {
 } from 'lucide-react';
 import { ArchivePicker, type DateRange } from '../rooms/ArchivePicker.tsx';
 import { summarise, type BoardBed, type BoardSummary } from '../rooms/board-data.js';
-import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
-import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { useBoardData } from '../rooms/use-board-data.js';
 import { buildCentres, type CentreSummary } from '../centres/centres-data.js';
 import { BrandMark } from '../../components/brand.tsx';
@@ -142,9 +140,6 @@ function AppRoutes() {
   );
 }
 
-// TODO: same scoped simplification as elsewhere — every configured centre today is Europe/London.
-const TZ = PRIMROSE_LODGE_SETTINGS.timezone;
-
 type FilterId =
   | 'all'
   | 'occupied'
@@ -169,9 +164,11 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
     case 'due_today':
       return (o?.dueTodayCount ?? 0) > 0;
     case 'discharging':
-      // The rest of this calendar week, matching the hub's "Discharges this week" — a rolling seven
-      // days would give the two screens different answers to the same question.
-      return o !== null && o.daysUntilDischarge <= daysLeftInWeek(new Date(), TZ);
+      // Bounded to match Overview's "Graduating in 7 days" exactly (>= -1, <= 7) — this used to read
+      // daysLeftInWeek with no lower bound at all, which (a) used a different window than Overview's
+      // actual rolling-7-day one despite the comment's stated intent to match it, and (b) counted
+      // anyone whose planned discharge passed long ago as "discharging this week" too.
+      return o !== null && o.daysUntilDischarge >= -1 && o.daysUntilDischarge <= 7;
     case 'photo':
       return o !== null && o.photoState === 'missing';
     case 'alerts':
@@ -643,7 +640,7 @@ function BoardPage() {
       overdue: board.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
       dueToday: board.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
       discharging: board.filter(
-        (b) => b.occupant && b.occupant.daysUntilDischarge <= daysLeftInWeek(new Date(), TZ),
+        (b) => b.occupant && b.occupant.daysUntilDischarge >= -1 && b.occupant.daysUntilDischarge <= 7,
       ).length,
       photo: board.filter((b) => b.occupant?.photoState === 'missing').length,
       alerts: board.filter((b) => b.occupant?.hasRestrictedAlert).length,

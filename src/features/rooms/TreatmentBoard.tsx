@@ -215,7 +215,10 @@ export function TreatmentBoard({
     available:     beds.filter((b) => !b.occupant).length,
     overdue:       beds.filter((b) => (b.occupant?.overdueCount ?? 0) > 0).length,
     dueToday:      beds.filter((b) => (b.occupant?.dueTodayCount ?? 0) > 0).length,
-    dischargeSoon: beds.filter((b) => b.occupant !== null && b.occupant.daysUntilDischarge <= 7).length,
+    // Bounded the same way Overview's "Graduating in 7 days" is (>= -1, not just <= 7) — otherwise
+    // this also counts anyone whose planned discharge passed weeks or months ago as "discharging
+    // this week", which is how the two pages' counts drifted apart for the same underlying idea.
+    dischargeSoon: beds.filter((b) => b.occupant !== null && b.occupant.daysUntilDischarge >= -1 && b.occupant.daysUntilDischarge <= 7).length,
     noTherapist:   beds.filter((b) => b.occupant !== null && !b.occupant.therapist).length,
     openConcerns:  beds.filter((b) => b.occupant?.hasOpenConcern === true).length,
   }), [beds]);
@@ -226,7 +229,7 @@ export function TreatmentBoard({
       if (activeFilter === 'overdue'        && (bed.occupant?.overdueCount ?? 0) === 0) return false;
       if (activeFilter === 'due_today'      && (bed.occupant?.dueTodayCount ?? 0) === 0) return false;
       if (activeFilter === 'available'      && bed.occupant !== null) return false;
-      if (activeFilter === 'discharge_soon' && (bed.occupant === null || bed.occupant.daysUntilDischarge > 7)) return false;
+      if (activeFilter === 'discharge_soon' && (bed.occupant === null || bed.occupant.daysUntilDischarge < -1 || bed.occupant.daysUntilDischarge > 7)) return false;
       if (activeFilter === 'no_therapist'   && (bed.occupant === null || !!bed.occupant.therapist)) return false;
       if (activeFilter === 'open_concerns'  && !bed.occupant?.hasOpenConcern) return false;
       if (!q) return true;
