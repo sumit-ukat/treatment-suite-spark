@@ -317,11 +317,13 @@ export function TreatmentBoard({
 
       {/* ── Archive date picker ── */}
       {showDatePicker ? (
-        <ArchivePicker
-          value={archiveRange}
-          onConfirm={(r) => { setArchiveRange(r); setShowDatePicker(false); }}
-          onClear={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
-        />
+        <div className="print:hidden">
+          <ArchivePicker
+            value={archiveRange}
+            onConfirm={(r) => { setArchiveRange(r); setShowDatePicker(false); }}
+            onClear={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
+          />
+        </div>
       ) : null}
 
       {/* ── Archive banner ── */}
@@ -339,7 +341,7 @@ export function TreatmentBoard({
           <button
             type="button"
             onClick={() => { setArchiveRange({ start: '', end: '' }); setShowDatePicker(false); }}
-            className="ml-auto flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-[11.5px] font-medium hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/40"
+            className="ml-auto flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-[11.5px] font-medium hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-950/40 print:hidden"
           >
             <X className="size-3.5" /> Back to live
           </button>
@@ -407,7 +409,7 @@ export function TreatmentBoard({
       {/* Top scrollbar — mirrors the bottom one so users can scroll without reaching the foot */}
       <div
         ref={topScrollRef}
-        className="overflow-x-auto rounded-t-[10px]"
+        className="overflow-x-auto rounded-t-[10px] print:hidden"
         style={{ height: 12 }}
         onScroll={(e) => {
           if (tableWrapRef.current) tableWrapRef.current.scrollLeft = e.currentTarget.scrollLeft;
@@ -416,20 +418,25 @@ export function TreatmentBoard({
         <div style={{ width: tableScrollWidth, height: 1 }} />
       </div>
 
+      {/* print:overflow-visible is the important part — table content past the on-screen scroll
+          viewport would otherwise be clipped out of the printed page entirely, not just hidden
+          behind a scrollbar (see the bug this fixes). print:static below un-freezes the sticky
+          header/columns, which don't paginate sensibly; the browser's own print scaling handles
+          fitting the full-width table onto the landscape page. */}
       <div
         ref={tableWrapRef}
-        className={`overflow-x-auto rounded-b-[10px] border border-[var(--color-line)] bg-card ${CARD_SHADOW}`}
+        className={`overflow-x-auto rounded-b-[10px] border border-[var(--color-line)] bg-card print:overflow-visible print:rounded-none print:border-0 print:shadow-none ${CARD_SHADOW}`}
         onScroll={(e) => {
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
       >
         <table className="w-full table-fixed border-separate border-spacing-0 text-[12.5px]">
 
-          <thead className="sticky top-0 z-20">
+          <thead className="sticky top-0 z-20 print:static">
             <tr>
-              <th className={`sticky left-0 z-30 w-16 ${th}`}>Bed</th>
+              <th className={`sticky left-0 z-30 w-16 print:static ${th}`}>Bed</th>
               {/* Shadow on Client column marks the freeze boundary */}
-              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
+              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] print:static print:shadow-none ${th}`}>
                 Client &amp; Placement
               </th>
               <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
@@ -455,7 +462,7 @@ export function TreatmentBoard({
             {visible.map((bed) => {
               const o = bed.occupant;
               const cb = 'border-b border-[var(--color-line)]';
-              const stickyCell = `sticky z-10 bg-card ${cb}`;
+              const stickyCell = `sticky z-10 bg-card print:static ${cb}`;
 
               /* ── Empty bed ── */
               if (!o) {
@@ -466,7 +473,7 @@ export function TreatmentBoard({
                         {bed.label}
                       </span>
                     </td>
-                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
+                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)] print:shadow-none`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
                     <td className={`${cb} w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
@@ -484,7 +491,7 @@ export function TreatmentBoard({
                  tint carry the signal instead — see CategoryCell / CELL_TINT above. */
               const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
               const urgentDischarge = o.daysUntilDischarge <= 2;
-              const osc = `sticky z-10 bg-card ${cb}`;
+              const osc = `sticky z-10 bg-card print:static ${cb}`;
 
               return (
                 <tr key={bed.label}>
@@ -502,7 +509,7 @@ export function TreatmentBoard({
                     onClick={() => setOpenBedLabel(bed.label)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
                     title="Open full client file"
-                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] print:shadow-none ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
@@ -635,7 +642,7 @@ export function TreatmentBoard({
             Red dot — safeguarding concern flagged for this client
           </div>
         </div>
-        <p className="mt-3 text-[11px] text-[var(--color-ink-muted)]">
+        <p className="mt-3 text-[11px] text-[var(--color-ink-muted)] print:hidden">
           Select a status cell to open its internal details. Client details remain visible while you scroll.
         </p>
       </div>

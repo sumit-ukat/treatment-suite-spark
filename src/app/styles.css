@@ -160,6 +160,24 @@
 }
 
 /**
+ * Print. Landscape gives a wide board more room before the browser has to shrink it to fit, and
+ * *-color-adjust is the one line every browser needs to actually print background colours at all —
+ * without it, Chrome/Firefox/Safari all silently drop them by default and every status tint on the
+ * page comes out white. Everything else (hiding chrome, un-scrolling the board) is done per-page with
+ * Tailwind's print: variant, not here, since what counts as "chrome" is different on every screen.
+ */
+@page {
+  size: landscape;
+  margin: 12mm;
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/**
  * ============================================================================
  * Ported design foundation (from the Lovable-generated redesign)
  * ============================================================================

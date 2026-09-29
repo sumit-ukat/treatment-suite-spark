@@ -450,10 +450,10 @@ function CentreShell() {
   const context: CentreContext = { centre, centres, authCentre, query, setQuery };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
       <ProvenanceBanner />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden print:block print:h-auto print:overflow-visible">
         {/* Mobile overlay — tap outside the drawer to close */}
         {mobileOpen && (
           <div
@@ -463,9 +463,10 @@ function CentreShell() {
           />
         )}
 
-        {/* Sidebar: off-canvas on mobile (<md), inline on tablet/desktop (md+) */}
+        {/* Sidebar: off-canvas on mobile (<md), inline on tablet/desktop (md+). Hidden entirely for
+            print — a printed page is the board itself, not the app chrome around it. */}
         <div
-          className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 md:relative md:z-auto md:inset-auto md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 md:relative md:z-auto md:inset-auto md:translate-x-0 print:hidden ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -483,8 +484,8 @@ function CentreShell() {
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5">
+        <div className="flex min-w-0 flex-1 flex-col print:block">
+          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5 print:hidden">
             {/* Hamburger — visible only on mobile (<md), where sidebar is off-canvas */}
             <button
               type="button"
@@ -542,8 +543,8 @@ function CentreShell() {
             </div>
           </header>
 
-          <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1500px]">
+          <main className="min-h-0 flex-1 overflow-y-auto print:h-auto print:overflow-visible">
+            <div className="mx-auto w-full max-w-[1500px] print:max-w-none">
               <Outlet context={context} />
             </div>
           </main>
