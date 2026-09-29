@@ -60,6 +60,7 @@ import { TreatmentBoard } from '../rooms/TreatmentBoard.tsx';
 import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
 import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { HelpCentre } from '../help/HelpCentre.tsx';
+import { DischargeLog } from '../discharge/DischargeLog.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { CentreSwitcher } from './CentreSwitcher.tsx';
 import { Chip } from '../../components/ui.tsx';
@@ -130,7 +131,7 @@ function AppRoutes() {
         <Route path="tasks" element={<NotBuiltPage />} />
         <Route path="family" element={<NotBuiltPage />} />
         <Route path="medical" element={<NotBuiltPage />} />
-        <Route path="discharge" element={<NotBuiltPage />} />
+        <Route path="discharge" element={<DischargePage />} />
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
@@ -986,6 +987,12 @@ function IncidentsPage() {
       <IncidentReportSection centreId={authCentre.id} beds={beds} defaultOpen />
     </div>
   );
+}
+
+function DischargePage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return <DischargeLog centreId={authCentre.id} />;
 }
 
 function HelpPage() {

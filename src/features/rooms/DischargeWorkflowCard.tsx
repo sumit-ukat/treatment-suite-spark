@@ -57,6 +57,13 @@ export function DischargeWorkflowCard({
   const [transferDestination, setTransferDestination] = useState('');
   const [transferTreatmentType, setTransferTreatmentType] = useState('');
   const [transferDurationDays, setTransferDurationDays] = useState('');
+  // What the centre used to track by hand in its discharge-report spreadsheet — captured here, at the
+  // moment of discharge, rather than as a separate follow-up step. reportSentAt defaults to today
+  // rather than blank: in practice the report is usually sent the same day it's handed over/finalised.
+  const [reportStatus, setReportStatus] = useState('');
+  const [location, setLocation] = useState('');
+  const [notes, setNotes] = useState('');
+  const [reportSentAt, setReportSentAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +85,9 @@ export function DischargeWorkflowCard({
       setTransferDestination('');
       setTransferTreatmentType('');
       setTransferDurationDays('');
+      setReportStatus('');
+      setLocation('');
+      setNotes('');
       onChanged?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not work.');
@@ -86,11 +96,18 @@ export function DischargeWorkflowCard({
     }
   }
 
+  const reportInput = () => ({
+    reportStatus: reportStatus.trim() || undefined,
+    location: location.trim() || undefined,
+    notes: notes.trim() || undefined,
+    reportSentAt: reportSentAt || undefined,
+  });
+
   const submitNewDischarge = () => {
     if (!reason.trim()) return;
     const at = dischargeTimestamp(date).toISOString();
     if (dischargeType === 'planned') {
-      void run(() => dischargeService.finalise(admissionId, 'planned', at, reason));
+      void run(() => dischargeService.finalise(admissionId, 'planned', at, reason, reportInput()));
     } else if (dischargeType === 'transfer') {
       void run(async () => {
         await dischargeService.requestTransfer(
@@ -106,7 +123,7 @@ export function DischargeWorkflowCard({
   const finaliseApprovedRequest = () => {
     if (!req) return;
     const at = dischargeTimestamp(date).toISOString();
-    void run(() => dischargeService.finalise(admissionId, req.dischargeType, at, reason || null));
+    void run(() => dischargeService.finalise(admissionId, req.dischargeType, at, reason || null, reportInput()));
   };
 
   const dateField = (
@@ -119,6 +136,60 @@ export function DischargeWorkflowCard({
         className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
       />
     </label>
+  );
+
+  // What used to live only in the centre's manual discharge-report spreadsheet — captured here so a
+  // discharge is never finalised without them, unlike the sheet, where they were the fields most
+  // likely to end up blank because filling them in was a separate, easy-to-forget step.
+  const reportFields = (
+    <>
+      <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+        Reports / transfer
+        <input
+          type="text"
+          list="discharge-report-status-options"
+          value={reportStatus}
+          onChange={(e) => setReportStatus(e.target.value)}
+          placeholder="e.g. Discharge report sent to GP"
+          className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+        />
+        <datalist id="discharge-report-status-options">
+          <option value="Discharge report sent to GP" />
+          <option value="Discharge report handed to client" />
+          <option value="Handed to client / sent to GP" />
+          <option value="Referred to secondary treatment" />
+          <option value="Referred to supported housing" />
+        </datalist>
+      </label>
+      <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+        Location (where the client went)
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Cranleigh, Transform Housing — Reigate…"
+          className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+      <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+        Date report sent
+        <input
+          type="date"
+          value={reportSentAt}
+          onChange={(e) => setReportSentAt(e.target.value)}
+          className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+      <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+        Notes (optional)
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+    </>
   );
 
   return (
@@ -193,9 +264,15 @@ export function DischargeWorkflowCard({
 
               {dischargeType !== 'planned' ? (
                 <p className="text-[10px] text-[var(--color-ink-muted)]">
-                  This needs sign-off from a different person before it can be finalised.
+                  This needs sign-off from a different person before it can be finalised — the report
+                  details below are asked for then, not at this submit-for-approval step.
                 </p>
-              ) : null}
+              ) : (
+                // Only for 'planned': that's the only case here that finalises immediately. Anything
+                // else goes through approval first and asks for these at the finalise step instead —
+                // see workflowStage === 'approved' below.
+                reportFields
+              )}
 
               <div className="flex items-center gap-2">
                 <button type="button" disabled={busy || !reason.trim()} onClick={submitNewDischarge}
@@ -288,6 +365,7 @@ export function DischargeWorkflowCard({
           ) : mode === 'form' ? (
             <div className="flex flex-col gap-2">
               {dateField}
+              {reportFields}
               <div className="flex items-center gap-2">
                 <button type="button" disabled={busy} onClick={finaliseApprovedRequest}
                   className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">

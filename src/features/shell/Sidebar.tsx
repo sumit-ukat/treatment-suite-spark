@@ -54,9 +54,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
       { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true },
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
-      // Placeholder — content to be specified. Real destination (matches my-work/tasks/family/medical
-      // below), not hidden, so the shape of the nav is reviewable before the page itself is built.
-      { id: 'discharge', label: 'Discharge', icon: LogOut, ready: false },
+      { id: 'discharge', label: 'Discharge', icon: LogOut, ready: true },
     ],
   },
   {

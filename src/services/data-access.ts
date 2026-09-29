@@ -874,21 +874,63 @@ export const discharge = {
     return (data as number) ?? 0;
   },
 
+  /**
+   * `report` mirrors what the centre used to track by hand in its discharge-report spreadsheet —
+   * captured at the same moment as the discharge itself (migration 0057) rather than as a separate
+   * follow-up step, since a discharge with an unrecorded destination is exactly how that spreadsheet
+   * accumulated gaps. Who discharged the client is not part of this: `admissions.updated_by` already
+   * gets set to the caller in the same statement, and `discharge_log` resolves it to a name.
+   */
   async finalise(
     admissionId: string,
     dischargeType: 'planned' | 'early' | 'transfer' | 'other',
     actualDischargeAt: string,
     reason: string | null,
+    report?: {
+      reportStatus?: string | undefined;
+      location?: string | undefined;
+      notes?: string | undefined;
+      reportSentAt?: string | undefined; // ISO date (YYYY-MM-DD)
+    },
   ): Promise<void> {
     const { error } = await client().rpc('finalise_discharge', {
       p_admission_id: admissionId,
       p_discharge_type: dischargeType,
       p_actual_discharge_at: actualDischargeAt,
       p_reason: reason,
+      p_report_status: report?.reportStatus ?? null,
+      p_location: report?.location ?? null,
+      p_notes: report?.notes ?? null,
+      p_report_sent_at: report?.reportSentAt ?? null,
     });
     if (error) throw new DataAccessError('discharge.finalise', error);
   },
+
+  /** The centre-wide discharge log behind the Discharge nav section — see migration 0057. Most
+   * recent discharge first. `clientName` is null when the caller holds clients.view_operational but
+   * not clients.view_identity, same nulling rule as `client_summary` everywhere else in this app. */
+  async log(centreId: string): Promise<DischargeLogRow[]> {
+    return run<DischargeLogRow[]>(
+      'discharge.log',
+      client().rpc('discharge_log', { p_centre_id: centreId }),
+    );
+  },
 };
+
+export interface DischargeLogRow {
+  admission_id: string;
+  client_id: string;
+  client_reference: string;
+  client_name: string | null;
+  admitted_at: string;
+  actual_discharge_at: string | null;
+  discharge_type: 'planned' | 'early' | 'transfer' | 'other' | null;
+  discharge_report_status: string | null;
+  discharge_location: string | null;
+  discharge_notes: string | null;
+  discharge_report_sent_at: string | null;
+  discharged_by_name: string | null;
+}
 
 export type IncidentType = 'client' | 'centre' | 'medication' | 'staff' | 'other';
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
