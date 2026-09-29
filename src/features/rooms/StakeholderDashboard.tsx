@@ -346,7 +346,15 @@ export function StakeholderDashboard({
                 </thead>
                 <tbody className="divide-y divide-[var(--color-line)]">
                   {rows.map(({ bed, o }) => (
-                    <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
+                    <tr
+                      key={bed.label}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`../board?bed=${encodeURIComponent(bed.label)}`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`../board?bed=${encodeURIComponent(bed.label)}`); } }}
+                      title={`Open ${o.displayName}'s client file`}
+                      className="cursor-pointer bg-[var(--color-panel)] transition hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                    >
                       <td className="px-3 py-2.5 font-medium text-[var(--color-ink)]">{o.displayName}</td>
                       <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
                       <td className="px-3 py-2.5">
@@ -417,7 +425,15 @@ export function StakeholderDashboard({
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
                 {leavingSoon.map(({ bed, o }) => (
-                  <tr key={bed.label} className="bg-[var(--color-panel)] transition hover:bg-muted/40">
+                  <tr
+                    key={bed.label}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`../board?bed=${encodeURIComponent(bed.label)}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`../board?bed=${encodeURIComponent(bed.label)}`); } }}
+                    title={`Open ${o.displayName}'s client file`}
+                    className="cursor-pointer bg-[var(--color-panel)] transition hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                  >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         {o.hasRestrictedAlert ? <span title="High risk" className="size-1.5 shrink-0 rounded-full bg-red-500" /> : null}
