@@ -198,6 +198,9 @@ export function TreatmentBoard({
   });
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<{ bedLabel: string; category: CategoryKey } | null>(null);
+  // Default excludes empty beds from the printed report — they're rarely wanted on a handover sheet;
+  // staff can opt back in right before printing.
+  const [printIncludeAvailable, setPrintIncludeAvailable] = useState(false);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -312,6 +315,17 @@ export function TreatmentBoard({
             >
               <History className="size-3.5" /> {asOf ? 'Archive' : 'Archive'}
             </button>
+            {!asOf ? (
+              <label className="inline-flex min-h-9 items-center gap-1.5 text-[12px] text-[var(--color-ink-muted)]">
+                <input
+                  type="checkbox"
+                  checked={printIncludeAvailable}
+                  onChange={(e) => setPrintIncludeAvailable(e.target.checked)}
+                  className="size-3.5 accent-[var(--color-accent)]"
+                />
+                Include free beds when printing
+              </label>
+            ) : null}
             {!asOf ? (
               <button
                 type="button"
@@ -594,7 +608,8 @@ export function TreatmentBoard({
       <div className="hidden print:block">
         <p className="mb-3 text-[10px] text-black">
           Printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {fmtTime(new Date())}
-          {' '}&middot; {counts.clients} clients &middot; {counts.available} beds free
+          {' '}&middot; {counts.clients} clients
+          {printIncludeAvailable ? <> &middot; {counts.available} beds free</> : null}
         </p>
         <table className="w-full border-collapse text-[9.5px] text-black">
           <thead>
@@ -612,7 +627,7 @@ export function TreatmentBoard({
             </tr>
           </thead>
           <tbody>
-            {visible.map((bed) => {
+            {(printIncludeAvailable ? visible : visible.filter((b) => b.occupant !== null)).map((bed) => {
               const o = bed.occupant;
               if (!o) {
                 return (
