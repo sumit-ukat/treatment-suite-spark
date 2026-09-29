@@ -1,4 +1,4 @@
--- 0055 · Kipu No. replaces the auto-generated client reference
+-- 0056 · Kipu No. replaces the auto-generated client reference
 --
 -- Every new client's `clients.reference` was auto-generated as a random `CL-XXXXXXXX` code
 -- (migration 0022), meaningless to staff and disconnected from Kipu, the external case-management
