@@ -302,6 +302,10 @@ export interface AdmitClientInput {
   clientId?: string | undefined;
   firstName?: string | undefined;
   lastName?: string | undefined;
+  /** Required (by the database, migration 0055) when creating a new client — becomes their
+   * `clients.reference`, replacing the random CL-XXXXXXXX code the server used to generate. Not
+   * needed when reusing an existing client via `clientId`; they already have one. */
+  kipuNo?: string | undefined;
   preferredName?: string | undefined;
   treatmentGroup?: string | undefined;
   substanceName?: string | undefined;
@@ -346,6 +350,7 @@ export const admissions = {
       p_detox_ends: input.detoxEnds ?? null,
       p_programme_modules: input.programmeModules ?? null,
       p_reason: input.reason ?? null,
+      p_kipu_no: input.kipuNo ?? null,
     });
     if (error) throw new DataAccessError('admissions.admitClient', error);
     return data as string;

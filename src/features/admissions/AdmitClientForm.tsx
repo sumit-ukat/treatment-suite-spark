@@ -42,6 +42,7 @@ type ClientMode = 'new' | 'existing';
 interface FormState {
   firstName: string;
   lastName: string;
+  kipuNo: string;
   preferredName: string;
   admittedDate: string;
   admittedTime: string;
@@ -66,6 +67,7 @@ interface FormState {
 const EMPTY: FormState = {
   firstName: '',
   lastName: '',
+  kipuNo: '',
   preferredName: '',
   admittedDate: new Date().toISOString().slice(0, 10),
   admittedTime: '12:00',
@@ -195,7 +197,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
   const selectedBed = beds.find((r) => `${r.id}:${r.bed.id}` === form.bedKey);
   const canReview =
     (mode === 'new'
-      ? Boolean(form.firstName.trim() && form.lastName.trim())
+      ? Boolean(form.firstName.trim() && form.lastName.trim() && form.kipuNo.trim())
       : Boolean(selectedClient && !selectedClient.has_open_admission)) &&
     form.bedKey &&
     Number(form.plannedDuration) > 0;
@@ -216,7 +218,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
         plannedDurationUnit: form.plannedDurationUnit,
         ...(mode === 'existing'
           ? { clientId: selectedClient!.client_id }
-          : { firstName: form.firstName.trim(), lastName: form.lastName.trim() }),
+          : { firstName: form.firstName.trim(), lastName: form.lastName.trim(), kipuNo: form.kipuNo.trim() }),
         preferredName: form.preferredName.trim() || undefined,
         treatmentGroup: form.treatmentGroup.trim() || undefined,
         substanceName,
@@ -372,6 +374,12 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
               ) : null}
             </dd>
           </div>
+          {mode === 'new' ? (
+            <div>
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Kipu No.</dt>
+              <dd className="font-medium">{form.kipuNo.trim()}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-[11px] text-[var(--color-ink-muted)]">Bed</dt>
             <dd className="font-medium">
@@ -657,6 +665,16 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
                 />
               </Field>
             </div>
+
+            <Field label="Kipu No.">
+              <input
+                className={inputCls}
+                value={form.kipuNo}
+                onChange={(e) => set('kipuNo', e.target.value)}
+                placeholder="e.g. 10293847"
+                required
+              />
+            </Field>
 
             <Field label="Preferred name (optional)">
               <input
