@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   BedDouble,
@@ -53,12 +54,17 @@ function KpiTile({
   label,
   sub,
   accent,
+  onClick,
 }: {
   icon: LucideIcon;
   value: string | number;
   label: string;
   sub?: string;
   accent?: 'green' | 'amber' | 'red' | 'neutral';
+  /** Only 6 of these 10 tiles have a real destination filter to land on (see StakeholderDashboard) —
+   * omitted rather than forced, so a tile with nowhere useful to go stays a plain, non-interactive
+   * summary instead of a click that does nothing or dumps the reader on an unfiltered board. */
+  onClick?: (() => void) | undefined;
 }) {
   const iconColour =
     accent === 'red'    ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' :
@@ -74,8 +80,9 @@ function KpiTile({
     accent === 'red'
       ? 'border-red-200/70 bg-gradient-to-br from-red-50/70 to-[var(--color-panel)] dark:border-red-900/50 dark:from-red-950/20'
       : 'border-[var(--color-line)] bg-[var(--color-panel)]';
-  return (
-    <div className={`flex flex-col gap-3 rounded-xl border p-4 ${cardCls}`}>
+
+  const content = (
+    <>
       <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${iconColour}`}>
         <Icon className="size-4" />
       </div>
@@ -84,7 +91,20 @@ function KpiTile({
         <p className="mt-1 text-[12px] font-medium text-[var(--color-ink)]">{label}</p>
         {sub ? <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{sub}</p> : null}
       </div>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return <div className={`flex flex-col gap-3 rounded-xl border p-4 ${cardCls}`}>{content}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition hover:border-[var(--color-accent)]/50 hover:shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${cardCls}`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -105,6 +125,7 @@ export function StakeholderDashboard({
   centreId: string;
   centreName: string;
 }) {
+  const navigate = useNavigate();
   const { beds, loading, refreshing, loadedAt, refresh } = useBoardData(centreId);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
 
@@ -200,12 +221,14 @@ export function StakeholderDashboard({
             label="Beds occupied"
             sub={`${stats.occupancyPercent}% occupancy · ${stats.bedsAvailable} available`}
             accent={stats.occupancyPercent >= 85 ? 'green' : stats.occupancyPercent >= 60 ? 'amber' : 'red'}
+            onClick={() => navigate('../board')}
           />
           <KpiTile
             icon={AlertTriangle}
             value={stats.restrictedAlerts}
             label="High risk clients"
             accent={stats.restrictedAlerts > 0 ? 'red' : 'green'}
+            onClick={() => navigate('../board?filter=alerts')}
           />
           <KpiTile
             icon={ClipboardList}
@@ -213,6 +236,7 @@ export function StakeholderDashboard({
             label="Overdue tasks"
             sub={stats.dueToday > 0 ? `${stats.dueToday} more due today` : 'None due today'}
             accent={stats.overdue > 0 ? 'red' : 'green'}
+            onClick={() => navigate('../treatment-board?filter=overdue')}
           />
           <KpiTile
             icon={CalendarClock}
@@ -220,6 +244,7 @@ export function StakeholderDashboard({
             label="Graduating in 7 days"
             sub={pendingD > 0 ? `${pendingD} pending request${pendingD !== 1 ? 's' : ''}` : 'No pending requests'}
             accent={leavingSoon.length > 0 ? 'amber' : 'neutral'}
+            onClick={() => navigate('../treatment-board?filter=discharge_soon')}
           />
           <KpiTile
             icon={FileWarning}
@@ -227,6 +252,7 @@ export function StakeholderDashboard({
             label="Incident reports"
             sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
             accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
+            onClick={() => navigate('../incidents')}
           />
         </div>
       </div>
@@ -255,6 +281,7 @@ export function StakeholderDashboard({
             label="Without therapist"
             sub="Clients with no therapist assigned"
             accent={stats.missingTherapist > 0 ? 'amber' : 'green'}
+            onClick={() => navigate('../treatment-board?filter=no_therapist')}
           />
           <KpiTile
             icon={Stethoscope}

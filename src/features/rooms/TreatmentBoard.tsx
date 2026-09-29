@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check, CircleAlert, Clock3, Flag, History, Minus, Plus, Printer, Search, X } from 'lucide-react';
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
@@ -156,6 +156,9 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
 
 type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns';
 
+const TREATMENT_FILTER_IDS: readonly FilterId[] =
+  ['all', 'overdue', 'due_today', 'available', 'discharge_soon', 'no_therapist', 'open_concerns'];
+
 export function TreatmentBoard({
   centreId,
   centreName,
@@ -164,6 +167,7 @@ export function TreatmentBoard({
   centreName: string;
 }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const topScrollRef = useRef<HTMLDivElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
@@ -178,7 +182,12 @@ export function TreatmentBoard({
 
   const { beds, loading, refreshing, error, loadedAt, refresh } = useBoardData(centreId, asOf);
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterId>('all');
+  // Read once, from whoever linked here with e.g. ?filter=overdue (the Overview page's stat cards) —
+  // not kept in sync afterwards, same as Room Board's equivalent filter buttons.
+  const [activeFilter, setActiveFilter] = useState<FilterId>(() => {
+    const requested = searchParams.get('filter');
+    return TREATMENT_FILTER_IDS.includes(requested as FilterId) ? (requested as FilterId) : 'all';
+  });
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<{ bedLabel: string; category: CategoryKey } | null>(null);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);

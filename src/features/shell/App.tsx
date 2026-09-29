@@ -610,11 +610,19 @@ const EMPTY_SUMMARY: BoardSummary = {
 
 /** `/centre/:centreSlug/board` — the one page with meaningful state of its own (filters, view mode,
  * which bed's detail panel is open), so it keeps that state locally rather than in the shell. */
+const BOARD_FILTER_IDS: readonly FilterId[] =
+  ['all', 'occupied', 'available', 'overdue', 'due_today', 'discharging', 'photo', 'alerts'];
+
 function BoardPage() {
   const { centre, authCentre, query, setQuery } = useCentreContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filter, setFilter] = useState<FilterId>('all');
+  // Read once, from whoever linked here with e.g. ?filter=alerts (the Overview page's stat cards) —
+  // not kept in sync afterwards, same as the filter buttons below, which don't write to the URL either.
+  const [filter, setFilter] = useState<FilterId>(() => {
+    const requested = searchParams.get('filter');
+    return BOARD_FILTER_IDS.includes(requested as FilterId) ? (requested as FilterId) : 'all';
+  });
   const [therapistFilter, setTherapistFilter] = useState('all');
   const [view, setView] = useState<'board' | 'list'>('board');
   const [archiveRange, setArchiveRange] = useState<DateRange>({ start: '', end: '' });
