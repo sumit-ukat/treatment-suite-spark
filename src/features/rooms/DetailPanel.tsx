@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Printer, X } from 'lucide-react';
 import type { BoardBed, BoardTask, Occupant } from './board-data.js';
 import { ExtendStayCard } from './ExtendStayCard.tsx';
 import { formatDate, formatDateWithDay } from '../../lib/format.js';
@@ -276,6 +276,126 @@ export function DetailPanel({
   const overallStatus: StatusKey =
     o.overdueCount > 0 ? 'overdue' : o.dueTodayCount > 0 ? 'attention' : 'ontrack';
   const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
+
+  /**
+   * A plain, self-contained printable report for this one client — everything on the file (key
+   * facts, safeguarding notes, admission notes, and every task across all three columns), not a
+   * screenshot of this dialog. Opened as its own window rather than relying on @media print on the
+   * dialog itself: this panel is a fixed-position overlay above the board, and the board has its own
+   * print handling — isolating the two this way means printing a client never fights with, or drags
+   * in, whatever the board underneath is doing for print.
+   */
+  function printClientFile() {
+    if (!o) return;
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const taskStatus = (t: BoardTask): string => {
+      if (t.isNotApplicable) return `Not applicable${t.notApplicableReason ? ` — ${t.notApplicableReason}` : ''}`;
+      if (t.isComplete) return `Done${t.completedAt ? ` (${formatDate(t.completedAt)})` : ''}`;
+      if (t.isOverdue) return 'Overdue';
+      if (t.isDueToday) return 'Due today';
+      return 'Upcoming';
+    };
+
+    const taskTable = (title: string, tasks: BoardTask[]): string => `
+      <h3>${title} <span class="muted">(${tasks.length})</span></h3>
+      ${tasks.length === 0
+        ? '<p class="muted">None.</p>'
+        : `<table>
+            <thead><tr><th>Task</th><th>Category</th><th>Due</th><th>Status</th></tr></thead>
+            <tbody>${tasks.map((t) => `
+              <tr>
+                <td>${esc(t.title)}</td>
+                <td>${esc(CATEGORY_LABEL[t.category] ?? t.category)}</td>
+                <td>${t.dueAt ? formatDate(t.dueAt) : '—'}</td>
+                <td>${esc(taskStatus(t))}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`
+      }`;
+
+    const safeguardingHtml = concernRows.length > 0
+      ? `<table>
+          <thead><tr><th>Category</th><th>Note</th><th>Logged</th><th>Status</th></tr></thead>
+          <tbody>${concernRows.map((r) => `
+            <tr>
+              <td>${esc(CONCERN_LABEL[r.category] ?? r.category)}</td>
+              <td>${esc(r.note)}</td>
+              <td>${formatDate(new Date(r.logged_at))}</td>
+              <td>${r.is_resolved ? 'Resolved' : 'Open'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`
+      : o.legacySafeguardingNote
+      ? `<p>${esc(o.legacySafeguardingNote)}</p>`
+      : '<p class="muted">No notes on file.</p>';
+
+    const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${esc(o.displayName)} — client file</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 24px; }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  h2 { font-size: 12px; margin: 20px 0 6px; text-transform: uppercase; letter-spacing: 0.05em; color: #444; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+  h3 { font-size: 11.5px; margin: 14px 0 4px; }
+  p { font-size: 11.5px; margin: 2px 0; }
+  .muted { color: #666; }
+  .meta { font-size: 11px; color: #555; margin-bottom: 14px; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 20px; font-size: 11px; }
+  .facts div span { display: block; }
+  .facts .label { color: #666; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 2px; }
+  th, td { border: 1px solid #bbb; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; font-weight: 600; }
+  @page { margin: 14mm; }
+  @media print { a { color: inherit; text-decoration: none; } }
+</style>
+</head>
+<body>
+  <h1>${esc(o.displayName)}</h1>
+  <p class="meta">
+    Ref ${esc(o.reference)} &middot; Bed ${esc(bed.label)} &middot; ${esc(o.group || 'No group')}
+    &middot; Printed ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+  </p>
+
+  <h2>Key facts</h2>
+  <div class="facts">
+    <div><span class="label">Admitted</span><span>${formatDate(o.admittedAt)}</span></div>
+    <div><span class="label">Planned discharge</span><span>${formatDate(o.plannedDischargeDate)}</span></div>
+    <div><span class="label">Programme</span><span>${o.durationDays} days</span></div>
+    <div><span class="label">Primary concern</span><span>${esc(o.substance || '—')}</span></div>
+    <div><span class="label">Family meeting</span><span>${o.familyMeetingEligibleNow ? 'Eligible now' : `From ${formatDate(o.familyMeetingEligibleFrom)}`}</span></div>
+    <div><span class="label">Focal therapist</span><span>${esc(o.therapist ?? 'Not assigned')}</span></div>
+    <div><span class="label">Keyworker</span><span>${esc(o.keyworker ?? 'Not assigned')}</span></div>
+    <div><span class="label">Buddy</span><span>${esc(o.buddy)}</span></div>
+  </div>
+
+  <h2>Programme progress</h2>
+  <p>Day ${o.treatmentDay} of ${o.durationDays} (${pct}% of the planned stay elapsed) &middot; ${o.completedCount} done &middot; ${o.overdueCount} overdue${o.isExtendedStay ? ` &middot; extended by ${o.extensionDays ?? '?'} day(s)` : ''}</p>
+
+  <h2>Safeguarding / risks / concerns</h2>
+  ${safeguardingHtml}
+
+  <h2>Admission notes</h2>
+  <p>${o.admissionNotes ? esc(o.admissionNotes) : '<span class="muted">No notes recorded.</span>'}</p>
+
+  <h2>Tasks</h2>
+  ${taskTable('Needs action', needsActionTasks)}
+  ${taskTable('Coming up', comingUpTasks)}
+  ${taskTable('Done', doneTasks)}
+
+  <script>window.onload = function () { window.print(); };</script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=860,height=900');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+  }
 
   return (
     <>
@@ -731,9 +851,19 @@ export function DetailPanel({
 
           {/* Col 3 — Programme progress + action buttons */}
           <div className="h-fit rounded-xl border border-[var(--color-line)] p-4">
-            <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-              Programme progress
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
+                Programme progress
+              </p>
+              <button
+                type="button"
+                onClick={printClientFile}
+                title="Print client file"
+                className="rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                <Printer className="size-3.5" />
+              </button>
+            </div>
             <div className="mt-2 flex items-baseline gap-2">
               <p className="nums text-[26px] font-semibold leading-none">
                 Day {o.treatmentDay}
