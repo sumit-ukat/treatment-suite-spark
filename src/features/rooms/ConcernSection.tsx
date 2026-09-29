@@ -73,6 +73,13 @@ export function ConcernSection({
     } catch { /* non-critical */ }
   }
 
+  async function reopen(id: string) {
+    try {
+      await concernsService.reopen(id);
+      setList((prev) => prev ? prev.map((c) => c.id === id ? { ...c, is_resolved: false } : c) : prev);
+    } catch { /* non-critical */ }
+  }
+
   const open = list?.filter((c) => !c.is_resolved) ?? [];
 
   return (
@@ -181,7 +188,16 @@ export function ConcernSection({
                   >
                     Resolve
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void reopen(c.id)}
+                    title="Undo — reopen this concern"
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:bg-black/5 hover:text-red-600 dark:hover:bg-white/10 dark:hover:text-red-400"
+                  >
+                    Undo
+                  </button>
+                )}
               </div>
             </li>
           ))}

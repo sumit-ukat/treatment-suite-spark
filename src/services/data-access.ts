@@ -759,6 +759,12 @@ export const concerns = {
     if (error) throw new DataAccessError('concerns.resolve', error);
   },
 
+  /** Undo for a mistakenly-resolved concern — clears it back to open. */
+  async reopen(concernId: string): Promise<void> {
+    const { error } = await client().rpc('reopen_concern', { p_concern_id: concernId });
+    if (error) throw new DataAccessError('concerns.reopen', error);
+  },
+
   /** Amend the text of a concern. The DB records who made the change and when. */
   async updateNote(concernId: string, note: string): Promise<void> {
     const { error } = await client().rpc('update_concern_note', {
@@ -932,6 +938,12 @@ export const discharge = {
       p_notes: notes,
     });
     if (error) throw new DataAccessError('discharge.decide', error);
+  },
+
+  /** Undo for a mistaken approve/reject — back to pending, only while still unfinalised. */
+  async undecide(requestId: string): Promise<void> {
+    const { error } = await client().rpc('undecide_discharge_request', { p_request_id: requestId });
+    if (error) throw new DataAccessError('discharge.undecide', error);
   },
 
   /**

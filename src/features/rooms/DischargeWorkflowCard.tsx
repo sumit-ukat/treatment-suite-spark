@@ -358,10 +358,20 @@ export function DischargeWorkflowCard({
           </div>
 
           {canFinalise && mode === 'idle' ? (
-            <button type="button" onClick={() => setMode('form')}
-              className="rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10">
-              Finalise discharge&hellip;
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setMode('form')}
+                className="rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[11.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10">
+                Finalise discharge&hellip;
+              </button>
+              {canApprove ? (
+                <button type="button" disabled={busy}
+                  onClick={() => void run(() => dischargeService.undecide(req.id))}
+                  title="Undo — back to pending, in case this was approved by mistake"
+                  className="rounded-md px-2 py-1.5 text-[11px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:text-red-600 disabled:opacity-40 dark:hover:text-red-400">
+                  Undo approval
+                </button>
+              ) : null}
+            </div>
           ) : mode === 'form' ? (
             <div className="flex flex-col gap-2">
               {dateField}
