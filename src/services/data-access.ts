@@ -625,6 +625,67 @@ export const tasks = {
   },
 };
 
+// ─── GP Summary log ────────────────────────────────────────────────────────────
+// Surgery contact details + sign-off trail for one GP Summary task — replaces the centre's manual
+// "GP Summary Log" spreadsheet. See migration 0058.
+
+export interface GpSummaryDetail {
+  client_task_id: string;
+  surgery_name: string | null;
+  surgery_email: string | null;
+  surgery_phone: string | null;
+  request_sent_at: string | null;
+  request_sent_by_name: string | null;
+  received_at: string | null;
+  /** null until received_at is set — there is nothing to judge compliant/not yet. */
+  compliant: boolean | null;
+  doctor_informed_at: string | null;
+  doctor_informed_by_name: string | null;
+  ukat_doctor: string | null;
+  confirmed_checked_at: string | null;
+  confirmed_checked_by_name: string | null;
+}
+
+export const gpSummary = {
+  async get(taskId: string): Promise<GpSummaryDetail | null> {
+    const { data, error } = await client().rpc('gp_summary_get', { p_task_id: taskId });
+    if (error) throw new DataAccessError('gpSummary.get', error);
+    const rows = (data ?? []) as GpSummaryDetail[];
+    return rows[0] ?? null;
+  },
+
+  async save(taskId: string, input: {
+    surgeryName?: string | undefined;
+    surgeryEmail?: string | undefined;
+    surgeryPhone?: string | undefined;
+    requestSentAt?: string | undefined;
+    receivedAt?: string | undefined;
+  }): Promise<void> {
+    const { error } = await client().rpc('gp_summary_save', {
+      p_task_id: taskId,
+      p_surgery_name: input.surgeryName ?? null,
+      p_surgery_email: input.surgeryEmail ?? null,
+      p_surgery_phone: input.surgeryPhone ?? null,
+      p_request_sent_at: input.requestSentAt ?? null,
+      p_received_at: input.receivedAt ?? null,
+    });
+    if (error) throw new DataAccessError('gpSummary.save', error);
+  },
+
+  async markDoctorInformed(taskId: string, ukatDoctor?: string | undefined): Promise<void> {
+    const { error } = await client().rpc('gp_summary_mark_doctor_informed', {
+      p_task_id: taskId,
+      p_ukat_doctor: ukatDoctor?.trim() ? ukatDoctor.trim() : null,
+    });
+    if (error) throw new DataAccessError('gpSummary.markDoctorInformed', error);
+  },
+
+  async markConfirmed(taskId: string): Promise<void> {
+    const { error } = await client().rpc('gp_summary_mark_confirmed', { p_task_id: taskId });
+    if (error) throw new DataAccessError('gpSummary.markConfirmed', error);
+  },
+};
+
 // ─── Concerns ────────────────────────────────────────────────────────────────
 
 export type ConcernCategory = 'behaviour' | 'risk' | 'medical' | 'welfare' | 'general';

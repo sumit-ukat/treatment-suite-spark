@@ -5,7 +5,7 @@ import type { BoardBed } from './board-data.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip } from '../../components/ui.tsx';
 import { formatDate } from '../../lib/format.js';
-import { admissions, tasks as taskService } from '../../services/data-access.js';
+import { admissions, tasks as taskService, gpSummary as gpSummaryService, type GpSummaryDetail } from '../../services/data-access.js';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TaskRow } from './DetailPanel.tsx';
 import type { BoardTask } from './board-data.js';
@@ -568,7 +568,7 @@ function AdminFields({
         {gp ? (
           <div className="mt-1 border-t border-[var(--color-line)] pt-3">
             <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-            <ul><TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} /></ul>
+            <GpSummaryRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
           </div>
         ) : null}
       </div>
@@ -602,11 +602,226 @@ function AdminFields({
       {gp ? (
         <div className="mt-1 border-t border-[var(--color-line)] pt-3">
           <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-          <ul><TaskRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} /></ul>
+          <GpSummaryRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
         </div>
       ) : (
         <Field label="GP Summary">Not applicable</Field>
       )}
+    </div>
+  );
+}
+
+/* ─── GP Summary row: task status + the surgery contact / sign-off log from migration 0058 ───────── */
+
+function GpSummaryRow({
+  task,
+  admittedAt,
+  onChanged,
+  readOnly,
+}: {
+  task: BoardTask;
+  admittedAt: Date;
+  onChanged?: (() => void) | undefined;
+  readOnly?: boolean;
+}) {
+  const { can } = useAuth();
+  const canEdit = !readOnly && can('tasks.complete');
+  const [detail, setDetail] = useState<GpSummaryDetail | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState({ surgeryName: '', surgeryEmail: '', surgeryPhone: '', requestSentAt: '', receivedAt: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [doctorName, setDoctorName] = useState('');
+  const [doctorBusy, setDoctorBusy] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
+  function load() {
+    if (!task.id) return;
+    gpSummaryService.get(task.id).then((d) => { setDetail(d); setLoaded(true); }).catch(() => setLoaded(true));
+  }
+  useEffect(() => { load(); }, [task.id]);
+
+  function openEdit() {
+    setForm({
+      surgeryName: detail?.surgery_name ?? '',
+      surgeryEmail: detail?.surgery_email ?? '',
+      surgeryPhone: detail?.surgery_phone ?? '',
+      requestSentAt: detail?.request_sent_at ?? '',
+      receivedAt: detail?.received_at ?? '',
+    });
+    setError(null);
+    setEditMode(true);
+  }
+
+  async function save() {
+    if (!task.id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await gpSummaryService.save(task.id, {
+        surgeryName: form.surgeryName,
+        surgeryEmail: form.surgeryEmail,
+        surgeryPhone: form.surgeryPhone,
+        requestSentAt: form.requestSentAt || undefined,
+        receivedAt: form.receivedAt || undefined,
+      });
+      setEditMode(false);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function markDoctorInformed() {
+    if (!task.id) return;
+    setDoctorBusy(true);
+    try {
+      await gpSummaryService.markDoctorInformed(task.id, doctorName);
+      setDoctorName('');
+      load();
+    } finally {
+      setDoctorBusy(false);
+    }
+  }
+
+  async function markConfirmed() {
+    if (!task.id) return;
+    setConfirmBusy(true);
+    try {
+      await gpSummaryService.markConfirmed(task.id);
+      load();
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <ul><TaskRow task={task} admittedAt={admittedAt} onChanged={() => { onChanged?.(); load(); }} {...(readOnly ? { readOnly } : {})} /></ul>
+
+      {task.id ? (
+        <div className="rounded-[8px] border border-[var(--color-line)] p-3">
+          {!loaded ? (
+            <p className="text-[11px] text-[var(--color-ink-muted)]">Loading GP Summary details…</p>
+          ) : editMode ? (
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Surgery
+                  <input type="text" value={form.surgeryName} onChange={(e) => setForm((f) => ({ ...f, surgeryName: e.target.value }))}
+                    className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+                </label>
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Email
+                  <input type="email" value={form.surgeryEmail} onChange={(e) => setForm((f) => ({ ...f, surgeryEmail: e.target.value }))}
+                    className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+                </label>
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Telephone
+                  <input type="text" value={form.surgeryPhone} onChange={(e) => setForm((f) => ({ ...f, surgeryPhone: e.target.value }))}
+                    className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+                </label>
+                <div />
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Date request sent
+                  <input type="date" value={form.requestSentAt} onChange={(e) => setForm((f) => ({ ...f, requestSentAt: e.target.value }))}
+                    className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+                </label>
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Date received
+                  <input type="date" value={form.receivedAt} onChange={(e) => setForm((f) => ({ ...f, receivedAt: e.target.value }))}
+                    className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+                </label>
+              </div>
+              {error ? <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">{error}</p> : null}
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={busy} onClick={save}
+                  className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50">
+                  {busy ? 'Saving…' : 'Save'}
+                </button>
+                <button type="button" disabled={busy} onClick={() => setEditMode(false)}
+                  className="rounded-md px-3 py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary log</span>
+                {canEdit ? (
+                  <button type="button" onClick={openEdit}
+                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
+                    <Pencil className="size-3" /> Edit
+                  </button>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11.5px]">
+                <DetailFact label="Surgery" value={detail?.surgery_name ?? undefined} />
+                <DetailFact label="Email" value={detail?.surgery_email ?? undefined} />
+                <DetailFact label="Telephone" value={detail?.surgery_phone ?? undefined} />
+                <DetailFact
+                  label="Compliant"
+                  value={detail == null || detail.compliant === null ? undefined : detail.compliant ? 'Yes' : 'No'}
+                />
+                <DetailFact
+                  label="Request sent"
+                  value={detail?.request_sent_at ? `${formatDate(new Date(detail.request_sent_at + 'T12:00:00'))}${detail.request_sent_by_name ? ` by ${detail.request_sent_by_name}` : ''}` : undefined}
+                />
+                <DetailFact
+                  label="Received"
+                  value={detail?.received_at ? formatDate(new Date(detail.received_at + 'T12:00:00')) : undefined}
+                />
+              </div>
+
+              <div className="mt-1 flex flex-col gap-2 border-t border-[var(--color-line)] pt-2.5 sm:flex-row sm:items-end sm:justify-between">
+                {detail?.doctor_informed_at ? (
+                  <div className="text-[11px] text-[var(--color-ink-muted)]">
+                    Doctor informed — {detail.ukat_doctor ? `${detail.ukat_doctor}, ` : ''}
+                    by {detail.doctor_informed_by_name ?? '—'} on {formatDate(new Date(detail.doctor_informed_at))}
+                  </div>
+                ) : canEdit ? (
+                  <div className="flex items-center gap-1.5">
+                    <input type="text" value={doctorName} onChange={(e) => setDoctorName(e.target.value)} placeholder="UKAT doctor (optional)"
+                      className="w-36 rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1 text-[11px] outline-none focus:border-[var(--color-accent)]" />
+                    <button type="button" disabled={doctorBusy} onClick={() => void markDoctorInformed()}
+                      className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10">
+                      {doctorBusy ? '…' : 'Mark doctor informed'}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-[var(--color-ink-muted)]">Doctor not yet informed</span>
+                )}
+
+                {detail?.confirmed_checked_at ? (
+                  <div className="text-[11px] text-[var(--color-ink-muted)]">
+                    Confirmed by {detail.confirmed_checked_by_name ?? '—'} on {formatDate(new Date(detail.confirmed_checked_at))}
+                  </div>
+                ) : canEdit ? (
+                  <button type="button" disabled={confirmBusy} onClick={() => void markConfirmed()}
+                    className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1 text-[11px] font-medium transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10">
+                    {confirmBusy ? '…' : 'Mark confirmed / checked'}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-[var(--color-ink-muted)]">Not yet confirmed</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DetailFact({ label, value }: { label: string; value: string | undefined }) {
+  return (
+    <div>
+      <div className="text-[9.5px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">{label}</div>
+      <div className="mt-0.5 text-[var(--color-ink)]">{value ?? <span className="text-[var(--color-ink-muted)]">—</span>}</div>
     </div>
   );
 }
