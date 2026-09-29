@@ -428,25 +428,20 @@ export function TreatmentBoard({
         <div style={{ width: tableScrollWidth, height: 1 }} />
       </div>
 
-      {/* print:overflow-visible is the important part — table content past the on-screen scroll
-          viewport would otherwise be clipped out of the printed page entirely, not just hidden
-          behind a scrollbar (see the bug this fixes). print:static below un-freezes the sticky
-          header/columns, which don't paginate sensibly; the browser's own print scaling handles
-          fitting the full-width table onto the landscape page. */}
       <div
         ref={tableWrapRef}
-        className={`overflow-x-auto rounded-b-[10px] border border-[var(--color-line)] bg-card print:overflow-visible print:rounded-none print:border-0 print:shadow-none ${CARD_SHADOW}`}
+        className={`overflow-x-auto rounded-b-[10px] border border-[var(--color-line)] bg-card print:hidden ${CARD_SHADOW}`}
         onScroll={(e) => {
           if (topScrollRef.current) topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
         }}
       >
         <table className="w-full table-fixed border-separate border-spacing-0 text-[12.5px]">
 
-          <thead className="sticky top-0 z-20 print:static">
+          <thead className="sticky top-0 z-20">
             <tr>
-              <th className={`sticky left-0 z-30 w-16 print:static ${th}`}>Bed</th>
+              <th className={`sticky left-0 z-30 w-16 ${th}`}>Bed</th>
               {/* Shadow on Client column marks the freeze boundary */}
-              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] print:static print:shadow-none ${th}`}>
+              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
                 Client &amp; Placement
               </th>
               <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
@@ -472,7 +467,7 @@ export function TreatmentBoard({
             {visible.map((bed) => {
               const o = bed.occupant;
               const cb = 'border-b border-[var(--color-line)]';
-              const stickyCell = `sticky z-10 bg-card print:static ${cb}`;
+              const stickyCell = `sticky z-10 bg-card ${cb}`;
 
               /* ── Empty bed ── */
               if (!o) {
@@ -483,7 +478,7 @@ export function TreatmentBoard({
                         {bed.label}
                       </span>
                     </td>
-                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)] print:shadow-none`}>
+                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
                     <td className={`${cb} w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
@@ -501,7 +496,7 @@ export function TreatmentBoard({
                  tint carry the signal instead — see CategoryCell / CELL_TINT above. */
               const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
               const urgentDischarge = o.daysUntilDischarge <= 2;
-              const osc = `sticky z-10 bg-card print:static ${cb}`;
+              const osc = `sticky z-10 bg-card ${cb}`;
 
               return (
                 <tr key={bed.label}>
@@ -519,7 +514,7 @@ export function TreatmentBoard({
                     onClick={() => setOpenBedLabel(bed.label)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
                     title="Open full client file"
-                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] print:shadow-none ${
+                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
@@ -593,6 +588,66 @@ export function TreatmentBoard({
         </table>
       </div>
 
+      {/* ── Print-only report — a plain, Salesforce-style list instead of a copy of the on-screen
+          matrix: no colour, no icons, no photos, just bordered rows of text so it stays legible
+          in black-and-white and doesn't burn through ink reproducing UI chrome. ── */}
+      <div className="hidden print:block">
+        <p className="mb-3 text-[10px] text-black">
+          Printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at {fmtTime(new Date())}
+          {' '}&middot; {counts.clients} clients &middot; {counts.available} beds free
+        </p>
+        <table className="w-full border-collapse text-[9.5px] text-black">
+          <thead>
+            <tr>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Bed</th>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Client</th>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Therapist</th>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Day</th>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Discharge</th>
+              {CATEGORY_ORDER.map((key) => (
+                <th key={key} className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">
+                  {CATEGORY_LABEL[key]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((bed) => {
+              const o = bed.occupant;
+              if (!o) {
+                return (
+                  <tr key={bed.label}>
+                    <td className="border border-black/20 px-1.5 py-1">{bed.label}</td>
+                    <td className="border border-black/20 px-1.5 py-1 italic" colSpan={4 + CATEGORY_ORDER.length}>
+                      Available{bed.shared ? ' — shared room' : ''}
+                    </td>
+                  </tr>
+                );
+              }
+              return (
+                <tr key={bed.label}>
+                  <td className="border border-black/20 px-1.5 py-1">{bed.label}</td>
+                  <td className="border border-black/20 px-1.5 py-1">
+                    {o.displayName}{o.overdueCount > 0 ? ` — ${o.overdueCount} overdue` : ''}
+                  </td>
+                  <td className="border border-black/20 px-1.5 py-1">{o.therapist ?? 'Not assigned'}</td>
+                  <td className="border border-black/20 px-1.5 py-1">Day {o.treatmentDay} of {o.durationDays}</td>
+                  <td className="border border-black/20 px-1.5 py-1">{fmtStr(o.plannedDischargeDate)}</td>
+                  {CATEGORY_ORDER.map((key) => {
+                    const status = categoryStatus(o, key);
+                    return (
+                      <td key={key} className="border border-black/20 px-1.5 py-1">
+                        {status.label}{status.fraction ? ` (${status.fraction})` : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* ── Full client file, opened from the Client & Placement cell ── */}
       {selected ? (() => {
         const occupiedVisible = visible.filter((b) => b.occupant !== null);
@@ -623,8 +678,8 @@ export function TreatmentBoard({
         />
       ) : null}
 
-      {/* ── Legend ── */}
-      <div className={`border border-[var(--color-line)] bg-card p-5 ${CARD_RADIUS} ${CARD_SHADOW}`}>
+      {/* ── Legend — explains the on-screen icons, so it's meaningless on the plain-text print report ── */}
+      <div className={`border border-[var(--color-line)] bg-card p-5 print:hidden ${CARD_RADIUS} ${CARD_SHADOW}`}>
         <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]">
           What the icons and colours mean
         </p>
