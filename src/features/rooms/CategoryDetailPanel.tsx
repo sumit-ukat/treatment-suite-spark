@@ -698,6 +698,30 @@ function GpSummaryRow({
     }
   }
 
+  async function undoDoctorInformed() {
+    if (!task.id) return;
+    if (!window.confirm('Undo "doctor informed"? This clears who was marked and when.')) return;
+    setDoctorBusy(true);
+    try {
+      await gpSummaryService.undoDoctorInformed(task.id);
+      load();
+    } finally {
+      setDoctorBusy(false);
+    }
+  }
+
+  async function undoConfirmed() {
+    if (!task.id) return;
+    if (!window.confirm('Undo "confirmed / checked"? This clears who confirmed it and when.')) return;
+    setConfirmBusy(true);
+    try {
+      await gpSummaryService.undoConfirmed(task.id);
+      load();
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <ul><TaskRow task={task} admittedAt={admittedAt} onChanged={() => { onChanged?.(); load(); }} {...(readOnly ? { readOnly } : {})} /></ul>
@@ -779,9 +803,17 @@ function GpSummaryRow({
 
               <div className="mt-1 flex flex-col gap-2 border-t border-[var(--color-line)] pt-2.5 sm:flex-row sm:items-end sm:justify-between">
                 {detail?.doctor_informed_at ? (
-                  <div className="text-[11px] text-[var(--color-ink-muted)]">
-                    Doctor informed — {detail.ukat_doctor ? `${detail.ukat_doctor}, ` : ''}
-                    by {detail.doctor_informed_by_name ?? '—'} on {formatDate(new Date(detail.doctor_informed_at))}
+                  <div className="flex items-center gap-2 text-[11px] text-[var(--color-ink-muted)]">
+                    <span>
+                      Doctor informed — {detail.ukat_doctor ? `${detail.ukat_doctor}, ` : ''}
+                      by {detail.doctor_informed_by_name ?? '—'} on {formatDate(new Date(detail.doctor_informed_at))}
+                    </span>
+                    {canEdit ? (
+                      <button type="button" disabled={doctorBusy} onClick={() => void undoDoctorInformed()}
+                        className="shrink-0 text-[10.5px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400">
+                        {doctorBusy ? '…' : 'Undo'}
+                      </button>
+                    ) : null}
                   </div>
                 ) : canEdit ? (
                   <div className="flex items-center gap-1.5">
@@ -797,8 +829,16 @@ function GpSummaryRow({
                 )}
 
                 {detail?.confirmed_checked_at ? (
-                  <div className="text-[11px] text-[var(--color-ink-muted)]">
-                    Confirmed by {detail.confirmed_checked_by_name ?? '—'} on {formatDate(new Date(detail.confirmed_checked_at))}
+                  <div className="flex items-center gap-2 text-[11px] text-[var(--color-ink-muted)]">
+                    <span>
+                      Confirmed by {detail.confirmed_checked_by_name ?? '—'} on {formatDate(new Date(detail.confirmed_checked_at))}
+                    </span>
+                    {canEdit ? (
+                      <button type="button" disabled={confirmBusy} onClick={() => void undoConfirmed()}
+                        className="shrink-0 text-[10.5px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400">
+                        {confirmBusy ? '…' : 'Undo'}
+                      </button>
+                    ) : null}
                   </div>
                 ) : canEdit ? (
                   <button type="button" disabled={confirmBusy} onClick={() => void markConfirmed()}

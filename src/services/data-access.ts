@@ -684,6 +684,17 @@ export const gpSummary = {
     const { error } = await client().rpc('gp_summary_mark_confirmed', { p_task_id: taskId });
     if (error) throw new DataAccessError('gpSummary.markConfirmed', error);
   },
+
+  /** Clears a mis-clicked sign-off back to unset, so it can be marked again correctly. */
+  async undoDoctorInformed(taskId: string): Promise<void> {
+    const { error } = await client().rpc('gp_summary_undo_doctor_informed', { p_task_id: taskId });
+    if (error) throw new DataAccessError('gpSummary.undoDoctorInformed', error);
+  },
+
+  async undoConfirmed(taskId: string): Promise<void> {
+    const { error } = await client().rpc('gp_summary_undo_confirmed', { p_task_id: taskId });
+    if (error) throw new DataAccessError('gpSummary.undoConfirmed', error);
+  },
 };
 
 // ─── Concerns ────────────────────────────────────────────────────────────────
