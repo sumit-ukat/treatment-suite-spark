@@ -11,6 +11,7 @@ import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
 import { CategoryDetailPanel } from './CategoryDetailPanel.tsx';
 import { CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
+import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 
 // Soft card radius/shadow used across the reskinned board — kept local to this screen (not the
 // shared --radius/--shadow-soft tokens) since the reskin is rolling out here first.
@@ -199,8 +200,9 @@ export function TreatmentBoard({
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<{ bedLabel: string; category: CategoryKey } | null>(null);
   // Default excludes empty beds from the printed report — they're rarely wanted on a handover sheet;
-  // staff can opt back in right before printing.
+  // staff can opt back in from the print options dialog.
   const [printIncludeAvailable, setPrintIncludeAvailable] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -316,20 +318,9 @@ export function TreatmentBoard({
               <History className="size-3.5" /> {asOf ? 'Archive' : 'Archive'}
             </button>
             {!asOf ? (
-              <label className="inline-flex min-h-9 items-center gap-1.5 text-[12px] text-[var(--color-ink-muted)]">
-                <input
-                  type="checkbox"
-                  checked={printIncludeAvailable}
-                  onChange={(e) => setPrintIncludeAvailable(e.target.checked)}
-                  className="size-3.5 accent-[var(--color-accent)]"
-                />
-                Include free beds when printing
-              </label>
-            ) : null}
-            {!asOf ? (
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => setPrintDialogOpen(true)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-[7px] border border-[var(--color-line)] bg-card px-3 text-[12px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
               >
                 <Printer className="size-3.5" /> Print
@@ -691,6 +682,43 @@ export function TreatmentBoard({
           onChanged={() => refresh()}
           readOnly={!!asOf}
         />
+      ) : null}
+
+      {/* ── Print options ── */}
+      {printDialogOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setPrintDialogOpen(false)}>
+          <DialogContent className="w-full max-w-[360px] p-5">
+            <DialogTitle className="text-[14px] font-semibold">Print options</DialogTitle>
+            <label className="mt-3 flex items-start gap-2 text-[12.5px] text-[var(--color-ink)]">
+              <input
+                type="checkbox"
+                checked={printIncludeAvailable}
+                onChange={(e) => setPrintIncludeAvailable(e.target.checked)}
+                className="mt-0.5 size-3.5 accent-[var(--color-accent)]"
+              />
+              <span>
+                Include free beds
+                <span className="block text-[11px] text-[var(--color-ink-muted)]">Off by default — a handover sheet is usually about the clients, not the vacancies.</span>
+              </span>
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPrintDialogOpen(false)}
+                className="rounded-[7px] border border-[var(--color-line)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPrintDialogOpen(false); window.setTimeout(() => window.print(), 0); }}
+                className="inline-flex items-center gap-1.5 rounded-[7px] bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:opacity-90"
+              >
+                <Printer className="size-3.5" /> Print
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
 
       {/* ── Legend — explains the on-screen icons, so it's meaningless on the plain-text print report ── */}
