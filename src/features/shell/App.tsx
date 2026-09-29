@@ -13,7 +13,6 @@ import {
 } from 'react-router-dom';
 import {
   ArrowUpRight,
-  ChevronDown,
   ClipboardList,
   Filter,
   History,
@@ -64,6 +63,7 @@ import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
 import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { HelpCentre } from '../help/HelpCentre.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
+import { CentreSwitcher } from './CentreSwitcher.tsx';
 import { Chip } from '../../components/ui.tsx';
 import {
   Dialog,
@@ -261,44 +261,6 @@ function UserMenu({
 /** The centre switcher — a dropdown rather than a bare `<select>`, matching the source's own pattern.
  * Fictional occupancy/region figures still come from `centres-data.ts` (see the caveat where this is
  * built); this only changes how a centre is picked, not what's known about it. */
-function CentreSwitcher({
-  centres,
-  value,
-  onChange,
-}: {
-  centres: readonly CentreSummary[];
-  value: string;
-  onChange: (slug: string) => void;
-}) {
-  const current = centres.find((c) => c.slug === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:border-[var(--color-accent-ring)] sm:flex"
-        >
-          <span className="max-w-[160px] truncate">{current?.name ?? 'Select centre'}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-80 overflow-auto">
-        <DropdownMenuLabel>Switch centre</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {centres.map((c) => (
-          <DropdownMenuItem key={c.slug} onSelect={() => onChange(c.slug)}>
-            <span className="min-w-0 flex-1 truncate">
-              {c.name}
-              {c.isConfigured ? '' : ' — no data'}
-            </span>
-            <span className="text-muted-foreground ml-auto shrink-0 text-xs">{c.region}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 /**
  * Two hubs over the same ten centres, so the switch belongs in the chrome rather than as a link
  * buried in either page — a reader comparing them should be able to flip back and forth without
@@ -518,6 +480,8 @@ function CentreShell() {
             centreName={centre.name}
             centreRegion={centre.region}
             centreSlug={centreSlug}
+            centres={centres}
+            onSwitchCentre={(slug) => navigate(`/centre/${slug}/treatment-board`)}
             onLeaveCentre={() => navigate('/exec')}
           />
         </div>

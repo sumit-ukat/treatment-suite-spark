@@ -2,6 +2,7 @@ import {
   BedDouble,
   BarChart3,
   Building2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -15,6 +16,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BrandMark } from '../../components/brand.tsx';
+import { CentreSwitcher } from './CentreSwitcher.tsx';
+import type { CentreSummary } from '../centres/centres-data.js';
 
 /**
  * Navigation.
@@ -109,6 +112,8 @@ export function Sidebar({
   centreName,
   centreRegion,
   centreSlug,
+  centres,
+  onSwitchCentre,
   onLeaveCentre,
   occupied,
   capacity,
@@ -122,6 +127,10 @@ export function Sidebar({
    * when unknown, rather than showing a fabricated region. */
   centreRegion?: string | undefined;
   centreSlug?: string;
+  /** All centres, for the centre-box's switcher dropdown. Omitted (or without onSwitchCentre) falls
+   * back to a plain, non-interactive centre card instead of a dropdown with nothing to switch to. */
+  centres?: readonly CentreSummary[] | undefined;
+  onSwitchCentre?: ((slug: string) => void) | undefined;
   onLeaveCentre: () => void;
   /** Today's real occupancy for the footer card — omitted (no footer) when the centre has no board
    * yet, rather than showing a fabricated 0/0. */
@@ -156,8 +165,44 @@ export function Sidebar({
         ) : null}
       </button>
 
-      {/* Centre card */}
-      {!collapsed ? (
+      {/* Centre card — a switcher when there's a centre list to switch between, else a plain card */}
+      {centres && onSwitchCentre ? (
+        <div className={collapsed ? 'mx-2.5 my-3 flex shrink-0 justify-center' : 'mx-3 my-3.5 shrink-0'}>
+          <CentreSwitcher
+            centres={centres}
+            value={centreSlug ?? ''}
+            onChange={onSwitchCentre}
+            trigger={() =>
+              collapsed ? (
+                <button
+                  type="button"
+                  title={`${centreName} — switch centre`}
+                  className="grid size-[31px] shrink-0 place-items-center rounded-[7px] bg-[var(--color-accent-soft)] text-[var(--color-accent)] transition hover:bg-[var(--color-accent)]/20"
+                >
+                  <Building2 aria-hidden="true" className="size-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  title="Switch centre"
+                  className="flex min-h-[54px] w-full items-center gap-2.5 rounded-[8px] border border-[var(--color-line)] px-2.5 py-2.5 text-left transition hover:border-[var(--color-accent-ring)] hover:bg-muted/40"
+                >
+                  <span className="grid size-[31px] shrink-0 place-items-center rounded-[7px] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+                    <Building2 aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <strong className="block truncate text-[12px] font-semibold text-[var(--color-ink)]">{centreName}</strong>
+                    {centreRegion ? (
+                      <small className="block truncate text-[11px] text-[var(--color-ink-muted)]">{centreRegion} · UKAT</small>
+                    ) : null}
+                  </span>
+                  <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+                </button>
+              )
+            }
+          />
+        </div>
+      ) : !collapsed ? (
         <div className="mx-3 my-3.5 flex min-h-[54px] shrink-0 items-center gap-2.5 rounded-[8px] border border-[var(--color-line)] px-2.5 py-2.5">
           <span className="grid size-[31px] shrink-0 place-items-center rounded-[7px] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
             <Building2 aria-hidden="true" className="size-4" />
