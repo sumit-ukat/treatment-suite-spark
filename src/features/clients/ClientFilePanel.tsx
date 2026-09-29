@@ -359,16 +359,23 @@ function AdmissionCard({ row: r }: { row: ClientAdmissionHistoryRow }) {
 
       <dl className="nums mt-2 grid grid-cols-2 gap-y-1.5 text-[12px]">
         <Fact label="Bed" value={r.bed_label ?? '—'} />
-        <Fact
-          label={isActive ? 'Planned discharge' : 'Discharged'}
-          value={
-            isActive
-              ? formatDate(r.current_planned_discharge_date)
-              : r.actual_discharge_at
-                ? `${formatDate(new Date(r.actual_discharge_at))}${r.discharge_type ? ` (${DISCHARGE_TYPE_LABEL[r.discharge_type] ?? r.discharge_type})` : ''}`
-                : '—'
-          }
-        />
+        {isActive ? (
+          <Fact label="Planned discharge" value={formatDate(r.current_planned_discharge_date)} />
+        ) : (
+          <>
+            {/* Both dates, once there's an actual one to compare against — so it's visible whether
+                this admission left early, on time, or late, not just when it ended. */}
+            <Fact label="Planned discharge" value={formatDate(r.current_planned_discharge_date)} />
+            <Fact
+              label="Actual discharge"
+              value={
+                r.actual_discharge_at
+                  ? `${formatDate(new Date(r.actual_discharge_at))}${r.discharge_type ? ` (${DISCHARGE_TYPE_LABEL[r.discharge_type] ?? r.discharge_type})` : ''}`
+                  : '—'
+              }
+            />
+          </>
+        )}
         <Fact label="Focal therapist" value={r.therapist_label ?? 'Not assigned'} />
         <Fact label="Buddy" value={r.buddy_label ?? '—'} />
         <Fact label="Substance" value={r.substance_name ?? '—'} />
