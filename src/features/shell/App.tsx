@@ -130,6 +130,7 @@ function AppRoutes() {
         <Route path="tasks" element={<NotBuiltPage />} />
         <Route path="family" element={<NotBuiltPage />} />
         <Route path="medical" element={<NotBuiltPage />} />
+        <Route path="discharge" element={<NotBuiltPage />} />
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
