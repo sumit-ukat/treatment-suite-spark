@@ -916,7 +916,7 @@ export function DetailPanel({
     {/* Extend Stay — sibling dialog so it gets its own full-screen overlay */}
     {extendStayOpen && o.admissionId ? (
       <Dialog open onOpenChange={(v) => !v && setExtendStayOpen(false)}>
-        <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+        <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
           <DialogTitle className="sr-only">Extend stay — {o.displayName}</DialogTitle>
           <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
             <div>
@@ -938,7 +938,7 @@ export function DetailPanel({
     {/* Discharge Workflow — sibling dialog so it gets its own full-screen overlay */}
     {dischargeOpen && o.admissionId ? (
       <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
-        <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+        <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
           <DialogTitle className="sr-only">Discharge — {o.displayName}</DialogTitle>
           <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
             <div>

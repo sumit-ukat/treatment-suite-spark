@@ -1263,7 +1263,7 @@ export function TreatmentDetailPanel({
       {/* ── Extend Stay overlay ── */}
       {showExtend && o.admissionId ? (
         <Dialog open onOpenChange={(open) => !open && setShowExtend(false)}>
-          <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
             <DialogTitle className="sr-only">Extend stay — {o.displayName}</DialogTitle>
             <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
               <div>
@@ -1342,7 +1342,7 @@ export function TreatmentDetailPanel({
       {/* ── Discharge Workflow overlay ── */}
       {showDischarge && o.admissionId ? (
         <Dialog open onOpenChange={(open) => !open && setShowDischarge(false)}>
-          <DialogContent className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+          <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
             <DialogTitle className="sr-only">Discharge workflow — {o.displayName}</DialogTitle>
             <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
               <div>
