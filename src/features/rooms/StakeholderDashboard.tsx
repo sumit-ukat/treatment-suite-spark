@@ -295,6 +295,7 @@ export function StakeholderDashboard({
                 : 'All GP summaries up to date'
             }
             accent={gpOverdueCount > 0 ? 'red' : gpPendingCount > 0 ? 'amber' : 'green'}
+            onClick={() => navigate('../treatment-board?filter=gp_pending')}
           />
           <KpiTile
             icon={CheckCircle2}

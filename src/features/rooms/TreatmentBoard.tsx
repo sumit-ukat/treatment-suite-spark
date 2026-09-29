@@ -51,6 +51,14 @@ function fmtTime(d: Date): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+/** True when this occupant's GP summary task exists and isn't done/not-applicable yet — shared by the
+ * "GP summaries pending" stat and its matching filter, so the two can never disagree with each other. */
+function gpSummaryPending(o: NonNullable<BoardBed['occupant']> | null | undefined): boolean {
+  if (!o) return false;
+  const t = o.tasks.find((t) => t.code === 'gp_summary');
+  return !!t && !t.isComplete && !t.isNotApplicable;
+}
+
 /** Icon-box tone: background, icon colour and the lucide glyph — mirrors the reference board's
  * state-icon treatment (done/overdue/due/neutral) instead of a pill chip. */
 const TONE_ICON: Record<Tone, { bg: string; text: string; Icon: typeof Check }> = {
@@ -154,10 +162,10 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns';
+type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns' | 'gp_pending';
 
 const TREATMENT_FILTER_IDS: readonly FilterId[] =
-  ['all', 'overdue', 'due_today', 'available', 'discharge_soon', 'no_therapist', 'open_concerns'];
+  ['all', 'overdue', 'due_today', 'available', 'discharge_soon', 'no_therapist', 'open_concerns', 'gp_pending'];
 
 export function TreatmentBoard({
   centreId,
@@ -221,6 +229,7 @@ export function TreatmentBoard({
     dischargeSoon: beds.filter((b) => b.occupant !== null && b.occupant.daysUntilDischarge >= -1 && b.occupant.daysUntilDischarge <= 7).length,
     noTherapist:   beds.filter((b) => b.occupant !== null && !b.occupant.therapist).length,
     openConcerns:  beds.filter((b) => b.occupant?.hasOpenConcern === true).length,
+    gpPending:     beds.filter((b) => gpSummaryPending(b.occupant)).length,
   }), [beds]);
 
   const visible = useMemo(() => {
@@ -232,6 +241,7 @@ export function TreatmentBoard({
       if (activeFilter === 'discharge_soon' && (bed.occupant === null || bed.occupant.daysUntilDischarge < -1 || bed.occupant.daysUntilDischarge > 7)) return false;
       if (activeFilter === 'no_therapist'   && (bed.occupant === null || !!bed.occupant.therapist)) return false;
       if (activeFilter === 'open_concerns'  && !bed.occupant?.hasOpenConcern) return false;
+      if (activeFilter === 'gp_pending'     && !gpSummaryPending(bed.occupant)) return false;
       if (!q) return true;
       const o = bed.occupant;
       return (
@@ -370,11 +380,11 @@ export function TreatmentBoard({
           onClick={() => toggle('overdue')}
         />
         <BoardStat
-          label="Tasks due today"
-          value={counts.dueToday}
-          tone="warn"
-          active={activeFilter === 'due_today'}
-          onClick={() => toggle('due_today')}
+          label="GP summaries pending"
+          value={counts.gpPending}
+          tone={counts.gpPending > 0 ? 'warn' : undefined}
+          active={activeFilter === 'gp_pending'}
+          onClick={() => toggle('gp_pending')}
         />
         <BoardStat
           label="Discharging this week"
