@@ -149,10 +149,10 @@ function CategoryCell({ bed, category, onOpen }: { bed: BoardBed; category: Cate
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns' | 'gp_pending';
+type FilterId = 'all' | 'overdue' | 'due_today' | 'available' | 'discharge_soon' | 'no_therapist' | 'open_concerns' | 'gp_pending' | 'extended_stay' | 'custom_pending';
 
 const TREATMENT_FILTER_IDS: readonly FilterId[] =
-  ['all', 'overdue', 'due_today', 'available', 'discharge_soon', 'no_therapist', 'open_concerns', 'gp_pending'];
+  ['all', 'overdue', 'due_today', 'available', 'discharge_soon', 'no_therapist', 'open_concerns', 'gp_pending', 'extended_stay', 'custom_pending'];
 
 export function TreatmentBoard({
   centreId,
@@ -233,6 +233,8 @@ export function TreatmentBoard({
       if (activeFilter === 'no_therapist'   && (bed.occupant === null || !!bed.occupant.therapist)) return false;
       if (activeFilter === 'open_concerns'  && !bed.occupant?.hasOpenConcern) return false;
       if (activeFilter === 'gp_pending'     && !gpSummaryPending(bed.occupant)) return false;
+      if (activeFilter === 'extended_stay'  && !bed.occupant?.isExtendedStay) return false;
+      if (activeFilter === 'custom_pending' && !bed.occupant?.tasks.some((t) => t.isManual && !t.isComplete)) return false;
       if (!q) return true;
       const o = bed.occupant;
       return (

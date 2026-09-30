@@ -61,9 +61,10 @@ function KpiTile({
   label: string;
   sub?: string;
   accent?: 'green' | 'amber' | 'red' | 'neutral';
-  /** Only 6 of these 10 tiles have a real destination filter to land on (see StakeholderDashboard) —
-   * omitted rather than forced, so a tile with nowhere useful to go stays a plain, non-interactive
-   * summary instead of a click that does nothing or dumps the reader on an unfiltered board. */
+  /** Only "Task completion" (a percentage, not a set of clients) has nowhere real to land — every
+   * other tile links to the matching Room Board / Treatment Board filter. Omitted rather than
+   * forced, so a tile with nowhere useful to go stays a plain, non-interactive summary instead of a
+   * click that does nothing or dumps the reader on an unfiltered board. */
   onClick?: (() => void) | undefined;
 }) {
   const iconColour =
@@ -274,6 +275,7 @@ export function StakeholderDashboard({
             label="Extended stays"
             sub={extendedStays > 0 ? 'Stays beyond original plan' : 'All stays on original plan'}
             accent={extendedStays > 0 ? 'amber' : 'green'}
+            onClick={() => navigate('../treatment-board?filter=extended_stay')}
           />
           <KpiTile
             icon={UserX}
@@ -309,6 +311,7 @@ export function StakeholderDashboard({
                 : 'No pending custom assignments'
             }
             accent={customOverdueCount > 0 ? 'red' : customPendingClients > 0 ? 'amber' : 'green'}
+            onClick={() => navigate('../treatment-board?filter=custom_pending')}
           />
         </div>
       </div>
