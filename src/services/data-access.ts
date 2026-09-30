@@ -325,7 +325,12 @@ export const admissions = {
     if (error) throw new DataAccessError('admissions.setHighRisk', error);
   },
 
-  /** Edit care-team labels, treatment group, substance and PEEP flag post-admission. */
+  /**
+   * Edit care-team labels, treatment group, substance, PEEP flag and programme length post-admission.
+   * A changed plannedDuration/plannedDurationUnit recomputes the planned discharge date server-side
+   * (app.calculate_planned_discharge) — it can move the discharge date earlier or later, unlike
+   * `extension.apply` which only ever adds days on top of the current plan.
+   */
   async updateDetails(admissionId: string, details: {
     focalTherapistLabel: string;
     buddyLabel: string;
@@ -335,6 +340,8 @@ export const admissions = {
     peepRequired: boolean;
     doctorLabel?: string | undefined;
     detoxEnds?: string | null | undefined;
+    plannedDuration?: number | undefined;
+    plannedDurationUnit?: 'days' | 'weeks' | undefined;
   }): Promise<void> {
     const { error } = await client().rpc('update_admission_details', {
       p_admission_id:          admissionId,
@@ -346,6 +353,8 @@ export const admissions = {
       p_peep_required:         details.peepRequired,
       p_doctor_label:          details.doctorLabel || null,
       p_detox_ends:            details.detoxEnds || null,
+      p_planned_duration:      details.plannedDuration ?? null,
+      p_planned_duration_unit: details.plannedDurationUnit ?? null,
     });
     if (error) throw new DataAccessError('admissions.updateDetails', error);
   },

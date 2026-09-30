@@ -803,7 +803,8 @@ function GpSummaryRow({
                 </label>
                 <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                   Email
-                  <input type="email" value={form.surgeryEmail} onChange={(e) => setForm((f) => ({ ...f, surgeryEmail: e.target.value }))}
+                  <input type="text" value={form.surgeryEmail} onChange={(e) => setForm((f) => ({ ...f, surgeryEmail: e.target.value }))}
+                    placeholder="Email, or a note e.g. no consent to contact GP"
                     className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
                 </label>
                 <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
@@ -858,7 +859,13 @@ function GpSummaryRow({
               <GpSummaryTrail detail={detail} />
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11.5px]">
                 <DetailFact label="Surgery" value={detail?.surgery_name ?? undefined} />
-                <DetailFact label="Email" value={detail?.surgery_email ?? undefined} />
+                <DetailFact
+                  label="Email"
+                  value={detail?.surgery_email ?? undefined}
+                  // Some source rows have a status/consent note here instead of a real address
+                  // (e.g. "No consent to contact GP") — shown as a note, not a broken email.
+                  italic={detail?.surgery_email != null && !detail.surgery_email.includes('@')}
+                />
                 <DetailFact label="Telephone" value={detail?.surgery_phone ?? undefined} />
                 <DetailFact
                   label="Compliant"
@@ -964,11 +971,11 @@ function GpSummaryTrail({ detail }: { detail: GpSummaryDetail | null }) {
   );
 }
 
-function DetailFact({ label, value }: { label: string; value: string | undefined }) {
+function DetailFact({ label, value, italic }: { label: string; value: string | undefined; italic?: boolean }) {
   return (
     <div>
       <div className="text-[9.5px] font-semibold tracking-[0.05em] text-[var(--color-ink-muted)] uppercase">{label}</div>
-      <div className="mt-0.5 text-[var(--color-ink)]">{value ?? <span className="text-[var(--color-ink-muted)]">—</span>}</div>
+      <div className={`mt-0.5 text-[var(--color-ink)] ${italic ? 'italic' : ''}`}>{value ?? <span className="text-[var(--color-ink-muted)]">—</span>}</div>
     </div>
   );
 }

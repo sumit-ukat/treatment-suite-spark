@@ -81,7 +81,7 @@ export function DetailPanel({
   const [notesBusy, setNotesBusy] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [editDetailsMode, setEditDetailsMode] = useState(false);
-  const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false });
+  const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false, durationDays: '' });
   const [detailsBusy, setDetailsBusy] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [editNameMode, setEditNameMode] = useState(false);
@@ -174,6 +174,7 @@ export function DetailPanel({
       group:      o?.group      ?? '',
       substance:  o?.substance  ?? '',
       peep:       o?.peeps      ?? false,
+      durationDays: o?.durationDays != null ? String(o.durationDays) : '',
     });
     setDetailsError(null);
     setEditDetailsMode(true);
@@ -227,6 +228,11 @@ export function DetailPanel({
 
   async function saveDetails() {
     if (!o?.admissionId) return;
+    const duration = parseInt(detailsForm.durationDays, 10);
+    if (isNaN(duration) || duration < 1) {
+      setDetailsError('Programme length must be a positive whole number of days.');
+      return;
+    }
     setDetailsBusy(true);
     setDetailsError(null);
     try {
@@ -237,6 +243,8 @@ export function DetailPanel({
         treatmentGroup:      detailsForm.group,
         substanceName:       detailsForm.substance,
         peepRequired:        detailsForm.peep,
+        plannedDuration:     duration,
+        plannedDurationUnit: 'days',
       });
       setEditDetailsMode(false);
       onChanged?.();
@@ -395,7 +403,7 @@ export function DetailPanel({
 <body>
   <h1>${esc(o.displayName)}</h1>
   <p class="meta">
-    Ref ${esc(o.reference)} &middot; Bed ${esc(bed.label)} &middot; ${esc(o.group || 'No group')}
+    Kipu No. ${esc(o.reference)} &middot; Bed ${esc(bed.label)} &middot; ${esc(o.group || 'No group')}
     &middot; Printed ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
   </p>
 
@@ -579,7 +587,7 @@ export function DetailPanel({
                 </div>
               ) : (
                 <div className="nums flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
-                  Ref {localReference ?? o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
+                  Kipu No. {localReference ?? o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
                   {can('clients.edit_identity') && !readOnly && (
                     <button
                       type="button"
@@ -686,6 +694,20 @@ export function DetailPanel({
                       placeholder="e.g. Alcohol…"
                       className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
                     />
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Programme (days)
+                    <input
+                      type="number"
+                      min={1}
+                      value={detailsForm.durationDays}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, durationDays: e.target.value }))}
+                      placeholder="e.g. 28…"
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                    <span className="mt-0.5 block text-[10px] text-[var(--color-ink-muted)]">
+                      Changes the planned discharge date — can move it earlier or later.
+                    </span>
                   </label>
                   <div className="flex flex-col justify-end pb-1">
                     <label className="flex cursor-pointer items-center gap-2 text-[10.5px] text-[var(--color-ink-muted)]">

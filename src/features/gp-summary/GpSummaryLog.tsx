@@ -161,7 +161,17 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">{r.client_reference}</td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">{formatDate(new Date(r.admitted_at))}</td>
                     <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.surgery_name ?? <span className="text-[var(--color-ink-muted)]">—</span>}</td>
-                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{r.surgery_email ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">
+                      {r.surgery_email == null ? (
+                        '—'
+                      ) : r.surgery_email.includes('@') ? (
+                        r.surgery_email
+                      ) : (
+                        // Some source rows have a status/consent note here instead of a real address
+                        // (e.g. "No consent to contact GP") — shown as a note, not a broken email.
+                        <span className="italic">{r.surgery_email}</span>
+                      )}
+                    </td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">{r.surgery_phone ?? '—'}</td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">
                       {r.request_sent_at ? (
