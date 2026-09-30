@@ -135,6 +135,13 @@ export function UsersAndRoles() {
     return m;
   }, [assignments, showEnded]);
 
+  // The toggle looks broken if there's nothing for it to reveal — show a plain, non-interactive
+  // note instead of a button that flips its own label but visibly changes nothing.
+  const hasEndedAssignments = useMemo(
+    () => assignments.some((a) => a.ends_at !== null && new Date(a.ends_at).getTime() <= Date.now()),
+    [assignments],
+  );
+
   if (!canManage) {
     return (
       <div className="mx-auto max-w-[480px] px-5 py-16 text-center">
@@ -196,10 +203,15 @@ export function UsersAndRoles() {
         title="Users"
         subtitle={`${users.length} shown`}
         className="mt-6"
-        action={{
-          label: showEnded ? 'Hide ended assignments' : 'Show ended assignments',
-          onClick: () => setShowEnded((v) => !v),
-        }}
+        titleExtra={!hasEndedAssignments ? (
+          <span className="text-[11.5px] text-[var(--color-ink-muted)]">No ended assignments</span>
+        ) : undefined}
+        {...(hasEndedAssignments ? {
+          action: {
+            label: showEnded ? 'Hide ended assignments' : 'Show ended assignments',
+            onClick: () => setShowEnded((v) => !v),
+          },
+        } : {})}
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-[12.5px]">
