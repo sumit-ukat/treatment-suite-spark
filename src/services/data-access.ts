@@ -394,6 +394,15 @@ export const clients = {
       client().rpc('update_client_name', { p_client_id: clientId, p_first_name: firstName, p_last_name: lastName }),
     );
   },
+
+  /** Set or correct a client's Kipu No. after admission — e.g. one admitted with a placeholder
+   * before their real number was known. See migration 0068. */
+  updateReference(clientId: string, reference: string): Promise<void> {
+    return run(
+      'clients.updateReference',
+      client().rpc('update_client_reference', { p_client_id: clientId, p_reference: reference }),
+    );
+  },
 };
 
 export interface ClientAdmissionHistoryRow {

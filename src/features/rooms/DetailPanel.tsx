@@ -89,6 +89,11 @@ export function DetailPanel({
   const [nameBusy, setNameBusy] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [localDisplayName, setLocalDisplayName] = useState<string | null>(null);
+  const [editRefMode, setEditRefMode] = useState(false);
+  const [refValue, setRefValue] = useState('');
+  const [refBusy, setRefBusy] = useState(false);
+  const [refError, setRefError] = useState<string | null>(null);
+  const [localReference, setLocalReference] = useState<string | null>(null);
   const [concernEditId, setConcernEditId] = useState<string | null>(null);
   const [concernEditText, setConcernEditText] = useState('');
   const [concernBusy, setConcernBusy] = useState(false);
@@ -195,6 +200,28 @@ export function DetailPanel({
       setNameError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
       setNameBusy(false);
+    }
+  }
+
+  function openEditRef() {
+    setRefValue(localReference ?? o?.reference ?? '');
+    setRefError(null);
+    setEditRefMode(true);
+  }
+
+  async function saveRef() {
+    if (!o?.clientId || !refValue.trim()) return;
+    setRefBusy(true);
+    setRefError(null);
+    try {
+      await clients.updateReference(o.clientId, refValue.trim());
+      setLocalReference(refValue.trim());
+      setEditRefMode(false);
+      onChanged?.();
+    } catch (err) {
+      setRefError(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setRefBusy(false);
     }
   }
 
@@ -519,9 +546,52 @@ export function DetailPanel({
                   )}
                 </div>
               )}
-              <div className="nums text-[11px] text-[var(--color-ink-muted)]">
-                Ref {o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
-              </div>
+              {editRefMode ? (
+                <div className="flex w-full flex-col gap-1.5">
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Kipu No.</span>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={refValue}
+                      onChange={(e) => setRefValue(e.target.value)}
+                      className="nums rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[13px] focus:border-[var(--color-accent)] focus:outline-none"
+                    />
+                  </label>
+                  {refError && <p className="text-[11px] text-red-600 dark:text-red-400">{refError}</p>}
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      disabled={refBusy || !refValue.trim()}
+                      onClick={saveRef}
+                      className="rounded-lg bg-[var(--color-accent)] px-3 py-1 text-[12px] font-semibold text-white disabled:opacity-50 transition hover:opacity-90"
+                    >
+                      {refBusy ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditRefMode(false)}
+                      className="rounded-lg border border-[var(--color-line)] px-3 py-1 text-[12px] font-semibold transition hover:bg-[var(--color-accent-soft)]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="nums flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
+                  Ref {localReference ?? o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
+                  {can('clients.edit_identity') && !readOnly && (
+                    <button
+                      type="button"
+                      onClick={openEditRef}
+                      title="Edit Kipu No."
+                      className="rounded p-0.5 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-ink)]"
+                    >
+                      <Pencil className="size-3" aria-hidden />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {o.clientId ? (
