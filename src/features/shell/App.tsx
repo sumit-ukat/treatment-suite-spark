@@ -549,7 +549,15 @@ function CentreShell() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search bed, client, staff…"
+                  onKeyDown={(e) => {
+                    // This box only ever filters Room Board (BoardPage reads the same shared
+                    // `query`). Everywhere else it looked live but silently did nothing — Enter now
+                    // jumps to Room Board, where whatever's typed is already applied.
+                    if (e.key === 'Enter' && query.trim() && !location.pathname.endsWith('/board')) {
+                      navigate(`/centre/${centreSlug}/board`);
+                    }
+                  }}
+                  placeholder="Search bed, client, staff… (Enter)"
                   className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
                 />
                 <kbd
