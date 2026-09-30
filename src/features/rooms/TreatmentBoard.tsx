@@ -23,6 +23,7 @@ const CARD_SHADOW = 'shadow-[0_2px_4px_rgba(32,37,53,0.04),0_1px_2px_rgba(32,37,
  * familyvisit=green, lifestep=amber), remapped onto this app's own token palette. */
 const CATEGORY_TINT: Record<CategoryKey, { bg: string; text: string }> = {
   admin: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
+  gpsummary: { bg: 'bg-teal-50 dark:bg-teal-950/25', text: 'text-teal-700 dark:text-teal-400' },
   contact: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
   survey: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
   familyvisit: { bg: 'bg-emerald-50 dark:bg-emerald-950/25', text: 'text-emerald-700 dark:text-emerald-400' },
@@ -34,9 +35,9 @@ const CATEGORY_TINT: Record<CategoryKey, { bg: string; text: string }> = {
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-/** Left-to-right order of the board's 8 category columns. */
+/** Left-to-right order of the board's 9 category columns. */
 const CATEGORY_ORDER: readonly CategoryKey[] = [
-  'admin', 'contact', 'survey', 'familyvisit', 'lifestep', 'careplan', 'doctor', 'custom',
+  'admin', 'gpsummary', 'contact', 'survey', 'familyvisit', 'lifestep', 'careplan', 'doctor', 'custom',
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -577,7 +578,7 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* 8 category cells */}
+                  {/* Category cells */}
                   {CATEGORY_ORDER.map((key) => (
                     <CategoryCell
                       key={key}

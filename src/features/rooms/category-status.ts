@@ -3,6 +3,7 @@ import type { BoardTask, Occupant } from './board-data.js';
 
 export type CategoryKey =
   | 'admin'
+  | 'gpsummary'
   | 'contact'
   | 'survey'
   | 'familyvisit'
@@ -13,6 +14,7 @@ export type CategoryKey =
 
 export const CATEGORY_LABEL: Record<CategoryKey, string> = {
   admin: 'Admin',
+  gpsummary: 'GP Summary',
   contact: 'Contact/Comms',
   survey: '7 Day Satisfaction',
   familyvisit: 'Family Visit',
@@ -132,14 +134,17 @@ export function categoryStatus(occupant: Occupant, category: CategoryKey): Categ
   }
 
   if (category === 'admin') {
-    const gp = occupant.tasks.find((t) => t.code === 'gp_summary');
-    const attention = (occupant.therapist ? 0 : 1) + (gp && !gp.isComplete && !gp.isNotApplicable && (gp.isOverdue || gp.isDueToday) ? 1 : 0);
+    // Field-based, not task-based (GP Summary moved to its own 'gpsummary' category below) — the
+    // only thing here that can be "wrong" rather than just informational is an unassigned therapist.
     if (!occupant.therapist) {
-      return { tone: 'alert', label: '1 not assigned', sublabel: 'Focal Therapist', attentionCount: attention, totalCount: 10 };
+      return { tone: 'alert', label: '1 not assigned', sublabel: 'Focal Therapist', attentionCount: 1, totalCount: 9 };
     }
-    if (gp?.isOverdue) return { tone: 'alert', label: '1 overdue', sublabel: 'GP Summary', attentionCount: attention, totalCount: 10 };
-    if (gp?.isDueToday) return { tone: 'warn', label: '1 due', sublabel: 'GP Summary', attentionCount: attention, totalCount: 10 };
-    return { tone: 'good', label: 'Done', attentionCount: 0, totalCount: 10 };
+    return { tone: 'good', label: 'Done', attentionCount: 0, totalCount: 9 };
+  }
+
+  if (category === 'gpsummary') {
+    const gp = occupant.tasks.find((t) => t.code === 'gp_summary');
+    return rollupTasks(gp ? [gp] : []);
   }
 
   // Module-backed categories: contact / survey / familyvisit / lifestep / careplan

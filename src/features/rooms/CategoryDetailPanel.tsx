@@ -134,6 +134,12 @@ function CategoryContent({
     return <AdminFields o={o} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />;
   }
 
+  if (category === 'gpsummary') {
+    const gp = o.tasks.find((t) => t.code === 'gp_summary');
+    if (!gp) return <p className="text-[12.5px] text-[var(--color-ink-muted)]">Not applicable for this client.</p>;
+    return <GpSummaryRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />;
+  }
+
   if (category === 'doctor') {
     return (
       <ManualTaskSection
@@ -487,7 +493,6 @@ function AdminFields({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const gp = o.tasks.find((t) => t.code === 'gp_summary');
   const pct = Math.min(100, Math.round((o.treatmentDay / o.durationDays) * 100));
   const canEdit = !!o.admissionId && can('admissions.edit') && !readOnly;
 
@@ -565,12 +570,6 @@ function AdminFields({
             Cancel
           </button>
         </div>
-        {gp ? (
-          <div className="mt-1 border-t border-[var(--color-line)] pt-3">
-            <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-            <GpSummaryRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -599,14 +598,6 @@ function AdminFields({
         <Field label="Buddy">{o.buddy || 'â€”'}</Field>
         <Field label="Peeps" highlight={o.peeps} wide>{o.peeps ? 'Yes' : 'No'}</Field>
       </div>
-      {gp ? (
-        <div className="mt-1 border-t border-[var(--color-line)] pt-3">
-          <div className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary</div>
-          <GpSummaryRow task={gp} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
-        </div>
-      ) : (
-        <Field label="GP Summary">Not applicable</Field>
-      )}
     </div>
   );
 }
