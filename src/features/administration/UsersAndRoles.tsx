@@ -159,8 +159,10 @@ export function UsersAndRoles() {
     <div className="mx-auto max-w-[860px] px-5 py-8">
       <PageHeader
         title="Users & roles"
-        description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, a zone, or one centre, independent of which centre you navigated through to reach this page."
+        description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
       />
+
+      <LevelsLegend />
 
       <InviteUserForm onInvited={reload} />
 
@@ -207,6 +209,80 @@ export function UsersAndRoles() {
           </table>
         </div>
       </Panel>
+    </div>
+  );
+}
+
+/**
+ * Plain-English reference for the three roles the Role dropdown offers — the role names themselves
+ * ("Level 1 — Full access" etc.) say the tier, not what it actually covers. Kept as static copy
+ * rather than generated from `permissions`/`role_permissions`: the live data would list 41 raw
+ * permission codes, which is exactly the unreadable thing this legend exists to translate away from.
+ */
+function LevelsLegend() {
+  const levels = [
+    {
+      name: 'Level 1 — Full access',
+      tone: 'accent' as const,
+      summary: 'Everything, organisation-wide.',
+      covers: [
+        'Every permission in the system',
+        'Managing other staff’s access (inviting, granting, revoking)',
+        'Creating and configuring centres',
+      ],
+    },
+    {
+      name: 'Level 2 — Centre admin',
+      tone: 'good' as const,
+      summary: 'Full control, but only for the centre(s) this is granted at.',
+      covers: [
+        'Admissions, discharge, stay extensions',
+        'Room/bed management, all clinical recording (treatment, medical, risk, safeguarding)',
+        'Client identity editing, photos, tasks, family contact, reports, audit history',
+      ],
+      excludes: ['Managing other staff’s access', 'Creating or configuring centres'],
+    },
+    {
+      name: 'Level 3 — Operational access',
+      tone: 'warn' as const,
+      summary: 'Day-to-day clinical/support work — no admin or approval capability.',
+      covers: [
+        'View and complete assigned tasks',
+        'Record routine treatment sessions and family contact',
+        'See client details, photos, and that a risk/safeguarding flag exists (not the written detail)',
+      ],
+      excludes: [
+        'Admitting, discharging, or extending a stay',
+        'Room/bed management, editing client identity',
+        'Recording or reading risk/safeguarding/medical detail',
+        'Reports, audit history, or managing anyone’s access',
+      ],
+    },
+  ];
+
+  return (
+    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {levels.map((l) => (
+        <div key={l.name} className="rounded-2xl border bg-card p-3.5 shadow-soft">
+          <Chip label={l.name} tone={l.tone} />
+          <p className="mt-2 text-[11.5px] font-medium text-[var(--color-ink)]">{l.summary}</p>
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-[var(--color-ink-muted)]">
+            {l.covers.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          {l.excludes ? (
+            <ul className="mt-2 space-y-1 border-t border-[var(--color-line)] pt-2 text-[11px] text-[var(--color-ink-muted)]">
+              {l.excludes.map((c) => (
+                <li key={c} className="flex gap-1.5">
+                  <span aria-hidden="true">&#8722;</span>
+                  {c}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
