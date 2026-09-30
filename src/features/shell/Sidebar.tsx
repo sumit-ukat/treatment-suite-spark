@@ -187,7 +187,7 @@ export function Sidebar({
                 <button
                   type="button"
                   title="Switch centre"
-                  className="flex min-h-[54px] w-full items-center gap-2.5 rounded-[8px] border border-[var(--color-line)] px-2.5 py-2.5 text-left transition hover:border-[var(--color-accent-ring)] hover:bg-muted/40"
+                  className="flex min-h-[54px] w-full items-center gap-2.5 rounded-[8px] border border-[var(--color-accent)]/35 bg-[var(--color-accent-soft)]/40 px-2.5 py-2.5 text-left transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]"
                 >
                   <span className="grid size-[31px] shrink-0 place-items-center rounded-[7px] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
                     <Building2 aria-hidden="true" className="size-4" />
@@ -198,7 +198,7 @@ export function Sidebar({
                       <small className="block truncate text-[11px] text-[var(--color-ink-muted)]">{centreRegion} · UKAT</small>
                     ) : null}
                   </span>
-                  <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+                  <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-[var(--color-accent)]" />
                 </button>
               )
             }

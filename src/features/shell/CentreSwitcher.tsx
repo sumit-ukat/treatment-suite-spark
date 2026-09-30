@@ -36,10 +36,11 @@ export function CentreSwitcher({
         ) : (
           <button
             type="button"
-            className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:border-[var(--color-accent-ring)] sm:flex"
+            title="Switch centre"
+            className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-accent)]/35 bg-[var(--color-accent-soft)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent)]/15 sm:flex"
           >
             <span className="max-w-[160px] truncate">{current?.name ?? 'Select centre'}</span>
-            <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+            <ChevronDown className="size-3.5 shrink-0 text-[var(--color-accent)]" />
           </button>
         )}
       </DropdownMenuTrigger>
