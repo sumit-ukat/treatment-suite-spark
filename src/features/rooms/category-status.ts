@@ -130,7 +130,12 @@ function rollupTasks(tasks: readonly BoardTask[]): CategoryStatus {
 /** One rollup per category, built from real task/field state only — never a fabricated value. */
 export function categoryStatus(occupant: Occupant, category: CategoryKey): CategoryStatus {
   if (category === 'custom') {
-    return rollupTasks(occupant.tasks.filter(isCustomTask));
+    // 'side_assignment' is a real, template-backed task (task_templates, auto-created on every
+    // admission — "Workbook col R"), not a manual one, so isCustomTask's isManual check never catches
+    // it. Fold it in here alongside whatever staff add ad hoc, so it isn't invisible to every rollup.
+    const sideAssignment = occupant.tasks.find((t) => t.code === 'side_assignment');
+    const manual = occupant.tasks.filter(isCustomTask);
+    return rollupTasks(sideAssignment ? [sideAssignment, ...manual] : manual);
   }
 
   if (category === 'doctor') {

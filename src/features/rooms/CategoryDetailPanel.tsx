@@ -154,15 +154,25 @@ function CategoryContent({
   }
 
   if (category === 'custom') {
+    // 'side_assignment' is real and auto-created on every admission (see category-status.ts) — shown
+    // as a normal task row, with the free-form manual-assignment list underneath it for anything else.
+    const sideAssignment = o.tasks.find((t) => t.code === 'side_assignment');
     return (
-      <ManualTaskSection
-        o={o}
-        onChanged={onChanged}
-        filterFn={isCustomTask}
-        taskCategory="milestone"
-        emptyMessage="No custom assignments for this client."
-        {...(readOnly ? { readOnly } : {})}
-      />
+      <div className="flex flex-col gap-3">
+        {sideAssignment ? (
+          <ul>
+            <TaskRow task={sideAssignment} admittedAt={o.admittedAt} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />
+          </ul>
+        ) : null}
+        <ManualTaskSection
+          o={o}
+          onChanged={onChanged}
+          filterFn={isCustomTask}
+          taskCategory="milestone"
+          emptyMessage={sideAssignment ? 'No other custom assignments for this client.' : 'No custom assignments for this client.'}
+          {...(readOnly ? { readOnly } : {})}
+        />
+      </div>
     );
   }
 
