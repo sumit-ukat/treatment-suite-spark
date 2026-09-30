@@ -343,6 +343,15 @@ function UserRow({
           {user.email}
           {user.job_title ? ` · ${user.job_title}` : ''}
         </div>
+        {/* Every distinct role this person holds, right under their name — the level at a glance,
+            without reading the (possibly several) full assignment cards in the next column. */}
+        {assignments.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {[...new Set(assignments.map((a) => rolesById.get(a.role_id)?.name ?? 'Unknown role'))].map((name) => (
+              <Chip key={name} label={name} tone="accent" />
+            ))}
+          </div>
+        ) : null}
       </td>
       <td className="py-2.5 pr-3">
         {assignments.length === 0 ? (
@@ -397,6 +406,7 @@ function AssignmentRow({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPermissions, setShowPermissions] = useState(false);
 
   const isEnded = a.ends_at !== null && new Date(a.ends_at).getTime() <= Date.now();
 
@@ -437,13 +447,25 @@ function AssignmentRow({
       </div>
 
       {/* Real permissions this specific grant carries — the same union GrantAccessForm previews before
-          submitting one of these, shown again here since a role's permission set is what this
-          assignment actually does, not just its name. */}
+          submitting one of these. Collapsed by default: the role name above already says what this
+          grant does in plain English (see the levels guide) — this is the raw detail underneath it,
+          not the thing most people need to read every time. */}
       {permissionCodes.length > 0 ? (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {permissionCodes.map((code) => (
-            <Chip key={code} label={code} />
-          ))}
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={() => setShowPermissions((v) => !v)}
+            className="text-[10.5px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:text-[var(--color-ink)]"
+          >
+            {showPermissions ? 'Hide permissions' : `Show ${permissionCodes.length} permissions`}
+          </button>
+          {showPermissions ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {permissionCodes.map((code) => (
+                <Chip key={code} label={code} />
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
