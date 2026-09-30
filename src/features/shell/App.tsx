@@ -515,19 +515,18 @@ function CentreShell() {
 
             {/* Centred, same for every centre — the logo comes from centres-data.ts and is null
                 until that centre's real logo is supplied, so this is name-only until then. This is
-                now the prominent centre identifier (large + bold, readable from across the room);
-                the name above at top-left is deliberately plain text so it doesn't compete with it.
-                `inset-x-0`/`justify-center` alone centres within this header's own box, which sits to
-                the right of the sidebar — offsetting left by half the sidebar's width centres it on
-                the whole window instead, and keeps tracking that as the sidebar collapses/expands. */}
-            <div
-              className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-center gap-2.5 md:flex"
-              style={{ marginLeft: collapsed ? -34 : -120 }}
-            >
+                the prominent centre identifier (large + bold, readable from across the room); the
+                name above at top-left is deliberately plain text so it doesn't compete with it.
+                A real flex item (not absolutely positioned) on purpose: absolute positioning centred
+                it on the raw viewport width regardless of how much room its neighbours actually
+                needed, which overlapped the CentreSwitcher pill at narrower widths. `flex-1 min-w-0`
+                gives it exactly the space left between the two side groups, at every width, and
+                `truncate` shrinks the name with an ellipsis rather than colliding with anything. */}
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-2.5 px-2 md:flex">
               {centre.logoUrl ? (
                 <img src={centre.logoUrl} alt="" className="size-9 shrink-0 rounded object-contain" />
               ) : null}
-              <span className="truncate font-display text-[22px] font-bold leading-none text-[var(--color-ink)]">
+              <span className="min-w-0 truncate font-display text-[22px] font-bold leading-none text-[var(--color-ink)]">
                 {centre.name}
               </span>
             </div>
