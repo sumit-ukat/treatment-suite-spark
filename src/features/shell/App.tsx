@@ -506,7 +506,7 @@ function CentreShell() {
                 {centre.region}
               </div>
               <div className="flex items-center gap-2">
-                <h1 className="truncate font-display text-[15px] leading-tight font-semibold">
+                <h1 className="truncate font-display text-[15px] leading-tight font-normal text-[var(--color-ink-muted)]">
                   {centre.name}
                 </h1>
                 <Chip label="Development" tone="warn" />
@@ -514,12 +514,14 @@ function CentreShell() {
             </div>
 
             {/* Centred, same for every centre — the logo comes from centres-data.ts and is null
-                until that centre's real logo is supplied, so this is name-only until then. */}
-            <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-center gap-2 md:flex">
+                until that centre's real logo is supplied, so this is name-only until then. This is
+                now the prominent centre identifier (large + bold, readable from across the room);
+                the name above at top-left is deliberately plain text so it doesn't compete with it. */}
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-center gap-2.5 md:flex">
               {centre.logoUrl ? (
-                <img src={centre.logoUrl} alt="" className="size-6 shrink-0 rounded object-contain" />
+                <img src={centre.logoUrl} alt="" className="size-9 shrink-0 rounded object-contain" />
               ) : null}
-              <span className="truncate text-[13px] font-semibold text-[var(--color-ink-muted)]">
+              <span className="truncate font-display text-[22px] font-bold leading-none text-[var(--color-ink)]">
                 {centre.name}
               </span>
             </div>
