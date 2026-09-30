@@ -43,19 +43,6 @@ function pct(n: number, total: number) {
   return Math.round((n / total) * 100);
 }
 
-function urgencyColour(days: number): string {
-  if (days < 0) return 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-400';
-  if (days <= 2)  return 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-400';
-  return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-400';
-}
-
-function dayLabel(days: number): string {
-  if (days < 0) return `${Math.abs(days)}d past date`;
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Tomorrow';
-  return `In ${days}d`;
-}
-
 // ─── sub-components ───────────────────────────────────────────────────────────
 
 /**
@@ -690,73 +677,6 @@ export function StakeholderDashboard({
             )}
           </div>
         </section>
-      </div>
-
-      {/* ── Graduating within 7 days ── */}
-      <div>
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-            Graduating within 7 days
-          </h2>
-          {leavingSoon.length > 0 && (
-            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:bg-amber-900/25 dark:text-amber-300">
-              {leavingSoon.length}
-            </span>
-          )}
-        </div>
-        {leavingSoon.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
-            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-            No graduates expected in the next 7 days.
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Bed</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Date</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Therapist</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-line)]">
-                {leavingSoon.map(({ bed, o }) => (
-                  <tr
-                    key={bed.label}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => navigate(`../board?bed=${encodeURIComponent(bed.label)}`)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`../board?bed=${encodeURIComponent(bed.label)}`); } }}
-                    title={`Open ${o.displayName}'s client file`}
-                    className="cursor-pointer bg-[var(--color-panel)] transition hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                  >
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {o.hasRestrictedAlert ? <span title="High risk" className="size-1.5 shrink-0 rounded-full bg-red-500" /> : null}
-                        <span className="font-medium text-[var(--color-ink)]">{o.displayName}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${urgencyColour(o.daysUntilDischarge)}`}>
-                          {dayLabel(o.daysUntilDischarge)}
-                        </span>
-                        <span className="text-[10.5px] text-[var(--color-ink-muted)]">
-                          {formatDate(new Date(o.plannedDischargeDate + 'T12:00:00Z'))}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">
-                      {o.therapist ?? <span className="italic text-amber-600 dark:text-amber-400">Not assigned</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
     </div>
