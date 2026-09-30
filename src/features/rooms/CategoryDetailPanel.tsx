@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Plus, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Pencil, Plus, X } from 'lucide-react';
 import type { BoardBed } from './board-data.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { Chip } from '../../components/ui.tsx';
@@ -628,6 +628,10 @@ function GpSummaryRow({
   const canEdit = !readOnly && can('tasks.complete');
   const [detail, setDetail] = useState<GpSummaryDetail | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // null until the first load decides it — true (open) whenever anything is still outstanding, so
+  // an actionable item is never hidden behind a click; only set to false, once, when everything was
+  // already resolved on first load. A manual toggle after that always wins over re-fetches.
+  const [expanded, setExpanded] = useState<boolean | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({ surgeryName: '', surgeryEmail: '', surgeryPhone: '', requestSentAt: '', receivedAt: '' });
   const [busy, setBusy] = useState(false);
@@ -636,11 +640,18 @@ function GpSummaryRow({
   const [doctorBusy, setDoctorBusy] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
-  function load() {
+  function load(isFirst = false) {
     if (!task.id) return;
-    gpSummaryService.get(task.id).then((d) => { setDetail(d); setLoaded(true); }).catch(() => setLoaded(true));
+    gpSummaryService.get(task.id).then((d) => {
+      setDetail(d);
+      setLoaded(true);
+      if (isFirst) {
+        const resolved = task.isComplete && d != null && d.compliant === true && !!d.doctor_informed_at && !!d.confirmed_checked_at;
+        setExpanded(!resolved);
+      }
+    }).catch(() => setLoaded(true));
   }
-  useEffect(() => { load(); }, [task.id]);
+  useEffect(() => { load(true); }, [task.id]);
 
   function openEdit() {
     setForm({
@@ -722,6 +733,8 @@ function GpSummaryRow({
     }
   }
 
+  const resolved = task.isComplete && detail != null && detail.compliant === true && !!detail.doctor_informed_at && !!detail.confirmed_checked_at;
+
   return (
     <div className="flex flex-col gap-2">
       <ul><TaskRow task={task} admittedAt={admittedAt} onChanged={() => { onChanged?.(); load(); }} {...(readOnly ? { readOnly } : {})} /></ul>
@@ -730,6 +743,23 @@ function GpSummaryRow({
         <div className="rounded-[8px] border border-[var(--color-line)] p-3">
           {!loaded ? (
             <p className="text-[11px] text-[var(--color-ink-muted)]">Loading GP Summary details…</p>
+          ) : resolved && !expanded ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="grid size-5 shrink-0 place-items-center rounded-[5px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <Check className="size-3" />
+                </span>
+                <span className="truncate text-[12px] font-semibold text-[var(--color-ink)]">GP Summary — Done</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] text-[var(--color-ink-muted)]">
+                Compliant · Confirmed by {detail?.confirmed_checked_by_name ?? '—'}
+                <ChevronDown className="size-3.5" />
+              </span>
+            </button>
           ) : editMode ? (
             <div className="flex flex-col gap-2">
               <div className="grid grid-cols-2 gap-2">
@@ -774,6 +804,15 @@ function GpSummaryRow({
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
+              {resolved ? (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  className="flex items-center gap-1 self-start text-[10px] text-[var(--color-ink-muted)] transition hover:text-[var(--color-ink)]"
+                >
+                  <ChevronUp className="size-3" /> Hide details
+                </button>
+              ) : null}
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">GP Summary log</span>
                 {canEdit ? (
