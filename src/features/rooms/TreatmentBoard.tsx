@@ -18,21 +18,6 @@ import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.t
 const CARD_RADIUS = 'rounded-[10px]';
 const CARD_SHADOW = 'shadow-[0_2px_4px_rgba(32,37,53,0.04),0_1px_2px_rgba(32,37,53,0.03)] dark:shadow-none';
 
-/** Per-category header tint — matches the reference board's own `operationalGroups` tone
- * assignment exactly (admin/careplan=violet, contact/doctor=red, survey/custom=light blue,
- * familyvisit=green, lifestep=amber), remapped onto this app's own token palette. */
-const CATEGORY_TINT: Record<CategoryKey, { bg: string; text: string }> = {
-  admin: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
-  gpsummary: { bg: 'bg-teal-50 dark:bg-teal-950/25', text: 'text-teal-700 dark:text-teal-400' },
-  contact: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
-  survey: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
-  familyvisit: { bg: 'bg-emerald-50 dark:bg-emerald-950/25', text: 'text-emerald-700 dark:text-emerald-400' },
-  lifestep: { bg: 'bg-[var(--color-attention-soft)]', text: 'text-[var(--color-attention)]' },
-  careplan: { bg: 'bg-[var(--color-accent-soft)]', text: 'text-[var(--color-accent)]' },
-  doctor: { bg: 'bg-[var(--color-overdue-soft)]', text: 'text-[var(--color-overdue)]' },
-  custom: { bg: 'bg-[var(--color-info-soft)]', text: 'text-[var(--color-info)]' },
-};
-
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 /** Left-to-right order of the board's 9 category columns. */
@@ -451,21 +436,18 @@ export function TreatmentBoard({
                 Client &amp; Placement
               </th>
               <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
-              {CATEGORY_ORDER.map((key) => {
-                const tint = CATEGORY_TINT[key];
-                return (
-                  <th
-                    key={key}
-                    className={`w-[126px] whitespace-normal border-r border-[var(--color-line)] last:border-r-0 ${tint.bg} ${th}`}
-                    style={{ whiteSpace: 'normal' }}
-                  >
-                    <span className={tint.text}>{CATEGORY_LABEL[key]}</span>
-                    <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-[var(--color-ink-muted)]">
-                      Open details
-                    </span>
-                  </th>
-                );
-              })}
+              {CATEGORY_ORDER.map((key) => (
+                <th
+                  key={key}
+                  className={`w-[126px] whitespace-normal border-r border-[var(--color-line)] last:border-r-0 ${th}`}
+                  style={{ whiteSpace: 'normal' }}
+                >
+                  <span className="font-bold text-[var(--color-ink)]">{CATEGORY_LABEL[key]}</span>
+                  <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-[var(--color-ink-muted)]">
+                    Open details
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
 
