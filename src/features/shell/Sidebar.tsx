@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   LogOut,
   Shield,
+  Stethoscope,
   Table2,
   UserPlus,
   Users,
@@ -55,6 +56,7 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
       { id: 'clients', label: 'Clients', icon: Users, ready: true },
       { id: 'discharge', label: 'Discharge', icon: LogOut, ready: true },
+      { id: 'gp-summary', label: 'GP Summary', icon: Stethoscope, ready: true },
     ],
   },
   {

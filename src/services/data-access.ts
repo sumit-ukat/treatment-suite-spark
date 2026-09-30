@@ -587,7 +587,37 @@ export interface GpSummaryDetail {
   confirmed_checked_by_name: string | null;
 }
 
+/** One row per admission with a GP Summary task at a centre — the data behind the GP Summary nav
+ * section (migration 0064). Same underlying gp_summary_details rows the Treatment Board's GP
+ * Summary panel reads and writes; this is a read view, not a second copy. */
+export interface GpSummaryLogRow {
+  admission_id: string;
+  client_id: string;
+  client_reference: string;
+  client_name: string | null;
+  admitted_at: string;
+  admission_status: 'active' | 'discharged' | string;
+  surgery_name: string | null;
+  surgery_email: string | null;
+  surgery_phone: string | null;
+  request_sent_at: string | null;
+  request_sent_by_name: string | null;
+  received_at: string | null;
+  compliant: boolean | null;
+  doctor_informed_at: string | null;
+  doctor_informed_by_name: string | null;
+  ukat_doctor: string | null;
+  confirmed_checked_at: string | null;
+  confirmed_checked_by_name: string | null;
+}
+
 export const gpSummary = {
+  async log(centreId: string): Promise<GpSummaryLogRow[]> {
+    const { data, error } = await client().rpc('gp_summary_log', { p_centre_id: centreId });
+    if (error) throw new DataAccessError('gpSummary.log', error);
+    return (data ?? []) as GpSummaryLogRow[];
+  },
+
   async get(taskId: string): Promise<GpSummaryDetail | null> {
     const { data, error } = await client().rpc('gp_summary_get', { p_task_id: taskId });
     if (error) throw new DataAccessError('gpSummary.get', error);

@@ -61,6 +61,7 @@ import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
 import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { HelpCentre } from '../help/HelpCentre.tsx';
 import { DischargeLog } from '../discharge/DischargeLog.tsx';
+import { GpSummaryLog } from '../gp-summary/GpSummaryLog.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { CentreSwitcher } from './CentreSwitcher.tsx';
 import { Chip } from '../../components/ui.tsx';
@@ -132,6 +133,7 @@ function AppRoutes() {
         <Route path="family" element={<NotBuiltPage />} />
         <Route path="medical" element={<NotBuiltPage />} />
         <Route path="discharge" element={<DischargePage />} />
+        <Route path="gp-summary" element={<GpSummaryPage />} />
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
@@ -1019,6 +1021,12 @@ function DischargePage() {
   const { centre, authCentre } = useCentreContext();
   if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
   return <DischargeLog centreId={authCentre.id} />;
+}
+
+function GpSummaryPage() {
+  const { centre, authCentre } = useCentreContext();
+  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
+  return <GpSummaryLog centreId={authCentre.id} />;
 }
 
 function HelpPage() {
