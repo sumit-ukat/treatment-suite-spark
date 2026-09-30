@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Search } from 'lucide-react';
+import { ArrowDownAZ, CalendarDays, CheckCircle2, Search, X } from 'lucide-react';
 import { discharge as dischargeService, type DischargeLogRow } from '../../services/data-access.js';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { formatDate } from '../../lib/format.js';
@@ -28,6 +28,9 @@ export function DischargeLog({ centreId }: { centreId: string }) {
   const [rows, setRows] = useState<DischargeLogRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  /** yyyy-MM, from an <input type="month"> — narrows to clients discharged in one calendar month. */
+  const [monthFilter, setMonthFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent');
 
   useEffect(() => {
     let cancelled = false;
@@ -40,13 +43,26 @@ export function DischargeLog({ centreId }: { centreId: string }) {
   const visible = useMemo(() => {
     if (!rows) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) =>
-      (r.client_name ?? '').toLowerCase().includes(q) ||
-      r.client_reference.toLowerCase().includes(q) ||
-      (r.discharge_location ?? '').toLowerCase().includes(q),
-    );
-  }, [rows, query]);
+    return rows
+      .filter((r) => {
+        if (!q) return true;
+        return (
+          (r.client_name ?? '').toLowerCase().includes(q) ||
+          r.client_reference.toLowerCase().includes(q) ||
+          (r.discharge_location ?? '').toLowerCase().includes(q)
+        );
+      })
+      .filter((r) => {
+        if (!monthFilter) return true;
+        return !!r.actual_discharge_at && r.actual_discharge_at.slice(0, 7) === monthFilter;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') return (a.client_name ?? a.client_reference).localeCompare(b.client_name ?? b.client_reference);
+        const aTime = a.actual_discharge_at ? new Date(a.actual_discharge_at).getTime() : 0;
+        const bTime = b.actual_discharge_at ? new Date(b.actual_discharge_at).getTime() : 0;
+        return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
+      });
+  }, [rows, query, monthFilter, sortBy]);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 sm:px-5">
@@ -54,16 +70,54 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         title="Discharge"
         description="Every discharged client, most recent first — where they went, what happened with the report, and who handled it."
         actions={
-          <label className="relative flex items-center">
-            <Search className="pointer-events-none absolute left-2.5 size-4 text-[var(--color-ink-muted)]" aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search client, reference or location"
-              className="h-9 w-[260px] rounded-[7px] border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
-            />
-          </label>
+          <>
+            <label className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-2.5 size-4 text-[var(--color-ink-muted)]" aria-hidden />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search client, reference or location"
+                className="h-9 w-[220px] rounded-[7px] border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+              />
+            </label>
+            <div className="relative flex shrink-0 items-center">
+              <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
+              <input
+                type="month"
+                value={monthFilter}
+                max={new Date().toISOString().slice(0, 7)}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                aria-label="Show only clients discharged in this month"
+                title="Discharge month — show only clients discharged in this calendar month"
+                className="h-9 rounded-[7px] border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                style={{ width: monthFilter ? '9.5rem' : '8.5rem' }}
+              />
+              {monthFilter ? (
+                <button
+                  type="button"
+                  onClick={() => setMonthFilter('')}
+                  aria-label="Clear month filter"
+                  className="absolute right-1.5 rounded p-0.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                >
+                  <X className="size-3" />
+                </button>
+              ) : null}
+            </div>
+            <div className="relative flex shrink-0 items-center">
+              <ArrowDownAZ className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                aria-label="Sort discharges"
+                className="h-9 shrink-0 rounded-[7px] border border-[var(--color-line)] bg-card py-0 pl-8 pr-2.5 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              >
+                <option value="recent">Left treatment (newest)</option>
+                <option value="oldest">Left treatment (oldest)</option>
+                <option value="name">Name (A–Z)</option>
+              </select>
+            </div>
+          </>
         }
       />
 

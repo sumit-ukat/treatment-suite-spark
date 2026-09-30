@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Search, X } from 'lucide-react';
+import { ArrowDownAZ, CalendarDays, Filter, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
@@ -46,6 +46,10 @@ export function ClientDirectory({
   const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
   const [scope, setScope] = useState<'all' | 'current' | 'former'>('all');
   const [asOfDate, setAsOfDate] = useState<string>('');
+  /** yyyy-MM, from an <input type="month"> — distinct from asOfDate: this narrows to one calendar
+   * month of admissions rather than a cumulative on-or-before cutoff. */
+  const [monthFilter, setMonthFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent');
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
@@ -62,6 +66,15 @@ export function ClientDirectory({
     if (!asOfDate) return true;
     if (!r.last_admitted_at) return false;
     return r.last_admitted_at.slice(0, 10) <= asOfDate;
+  }).filter((r) => {
+    if (!monthFilter) return true;
+    if (!r.last_admitted_at) return false;
+    return r.last_admitted_at.slice(0, 7) === monthFilter;
+  }).sort((a, b) => {
+    if (sortBy === 'name') return (a.display_name ?? a.reference).localeCompare(b.display_name ?? b.reference);
+    const aTime = a.last_admitted_at ? new Date(a.last_admitted_at).getTime() : 0;
+    const bTime = b.last_admitted_at ? new Date(b.last_admitted_at).getTime() : 0;
+    return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
   });
 
   if (!canSearch) {
@@ -127,6 +140,29 @@ export function ClientDirectory({
             </button>
           ) : null}
         </div>
+        <div className="relative flex shrink-0 items-center">
+          <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" aria-hidden />
+          <input
+            type="month"
+            value={monthFilter}
+            max={new Date().toISOString().slice(0, 7)}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            aria-label="Show only clients admitted in this month"
+            title="Admission month — show only clients admitted in this calendar month"
+            className="h-9 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+            style={{ width: monthFilter ? '9.5rem' : '8.5rem' }}
+          />
+          {monthFilter ? (
+            <button
+              type="button"
+              onClick={() => setMonthFilter('')}
+              aria-label="Clear month filter"
+              className="absolute right-1.5 rounded p-0.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          ) : null}
+        </div>
         <select
           value={scope}
           onChange={(e) => setScope(e.target.value as typeof scope)}
@@ -137,6 +173,19 @@ export function ClientDirectory({
           <option value="current">Currently resident</option>
           <option value="former">Former clients</option>
         </select>
+        <div className="relative flex shrink-0 items-center">
+          <ArrowDownAZ className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" aria-hidden />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            aria-label="Sort clients"
+            className="h-9 shrink-0 rounded-lg border border-[var(--color-line)] bg-card py-0 pl-8 pr-2.5 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+          >
+            <option value="recent">Latest admission (newest)</option>
+            <option value="oldest">Latest admission (oldest)</option>
+            <option value="name">Name (A–Z)</option>
+          </select>
+        </div>
         {results.length > 0 ? (
           <span className="tabular ml-auto shrink-0 pr-1 text-xs text-muted-foreground">
             {visible.length} result{visible.length === 1 ? '' : 's'}
