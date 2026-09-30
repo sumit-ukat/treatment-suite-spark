@@ -175,65 +175,6 @@ export const roomsAndBeds = {
     );
   },
 
-  /**
-   * Create a room, and for a single room its one bed sharing the room's label — mirroring how
-   * Primrose Lodge was seeded, where a single room's bed label equals the room label. A shared room
-   * is created empty; its beds (6A, 6B, ...) are added individually via `addBed` because their count
-   * and labels are a judgement call, not something to guess.
-   */
-  async createRoom(input: {
-    centreId: string;
-    label: string;
-    roomType: 'single' | 'shared';
-    sortOrder: number;
-  }): Promise<RoomRow> {
-    const room = await run<RoomRow>(
-      'roomsAndBeds.createRoom',
-      client()
-        .from('rooms')
-        .insert({
-          centre_id: input.centreId,
-          label: input.label,
-          room_type: input.roomType,
-          sort_order: input.sortOrder,
-        })
-        .select('id,label,room_type,status,sort_order')
-        .single(),
-    );
-
-    if (input.roomType === 'single') {
-      await run(
-        'roomsAndBeds.createRoom.bed',
-        client()
-          .from('beds')
-          .insert({
-            room_id: room.id,
-            centre_id: input.centreId,
-            label: input.label,
-            sort_order: input.sortOrder,
-          }),
-      );
-    }
-
-    return room;
-  },
-
-  addBed(input: { roomId: string; centreId: string; label: string; sortOrder: number }): Promise<BedRow> {
-    return run(
-      'roomsAndBeds.addBed',
-      client()
-        .from('beds')
-        .insert({
-          room_id: input.roomId,
-          centre_id: input.centreId,
-          label: input.label,
-          sort_order: input.sortOrder,
-        })
-        .select('id,room_id,label,status,sort_order')
-        .single(),
-    );
-  },
-
   async setRoomStatus(roomId: string, status: RoomRow['status']): Promise<void> {
     const { error } = await client().from('rooms').update({ status }).eq('id', roomId);
     if (error) throw new DataAccessError('roomsAndBeds.setRoomStatus', error);

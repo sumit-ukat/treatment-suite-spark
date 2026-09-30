@@ -5,32 +5,15 @@ import { roomsAndBeds, type BedRow, type RoomRow } from '../../services/data-acc
 import { Chip } from '../../components/ui.tsx';
 
 /**
- * Room and bed configuration — the screen that makes "staff will fill it in themselves" possible.
- *
- * Two decisions closed by the centre owner rather than gathered by import: which bed is Primrose
- * Lodge's 19th, and the real bed counts for the other nine centres. Both were closed on the
- * understanding that this screen would exist for staff to answer them directly. Everything here
- * writes to the real `rooms` and `beds` tables — there is no demo data on this screen.
+ * Room and bed status — lets staff put a room or bed on hold for maintenance (or closed) without
+ * touching a migration. Rooms and beds themselves are configured directly, not through this screen;
+ * this only ever changes `status` on the real `rooms` and `beds` tables — there is no demo data here.
  *
  * Permission is enforced by RLS, not by this component. `can('rooms.manage')` only decides whether
- * the add/edit controls render; a user without it would have the write refused by the database even
- * if the button were shown, so hiding it is a courtesy, not the control.
+ * the status pickers render as editable selects instead of read-only chips; a user without it would
+ * have the write refused by the database even if the control were shown, so hiding it is a courtesy,
+ * not the control.
  */
-
-/**
- * `rooms`/`beds` both enforce `unique (centre_id, label)` — a label has to be unique across the
- * whole centre, not just within one room, since it's how staff (and search) identify a bed
- * elsewhere in the app. Postgres's own "duplicate key value violates unique constraint" is accurate
- * but leaves someone guessing why a label that's free in this room was rejected; this turns that one
- * specific failure into the actual reason, and leaves every other error untouched.
- */
-function friendlyLabelError(err: unknown, kind: 'room' | 'bed', label: string): string {
-  const message = err instanceof Error ? err.message : String(err);
-  if (message.includes('duplicate key value violates unique constraint')) {
-    return `A ${kind} labelled "${label}" already exists somewhere at this centre — labels must be unique across the whole centre, not just this room. Try a different one.`;
-  }
-  return message;
-}
 
 function useCentreRoomsAndBeds(centreId: string | null) {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
@@ -123,58 +106,6 @@ function StatusControl({
   );
 }
 
-function AddBedForm({
-  room,
-  centreId,
-  nextSortOrder,
-  onAdded,
-}: {
-  room: RoomRow;
-  centreId: string;
-  nextSortOrder: number;
-  onAdded: () => void;
-}) {
-  const [label, setLabel] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = label.trim();
-    if (!trimmed) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await roomsAndBeds.addBed({ roomId: room.id, centreId, label: trimmed, sortOrder: nextSortOrder });
-      setLabel('');
-      onAdded();
-    } catch (err) {
-      setError(friendlyLabelError(err, 'bed', trimmed));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-1.5">
-      <input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder={`e.g. ${room.label}A`}
-        className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-1.5 py-1 text-[12px] focus:border-[var(--color-accent)] focus:outline-none"
-      />
-      <button
-        type="submit"
-        disabled={busy || !label.trim()}
-        className="rounded-md border border-[var(--color-line)] px-2 py-1 text-[11.5px] font-medium hover:bg-[var(--color-accent-soft)] disabled:opacity-50"
-      >
-        + Bed
-      </button>
-      {error ? <span className="w-full text-[11px] text-red-600 dark:text-red-400">{error}</span> : null}
-    </form>
-  );
-}
-
 export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
   const { can } = useAuth();
   const { rooms, beds, loading, error, reload } = useCentreRoomsAndBeds(centre.id);
@@ -208,8 +139,8 @@ export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
         <div>
           <h2 className="text-[16px] font-semibold">{centre.name} — Rooms &amp; Beds</h2>
           <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
-            {rooms.length} rooms · {beds.length} bed spaces. Add beds to a shared room, or put a
-            room or bed on hold for maintenance — real data, not hard-coded.
+            {rooms.length} rooms · {beds.length} bed spaces. Put a room or bed on hold for
+            maintenance — real data, not hard-coded.
           </p>
         </div>
         <Chip label={canManage ? 'You can edit' : 'Read only'} tone={canManage ? 'accent' : 'neutral'} />
@@ -256,21 +187,10 @@ export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
                   ))}
                   {roomBeds.length === 0 ? (
                     <span className="text-[11.5px] text-amber-600 dark:text-amber-400">
-                      No beds yet — add at least one below
+                      No beds configured for this room.
                     </span>
                   ) : null}
                 </div>
-
-                {canManage && room.room_type === 'shared' ? (
-                  <div className="mt-2">
-                    <AddBedForm
-                      room={room}
-                      centreId={centre.id}
-                      nextSortOrder={roomBeds.length ? Math.max(...roomBeds.map((b) => b.sort_order)) + 1 : room.sort_order + 1}
-                      onAdded={reload}
-                    />
-                  </div>
-                ) : null}
               </div>
             );
           })}
