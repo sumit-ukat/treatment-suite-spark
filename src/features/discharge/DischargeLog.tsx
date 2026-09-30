@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownAZ, CalendarDays, CheckCircle2, Search, X } from 'lucide-react';
+import { ArrowDownAZ, CalendarDays, CheckCircle2, Printer, Search, X } from 'lucide-react';
 import { discharge as dischargeService, type DischargeLogRow } from '../../services/data-access.js';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { formatDate } from '../../lib/format.js';
@@ -117,11 +117,23 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                 <option value="name">Name (A–Z)</option>
               </select>
             </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[7px] border border-[var(--color-line)] bg-card px-3 text-[12px] font-medium text-[var(--color-ink)] transition hover:bg-[var(--color-accent-soft)]"
+            >
+              <Printer className="size-3.5" /> Print
+            </button>
           </>
         }
       />
 
-      <div className="mt-5">
+      <p className="mt-3 hidden text-[10px] text-black print:block">
+        Printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+        {' '}&middot; {visible.length} client{visible.length === 1 ? '' : 's'} shown
+      </p>
+
+      <div className="mt-5 print:mt-2">
         {error ? (
           <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-[13px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
             Could not load the discharge log: {error}
@@ -134,7 +146,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
             No discharges recorded yet at this centre.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[10px] border border-[var(--color-line)]">
+          <div className="overflow-x-auto rounded-[10px] border border-[var(--color-line)] print:overflow-visible print:rounded-none print:border-0">
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
