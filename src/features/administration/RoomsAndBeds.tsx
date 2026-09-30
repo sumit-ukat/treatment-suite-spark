@@ -123,76 +123,6 @@ function StatusControl({
   );
 }
 
-function AddRoomForm({
-  centre,
-  nextSortOrder,
-  onAdded,
-}: {
-  centre: AccessibleCentre;
-  nextSortOrder: number;
-  onAdded: () => void;
-}) {
-  const [label, setLabel] = useState('');
-  const [roomType, setRoomType] = useState<'single' | 'shared'>('single');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = label.trim();
-    if (!trimmed) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await roomsAndBeds.createRoom({
-        centreId: centre.id,
-        label: trimmed,
-        roomType,
-        sortOrder: nextSortOrder,
-      });
-      setLabel('');
-      onAdded();
-    } catch (err) {
-      setError(friendlyLabelError(err, 'room', trimmed));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-[var(--color-line)] p-3">
-      <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Room label</span>
-        <input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. 17"
-          className="w-28 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px] focus:border-[var(--color-accent)] focus:outline-none"
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Type</span>
-        <select
-          value={roomType}
-          onChange={(e) => setRoomType(e.target.value as 'single' | 'shared')}
-          className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px] focus:border-[var(--color-accent)] focus:outline-none"
-        >
-          <option value="single">Single (one bed)</option>
-          <option value="shared">Shared (add beds after)</option>
-        </select>
-      </label>
-      <button
-        type="submit"
-        disabled={busy || !label.trim()}
-        className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
-      >
-        {busy ? 'Adding…' : 'Add room'}
-      </button>
-      {error ? <span className="text-[12px] text-red-600 dark:text-red-400">{error}</span> : null}
-    </form>
-  );
-}
-
 function AddBedForm({
   room,
   centreId,
@@ -260,8 +190,6 @@ export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
     return map;
   }, [beds]);
 
-  const nextRoomSortOrder = rooms.length ? Math.max(...rooms.map((r) => r.sort_order)) + 10 : 10;
-
   if (loading) {
     return <div className="p-6 text-[13px] text-[var(--color-ink-muted)]">Loading rooms and beds…</div>;
   }
@@ -280,8 +208,8 @@ export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
         <div>
           <h2 className="text-[16px] font-semibold">{centre.name} — Rooms &amp; Beds</h2>
           <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
-            {rooms.length} rooms · {beds.length} bed spaces. Configured here, not hard-coded — this is
-            how each centre's real layout gets entered.
+            {rooms.length} rooms · {beds.length} bed spaces. Add beds to a shared room, or put a
+            room or bed on hold for maintenance — real data, not hard-coded.
           </p>
         </div>
         <Chip label={canManage ? 'You can edit' : 'Read only'} tone={canManage ? 'accent' : 'neutral'} />
@@ -347,16 +275,6 @@ export function RoomsAndBedsAdmin({ centre }: { centre: AccessibleCentre }) {
             );
           })}
         </div>
-      )}
-
-      {canManage ? (
-        <div className="mt-4">
-          <AddRoomForm centre={centre} nextSortOrder={nextRoomSortOrder} onAdded={reload} />
-        </div>
-      ) : (
-        <p className="mt-4 text-[12px] text-[var(--color-ink-muted)]">
-          You do not have permission to add or edit rooms at this centre.
-        </p>
       )}
     </div>
   );
