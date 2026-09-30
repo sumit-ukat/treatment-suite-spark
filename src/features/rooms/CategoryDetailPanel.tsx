@@ -822,6 +822,7 @@ function GpSummaryRow({
                   </button>
                 ) : null}
               </div>
+              <GpSummaryTrail detail={detail} />
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11.5px]">
                 <DetailFact label="Surgery" value={detail?.surgery_name ?? undefined} />
                 <DetailFact label="Email" value={detail?.surgery_email ?? undefined} />
@@ -892,6 +893,40 @@ function GpSummaryRow({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** A step ticks the moment its own field is filled in — no separate "mark this step done" action,
+ * it just reflects what's already been entered below. */
+function GpSummaryTrail({ detail }: { detail: GpSummaryDetail | null }) {
+  const steps = [
+    { label: 'Surgery details', done: !!detail?.surgery_name },
+    { label: 'Request sent', done: !!detail?.request_sent_at },
+    { label: 'Received', done: !!detail?.received_at },
+    { label: 'Doctor informed', done: !!detail?.doctor_informed_at },
+    { label: 'Confirmed', done: !!detail?.confirmed_checked_at },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {steps.map((s, i) => (
+        <div key={s.label} className="flex items-center gap-1">
+          <span
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium whitespace-nowrap transition ${
+              s.done
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                : 'bg-black/[0.04] text-[var(--color-ink-muted)] dark:bg-white/[0.06]'
+            }`}
+          >
+            {s.done ? <Check className="size-2.5 shrink-0" /> : <span className="size-1.5 shrink-0 rounded-full bg-current opacity-40" />}
+            {s.label}
+          </span>
+          {i < steps.length - 1 ? (
+            <div className={`h-px w-2.5 shrink-0 ${s.done ? 'bg-emerald-300 dark:bg-emerald-700' : 'bg-[var(--color-line)]'}`} />
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
