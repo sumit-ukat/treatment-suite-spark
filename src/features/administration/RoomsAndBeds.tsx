@@ -17,6 +17,21 @@ import { Chip } from '../../components/ui.tsx';
  * if the button were shown, so hiding it is a courtesy, not the control.
  */
 
+/**
+ * `rooms`/`beds` both enforce `unique (centre_id, label)` — a label has to be unique across the
+ * whole centre, not just within one room, since it's how staff (and search) identify a bed
+ * elsewhere in the app. Postgres's own "duplicate key value violates unique constraint" is accurate
+ * but leaves someone guessing why a label that's free in this room was rejected; this turns that one
+ * specific failure into the actual reason, and leaves every other error untouched.
+ */
+function friendlyLabelError(err: unknown, kind: 'room' | 'bed', label: string): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes('duplicate key value violates unique constraint')) {
+    return `A ${kind} labelled "${label}" already exists somewhere at this centre — labels must be unique across the whole centre, not just this room. Try a different one.`;
+  }
+  return message;
+}
+
 function useCentreRoomsAndBeds(centreId: string | null) {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [beds, setBeds] = useState<BedRow[]>([]);
@@ -138,7 +153,7 @@ function AddRoomForm({
       setLabel('');
       onAdded();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyLabelError(err, 'room', trimmed));
     } finally {
       setBusy(false);
     }
@@ -204,14 +219,14 @@ function AddBedForm({
       setLabel('');
       onAdded();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyLabelError(err, 'bed', trimmed));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-1.5">
+    <form onSubmit={submit} className="flex flex-wrap items-center gap-1.5">
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
@@ -225,7 +240,7 @@ function AddBedForm({
       >
         + Bed
       </button>
-      {error ? <span className="text-[11px] text-red-600 dark:text-red-400">{error}</span> : null}
+      {error ? <span className="w-full text-[11px] text-red-600 dark:text-red-400">{error}</span> : null}
     </form>
   );
 }
