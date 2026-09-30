@@ -281,7 +281,13 @@ function MovementsPanel({
           </span>
         }
       />
-      <div className="flex flex-1 items-end justify-around gap-1 px-6 pb-1" style={{ height: 150 }}>
+      <div className="relative flex flex-1 items-end justify-around gap-1 px-6 pb-1" style={{ height: 150 }}>
+        {totalAdmissions === 0 && totalDischarges === 0 ? (
+          <div className="absolute inset-x-6 top-0 flex items-center gap-2 text-[12px] text-[var(--color-ink-muted)]" style={{ height: 118 }}>
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+            No admissions or planned discharges fall in this week.
+          </div>
+        ) : null}
         {WEEKDAY_LABELS.map((d, i) => (
           <div key={d} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
             <div className="flex h-full items-end gap-[3px]">

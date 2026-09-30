@@ -180,22 +180,6 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
   }
 };
 
-/**
- * Provenance banner.
- *
- * The figures are the real Primrose Lodge board; the people are not. Saying so on every screen
- * matters more than it looks: a plausible name beside a real admission date is exactly the thing
- * someone later quotes as fact.
- */
-function ProvenanceBanner() {
-  return (
-    <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-center text-[11px] font-medium text-amber-800 dark:text-amber-300">
-      Primrose Lodge as recorded 21 Jul 2026 · real dates, durations and task states ·{' '}
-      <strong className="font-semibold">client and staff names are pseudonyms</strong>
-    </div>
-  );
-}
-
 const initialsOf = (name: string): string =>
   name.split(/[\s.]+/).filter(Boolean).map((p) => p[0] ?? '').join('').slice(0, 2).toUpperCase();
 
@@ -329,7 +313,6 @@ function HubPage() {
   const navigate = useNavigate();
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
-      <ProvenanceBanner />
       <HubHeader variant="operations" />
       <main className="min-h-0 flex-1 overflow-y-auto">
         {/* Executive hub entry point — lives here rather than only in the header switcher so it is
@@ -375,7 +358,6 @@ function ExecHubPage() {
   const navigate = useNavigate();
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
-      <ProvenanceBanner />
       <HubHeader variant="executive" />
       <main className="min-h-0 flex-1 overflow-y-auto">
         <ExecutiveHub onOpenCentre={(slug) => navigate(`/centre/${slug}/overview`)} />
@@ -455,8 +437,6 @@ function CentreShell() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
-      <ProvenanceBanner />
-
       <div className="flex min-h-0 flex-1 overflow-hidden print:block print:h-auto print:overflow-visible">
         {/* Mobile overlay — tap outside the drawer to close */}
         {mobileOpen && (
