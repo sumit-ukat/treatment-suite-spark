@@ -131,7 +131,7 @@ export const ARTICLES: readonly HelpArticle[] = [
         'You can start a discharge but not approve one — approval is deliberately a separate permission.',
         'The Administration screen is missing entirely — that needs "manage users".',
       ] },
-      { kind: 'note', text: 'If you need a permission you do not have, ask your centre manager or an administrator. They can change it under Administration → System access.' },
+      { kind: 'note', text: 'If you need a permission you do not have, ask your centre manager or an administrator. They can change it under Administration → People & access.' },
     ],
   },
 
@@ -639,14 +639,13 @@ export const ARTICLES: readonly HelpArticle[] = [
     id: 'admin-staff',
     category: 'admin',
     title: 'How do I manage staff and their permissions?',
-    summary: 'Administration → Staff & permissions to see the roster, System access to change it.',
+    summary: 'Administration → People & access — see the roster and change it in one place.',
     keywords: ['staff', 'users', 'permissions', 'roles', 'add user', 'invite', 'access', 'remove someone', 'new starter'],
     body: [
-      { kind: 'p', text: 'The Administration screen has three tabs:' },
+      { kind: 'p', text: 'The Administration screen has two tabs:' },
       { kind: 'table', head: ['Tab', 'What it does'], rows: [
-        ['Staff & permissions', 'A read-only roster — everyone with access, their role, scope and permissions at a glance.'],
-        ['Rooms & beds',        'The physical layout — see the next article.'],
-        ['System access',       'Invite someone (creates their login), then grant them a role and a centre/zone/organisation scope. The only place that actually changes access.'],
+        ['People & access', 'Everyone with access, their role, scope and permissions at a glance — and, from the same screen, invite someone new (creates their login), grant them a role and a centre/zone/organisation scope, or revoke access.'],
+        ['Rooms & beds',    'The physical layout — see the next article.'],
       ] },
       { kind: 'note', text: 'This whole screen needs the "manage users" permission, so it will not appear in your menu unless you hold it.' },
     ],

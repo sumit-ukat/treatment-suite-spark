@@ -167,8 +167,8 @@ export function UsersAndRoles() {
   return (
     <div className="mx-auto max-w-[1200px] px-5 py-8">
       <PageHeader
-        title="Users & roles"
-        description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
+        title="People & access"
+        description="Everyone with access, their role and scope, at a glance below. Invite a new person to create their sign-in, then grant them a role — access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
       />
 
       <button
