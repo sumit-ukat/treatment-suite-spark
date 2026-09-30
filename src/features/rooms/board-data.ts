@@ -371,6 +371,12 @@ export interface Occupant {
    * lists have no keyworker concept to draw from. */
   keyworker: string | null;
   buddy: string;
+  /** `doctor` is a valid staff_assignments role_code (same table as therapist/buddy/key_worker),
+   * captured at admission time but never surfaced anywhere until now. Null on the fictional boards. */
+  doctor: string | null;
+  /** `admissions.detox_ends` — captured at admission time but never surfaced anywhere until now.
+   * `YYYY-MM-DD`, null on the fictional boards and whenever unset. */
+  detoxEnds: string | null;
   group: string;
   peeps: boolean;
   photoState: 'present' | 'missing';
@@ -495,6 +501,8 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     therapist: row.therapistIdx === null ? null : (THERAPISTS[row.therapistIdx] ?? null),
     keyworker: null,
     buddy: BUDDIES[row.buddyIdx] ?? '—',
+    doctor: null,
+    detoxEnds: null,
     group: row.group,
     peeps: row.peeps,
     // The workbook holds eight photographs but no verification state — it has no concept of one.

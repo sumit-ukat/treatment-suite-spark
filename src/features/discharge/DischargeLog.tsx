@@ -49,7 +49,8 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         return (
           (r.client_name ?? '').toLowerCase().includes(q) ||
           r.client_reference.toLowerCase().includes(q) ||
-          (r.discharge_location ?? '').toLowerCase().includes(q)
+          (r.discharge_location ?? '').toLowerCase().includes(q) ||
+          (r.referral_partner_name ?? '').toLowerCase().includes(q)
         );
       })
       .filter((r) => {
@@ -156,6 +157,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Type</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Reports / transfer</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Location</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Referral partner</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Report sent</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Handled by</th>
                 </tr>
@@ -181,6 +183,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                     </td>
                     <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.discharge_report_status ?? <span className="text-[var(--color-ink-muted)]">—</span>}</td>
                     <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.discharge_location ?? <span className="text-[var(--color-ink-muted)]">—</span>}</td>
+                    <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.referral_partner_name ?? <span className="text-[var(--color-ink-muted)]">—</span>}</td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">
                       {r.discharge_report_sent_at ? formatDate(new Date(`${r.discharge_report_sent_at}T12:00:00`)) : '—'}
                     </td>

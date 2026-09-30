@@ -21,7 +21,7 @@ export const CATEGORY_LABEL: Record<CategoryKey, string> = {
   lifestep: 'Life Story / Step Work',
   careplan: 'Care Plan',
   doctor: 'Doctor – Thursday',
-  custom: 'Custom',
+  custom: 'Side assignment',
 };
 
 /** One row per real task code, grouped by the category it belongs to on the board. Single source of
@@ -32,12 +32,10 @@ export const COLUMNS = [
   { code: 'family_contact_week_2',        label: '2nd Week',       full: 'Week 2 family contact',                  group: 'contact'  as const },
   { code: 'family_contact_pre_discharge', label: 'Pre-Discharge',  full: 'Family contact 24 hrs before discharge', group: 'contact'  as const },
   { code: 'satisfaction_survey_7day', label: '7-Day Survey',   full: '7-day satisfaction survey',  group: 'survey'      as const },
-  { code: 'family_visit',            label: 'Family Visit',   full: 'Family visit',               group: 'familyvisit' as const },
   { code: 'life_story',        label: 'Life Story/Surrender', full: 'Life story / surrender',          group: 'lifestep' as const },
   { code: 'step_1',           label: 'Step 1',               full: '12-Step programme — Step 1',      group: 'lifestep' as const },
   { code: 'step_2',           label: 'Step 2',               full: '12-Step programme — Step 2',      group: 'lifestep' as const },
   { code: 'step_3',           label: 'Step 3',               full: '12-Step programme — Step 3',      group: 'lifestep' as const },
-  { code: 'side_assignment',  label: 'Side Assignment',      full: 'Side assignment',                 group: 'lifestep' as const },
   { code: 'ccp',              label: 'CCP',                  full: 'Care & Continuing Plan (CCP)',     group: 'lifestep' as const },
   { code: 'session_intro',   label: 'Intro CP/121',    full: 'Introductory counselling session',  group: 'careplan' as const },
   { code: 'session_week_1', label: 'Week 1 CP/121',   full: 'Week 1 CP/121 counselling session', group: 'careplan' as const },
@@ -54,12 +52,19 @@ export function isDoctorTask(task: BoardTask): boolean {
   return task.isManual && task.category === 'medical';
 }
 
-/** A manual task only counts as "Custom" if it isn't one of the named category tasks assigned via
- * that category's own Assign button (those are matched into their category panel by title, since
- * manual tasks have no code — see ModuleTaskSection), and isn't a Doctor task either. Otherwise it
- * would show up twice. */
+/** Manual tasks assigned from the Family Visit panel use category 'family_contact' — the app already
+ * allows this category for a real, scheduled family contact task; a manually-logged visit reuses it
+ * rather than inventing a new one, and is distinguished from those by `isManual`. */
+export function isFamilyVisitTask(task: BoardTask): boolean {
+  return task.isManual && task.category === 'family_contact';
+}
+
+/** A manual task only counts as "Side assignment" if it isn't one of the named category tasks
+ * assigned via that category's own Assign button (those are matched into their category panel by
+ * title, since manual tasks have no code — see ModuleTaskSection), and isn't a Doctor or Family Visit
+ * task either. Otherwise it would show up twice. */
 export function isCustomTask(task: BoardTask): boolean {
-  return task.isManual && !CATEGORY_TASK_TITLES.has(task.title) && !isDoctorTask(task);
+  return task.isManual && !CATEGORY_TASK_TITLES.has(task.title) && !isDoctorTask(task) && !isFamilyVisitTask(task);
 }
 
 export interface CategoryStatus {
@@ -133,6 +138,11 @@ export function categoryStatus(occupant: Occupant, category: CategoryKey): Categ
     return rollupTasks(occupant.tasks.filter(isDoctorTask));
   }
 
+  if (category === 'familyvisit') {
+    // Same as 'doctor' — no fixed template ever creates one of these, only what staff manually log.
+    return rollupTasks(occupant.tasks.filter(isFamilyVisitTask));
+  }
+
   if (category === 'admin') {
     // Field-based, not task-based (GP Summary moved to its own 'gpsummary' category below) — the
     // only thing here that can be "wrong" rather than just informational is an unassigned therapist.
@@ -156,7 +166,7 @@ export function categoryStatus(occupant: Occupant, category: CategoryKey): Categ
     };
   }
 
-  // Module-backed categories: contact / survey / familyvisit / lifestep / careplan
+  // Module-backed categories: contact / survey / lifestep / careplan
   const codes: readonly string[] = COLUMNS.filter((c) => c.group === category).map((c) => c.code);
   if (!occupant.programmeModules.includes(category)) {
     return { tone: 'neutral', label: 'Not in programme', attentionCount: 0, totalCount: 0 };

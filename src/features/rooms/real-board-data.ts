@@ -107,6 +107,7 @@ function buildRealOccupant(
   const therapistLabel = staff.find((s) => s.role_code === 'focal_therapist')?.display_label ?? null;
   const keyworkerLabel = staff.find((s) => s.role_code === 'key_worker')?.display_label ?? null;
   const buddyLabel = staff.find((s) => s.role_code === 'buddy')?.display_label ?? '—';
+  const doctorLabel = staff.find((s) => s.role_code === 'doctor')?.display_label ?? null;
 
   const rawTasks = tasksByAdmission.get(admission.id) ?? [];
   const tasks: BoardTask[] = rawTasks.map((t) => {
@@ -217,6 +218,8 @@ function buildRealOccupant(
     therapist: therapistLabel,
     keyworker: keyworkerLabel,
     buddy: buddyLabel,
+    doctor: doctorLabel,
+    detoxEnds: admission.detox_ends,
     group: admission.treatment_group ?? '',
     peeps: admission.peep_required,
     photoState: photoUrlByClientId.has(admission.client_id) ? 'present' : 'missing',

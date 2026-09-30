@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Panel } from '../../components/ui.tsx';
-import { discharge as dischargeService } from '../../services/data-access.js';
+import { discharge as dischargeService, referralPartners as referralPartnersService, type ReferralPartnerRow } from '../../services/data-access.js';
 import type { DischargeRequestSummary, Occupant } from './board-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
@@ -36,10 +36,12 @@ function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' 
 
 export function DischargeWorkflowCard({
   occupant: o,
+  centreId,
   onChanged,
   startInFormMode = false,
 }: {
   occupant: Occupant;
+  centreId: string;
   onChanged?: (() => void) | undefined;
   startInFormMode?: boolean;
 }) {
@@ -47,6 +49,33 @@ export function DischargeWorkflowCard({
   const canInitiate = can('discharge.initiate');
   const canApprove = can('discharge.approve');
   const canFinalise = can('discharge.finalise');
+
+  const [partners, setPartners] = useState<ReferralPartnerRow[]>([]);
+  const [referralPartnerId, setReferralPartnerId] = useState('');
+  const [newPartnerMode, setNewPartnerMode] = useState(false);
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [partnerBusy, setPartnerBusy] = useState(false);
+
+  useEffect(() => {
+    referralPartnersService.list(centreId).then(setPartners).catch(() => {});
+  }, [centreId]);
+
+  async function addPartner() {
+    if (!newPartnerName.trim()) return;
+    setPartnerBusy(true);
+    try {
+      const id = await referralPartnersService.create(centreId, newPartnerName.trim());
+      const updated = await referralPartnersService.list(centreId);
+      setPartners(updated);
+      setReferralPartnerId(id);
+      setNewPartnerMode(false);
+      setNewPartnerName('');
+    } catch {
+      // Non-critical — the discharge itself can still proceed without a linked partner.
+    } finally {
+      setPartnerBusy(false);
+    }
+  }
 
   const [mode, setMode] = useState<'idle' | 'form' | 'reject'>(startInFormMode ? 'form' : 'idle');
   const [dischargeType, setDischargeType] = useState<DischargeRequestSummary['dischargeType'] | 'planned'>(
@@ -88,6 +117,7 @@ export function DischargeWorkflowCard({
       setReportStatus('');
       setLocation('');
       setNotes('');
+      setReferralPartnerId('');
       onChanged?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not work.');
@@ -101,6 +131,7 @@ export function DischargeWorkflowCard({
     location: location.trim() || undefined,
     notes: notes.trim() || undefined,
     reportSentAt: reportSentAt || undefined,
+    referralPartnerId: referralPartnerId || undefined,
   });
 
   const submitNewDischarge = () => {
@@ -171,6 +202,46 @@ export function DischargeWorkflowCard({
           className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
         />
       </label>
+      <div className="block text-[10.5px] text-[var(--color-ink-muted)]">
+        Referral partner (optional)
+        {!newPartnerMode ? (
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <select
+              value={referralPartnerId}
+              onChange={(e) => setReferralPartnerId(e.target.value)}
+              className="block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="">Not linked to a partner org…</option>
+              {partners.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <button type="button" onClick={() => setNewPartnerMode(true)}
+              className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1.5 text-[11px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10">
+              New…
+            </button>
+          </div>
+        ) : (
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <input
+              type="text"
+              autoFocus
+              value={newPartnerName}
+              onChange={(e) => setNewPartnerName(e.target.value)}
+              placeholder="e.g. Transform Housing"
+              className="block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+            />
+            <button type="button" disabled={partnerBusy || !newPartnerName.trim()} onClick={() => void addPartner()}
+              className="shrink-0 rounded-md bg-[var(--color-accent)] px-2 py-1.5 text-[11px] font-medium text-white transition disabled:opacity-40">
+              {partnerBusy ? '…' : 'Add'}
+            </button>
+            <button type="button" onClick={() => { setNewPartnerMode(false); setNewPartnerName(''); }}
+              className="shrink-0 rounded-md px-2 py-1.5 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
       <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
         Date report sent
         <input

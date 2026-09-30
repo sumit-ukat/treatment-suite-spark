@@ -1109,7 +1109,7 @@ export function DetailPanel({
             </button>
           </div>
           <div className="overflow-y-auto p-4">
-            <DischargeWorkflowCard occupant={o} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
+            <DischargeWorkflowCard occupant={o} centreId={centreId} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
       </Dialog>

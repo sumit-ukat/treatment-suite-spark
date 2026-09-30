@@ -9,7 +9,7 @@ import { admissions, tasks as taskService, gpSummary as gpSummaryService, type G
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TaskRow } from './DetailPanel.tsx';
 import type { BoardTask } from './board-data.js';
-import { CATEGORY_LABEL, categoryStatus, COLUMNS, isCustomTask, isDoctorTask, type CategoryKey } from './category-status.js';
+import { CATEGORY_LABEL, categoryStatus, COLUMNS, isCustomTask, isDoctorTask, isFamilyVisitTask, type CategoryKey } from './category-status.js';
 
 export function CategoryDetailPanel({
   bed,
@@ -166,7 +166,20 @@ function CategoryContent({
     );
   }
 
-  // Module-backed categories: contact / survey / familyvisit / lifestep / careplan
+  if (category === 'familyvisit') {
+    return (
+      <ManualTaskSection
+        o={o}
+        onChanged={onChanged}
+        filterFn={isFamilyVisitTask}
+        taskCategory="family_contact"
+        emptyMessage="No family visits logged for this client."
+        {...(readOnly ? { readOnly } : {})}
+      />
+    );
+  }
+
+  // Module-backed categories: contact / survey / lifestep / careplan
   if (!o.programmeModules.includes(category)) {
     return (
       <p className="text-[12.5px] text-[var(--color-ink-muted)]">
@@ -340,7 +353,7 @@ function ManualTaskSection({
   onChanged?: (() => void) | undefined;
   readOnly?: boolean;
   filterFn: (t: BoardTask) => boolean;
-  taskCategory: 'milestone' | 'medical';
+  taskCategory: 'milestone' | 'medical' | 'family_contact';
   emptyMessage: string;
 }) {
   const { can } = useAuth();
@@ -489,7 +502,7 @@ function AdminFields({
 }) {
   const { can } = useAuth();
   const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState({ therapist: '', buddy: '', group: '', substance: '', peep: false });
+  const [form, setForm] = useState({ therapist: '', buddy: '', group: '', substance: '', peep: false, doctor: '', detoxEnds: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -503,6 +516,8 @@ function AdminFields({
       group: o.group ?? '',
       substance: o.substance ?? '',
       peep: o.peeps,
+      doctor: o.doctor ?? '',
+      detoxEnds: o.detoxEnds ?? '',
     });
     setError(null);
     setEditMode(true);
@@ -520,6 +535,8 @@ function AdminFields({
         treatmentGroup: form.group,
         substanceName: form.substance,
         peepRequired: form.peep,
+        doctorLabel: form.doctor,
+        detoxEnds: form.detoxEnds || null,
       });
       setEditMode(false);
       onChanged?.();
@@ -552,6 +569,16 @@ function AdminFields({
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Substance
             <input type="text" value={form.substance} onChange={(e) => setForm((f) => ({ ...f, substance: e.target.value }))} placeholder="e.g. Alcohol…"
+              className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+          </label>
+          <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+            Doctor
+            <input type="text" value={form.doctor} onChange={(e) => setForm((f) => ({ ...f, doctor: e.target.value }))} placeholder="Name…"
+              className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
+          </label>
+          <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+            Detox ends
+            <input type="date" value={form.detoxEnds} onChange={(e) => setForm((f) => ({ ...f, detoxEnds: e.target.value }))}
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
         </div>
@@ -592,9 +619,9 @@ function AdminFields({
           </div>
         </Field>
         <Field label="Discharge Date">{formatDate(o.plannedDischargeDate)}</Field>
-        <Field label="Detox Ends">Not set</Field>
+        <Field label="Detox Ends">{o.detoxEnds ? formatDate(o.detoxEnds) : '—'}</Field>
         <Field label="Group">{o.group || '—'}</Field>
-        <Field label="Doctor">Not set</Field>
+        <Field label="Doctor">{o.doctor ?? '—'}</Field>
         <Field label="Buddy">{o.buddy || '—'}</Field>
         <Field label="Peeps" highlight={o.peeps} wide>{o.peeps ? 'Yes' : 'No'}</Field>
       </div>

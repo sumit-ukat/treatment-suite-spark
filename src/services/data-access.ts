@@ -333,6 +333,8 @@ export const admissions = {
     treatmentGroup: string;
     substanceName: string;
     peepRequired: boolean;
+    doctorLabel?: string | undefined;
+    detoxEnds?: string | null | undefined;
   }): Promise<void> {
     const { error } = await client().rpc('update_admission_details', {
       p_admission_id:          admissionId,
@@ -342,6 +344,8 @@ export const admissions = {
       p_treatment_group:       details.treatmentGroup || null,
       p_substance_name:        details.substanceName || null,
       p_peep_required:         details.peepRequired,
+      p_doctor_label:          details.doctorLabel || null,
+      p_detox_ends:            details.detoxEnds || null,
     });
     if (error) throw new DataAccessError('admissions.updateDetails', error);
   },
@@ -545,7 +549,7 @@ export const tasks = {
   async addManualTask(input: {
     admissionId: string;
     title: string;
-    category: 'milestone' | 'session' | 'admin' | 'medical';
+    category: 'milestone' | 'session' | 'admin' | 'medical' | 'family_contact';
     dueAt?: string | undefined;
     description?: string | undefined;
   }): Promise<string> {
@@ -955,6 +959,7 @@ export const discharge = {
       location?: string | undefined;
       notes?: string | undefined;
       reportSentAt?: string | undefined; // ISO date (YYYY-MM-DD)
+      referralPartnerId?: string | undefined;
     },
   ): Promise<void> {
     const { error } = await client().rpc('finalise_discharge', {
@@ -966,6 +971,7 @@ export const discharge = {
       p_location: report?.location ?? null,
       p_notes: report?.notes ?? null,
       p_report_sent_at: report?.reportSentAt ?? null,
+      p_referral_partner_id: report?.referralPartnerId ?? null,
     });
     if (error) throw new DataAccessError('discharge.finalise', error);
   },
@@ -994,7 +1000,41 @@ export interface DischargeLogRow {
   discharge_notes: string | null;
   discharge_report_sent_at: string | null;
   discharged_by_name: string | null;
+  referral_partner_name: string | null;
 }
+
+export interface ReferralPartnerRow {
+  id: string;
+  name: string;
+  partner_type: string | null;
+  location: string | null;
+  website: string | null;
+  phone: string | null;
+  contact_email: string | null;
+  contact_name: string | null;
+  contact_role: string | null;
+}
+
+/** The centre's referral-partner directory (secondary treatment / housing / support organisations a
+ * client can be discharged to) — replaces the manual "Options" sheet. See migrations 0066/0067. */
+export const referralPartners = {
+  list(centreId: string): Promise<ReferralPartnerRow[]> {
+    return run(
+      'referralPartners.list',
+      client().rpc('referral_partners_for_centre', { p_centre_id: centreId }),
+    );
+  },
+
+  /** Anyone who can initiate/finalise a discharge may add one on the fly — see app.create_referral_partner. */
+  async create(centreId: string, name: string): Promise<string> {
+    const { data, error } = await client().rpc('create_referral_partner', {
+      p_centre_id: centreId,
+      p_name: name,
+    });
+    if (error) throw new DataAccessError('referralPartners.create', error);
+    return data as string;
+  },
+};
 
 export type IncidentType = 'client' | 'centre' | 'medication' | 'staff' | 'other';
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
