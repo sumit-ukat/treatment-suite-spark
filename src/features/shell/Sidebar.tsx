@@ -54,9 +54,9 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
       { id: 'overview', label: 'Overview', icon: BarChart3, ready: true },
       { id: 'treatment-board', label: 'Treatment board', icon: Table2, ready: true },
       { id: 'board', label: 'Room board', icon: BedDouble, ready: true },
-      { id: 'clients', label: 'Clients', icon: Users, ready: true },
-      { id: 'discharge', label: 'Discharge', icon: LogOut, ready: true },
       { id: 'gp-summary', label: 'GP Summary', icon: Stethoscope, ready: true },
+      { id: 'discharge', label: 'Discharge', icon: LogOut, ready: true },
+      { id: 'clients', label: 'Clients', icon: Users, ready: true },
     ],
   },
   {
