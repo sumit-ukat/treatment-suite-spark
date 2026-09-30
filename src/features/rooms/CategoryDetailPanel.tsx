@@ -670,6 +670,9 @@ function GpSummaryRow({
       });
       setEditMode(false);
       load();
+      // Filling in the last field of the log can auto-complete the task server-side (migration
+      // 0061) — re-fetch the board so its own status/reopen chrome reflects that immediately.
+      onChanged?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
@@ -684,6 +687,7 @@ function GpSummaryRow({
       await gpSummaryService.markDoctorInformed(task.id, doctorName);
       setDoctorName('');
       load();
+      onChanged?.();
     } finally {
       setDoctorBusy(false);
     }
@@ -695,6 +699,7 @@ function GpSummaryRow({
     try {
       await gpSummaryService.markConfirmed(task.id);
       load();
+      onChanged?.();
     } finally {
       setConfirmBusy(false);
     }
