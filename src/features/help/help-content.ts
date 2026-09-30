@@ -639,14 +639,13 @@ export const ARTICLES: readonly HelpArticle[] = [
     id: 'admin-staff',
     category: 'admin',
     title: 'How do I manage staff and their permissions?',
-    summary: 'Administration → Staff & permissions, and System access for logins.',
+    summary: 'Administration → System access.',
     keywords: ['staff', 'users', 'permissions', 'roles', 'add user', 'invite', 'access', 'remove someone', 'new starter'],
     body: [
-      { kind: 'p', text: 'The Administration screen has three tabs:' },
+      { kind: 'p', text: 'The Administration screen has two tabs:' },
       { kind: 'table', head: ['Tab', 'What it does'], rows: [
-        ['Staff & permissions', 'Who works at this centre and what each of them may do.'],
-        ['Rooms & beds',        'The physical layout — see the next article.'],
-        ['System access',       'Logins, roles and invitations for the tool itself.'],
+        ['Rooms & beds',  'The physical layout — see the next article.'],
+        ['System access', 'Invite someone (creates their login), then grant them a role and a centre/zone/organisation scope — this is where all real staff and their access live.'],
       ] },
       { kind: 'note', text: 'This whole screen needs the "manage users" permission, so it will not appear in your menu unless you hold it.' },
     ],
