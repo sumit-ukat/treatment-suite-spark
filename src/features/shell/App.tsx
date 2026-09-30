@@ -487,7 +487,7 @@ function CentreShell() {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col print:block">
-          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5 print:hidden">
+          <header className="relative flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)] px-4 sm:px-5 print:hidden">
             {/* Hamburger — visible only on mobile (<md), where sidebar is off-canvas */}
             <button
               type="button"
@@ -511,6 +511,17 @@ function CentreShell() {
                 </h1>
                 <Chip label="Development" tone="warn" />
               </div>
+            </div>
+
+            {/* Centred, same for every centre — the logo comes from centres-data.ts and is null
+                until that centre's real logo is supplied, so this is name-only until then. */}
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-center gap-2 md:flex">
+              {centre.logoUrl ? (
+                <img src={centre.logoUrl} alt="" className="size-6 shrink-0 rounded object-contain" />
+              ) : null}
+              <span className="truncate text-[13px] font-semibold text-[var(--color-ink-muted)]">
+                {centre.name}
+              </span>
             </div>
 
             <div className="ml-auto flex items-center gap-2.5">

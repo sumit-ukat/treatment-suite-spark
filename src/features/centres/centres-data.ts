@@ -58,6 +58,10 @@ export interface CentreSummary {
   occupancyTrendConfirmed: boolean;
   /** True only for the centre that is actually configured in the database. */
   isConfigured: boolean;
+  /** Shown centred in the workspace header so staff always know which centre they're in. Null
+   * until a centre's real logo is supplied — the header falls back to name-only, never a
+   * placeholder image. */
+  logoUrl: string | null;
 }
 
 interface CentreSpec {
@@ -67,6 +71,7 @@ interface CentreSpec {
   region: string;
   capacity: number;
   capacityConfirmed: boolean;
+  logoUrl: string | null;
 }
 
 /** Region grouping — two zones only. */
@@ -76,16 +81,16 @@ const SPECS: readonly CentreSpec[] = [
   // Primrose Lodge: 19 is confirmed. The room board still shows 18 because which bed is the
   // nineteenth is OPEN_QUESTIONS Q40 — so the group total and the board deliberately disagree by one
   // until that is answered, rather than papering over it.
-  { slug: 'primrose-lodge',      name: 'Primrose Lodge',      county: 'Surrey',         region: 'South',    capacity: 19, capacityConfirmed: true },
-  { slug: 'providence-projects', name: 'Providence Projects', county: 'Dorset',         region: 'South',    capacity: 32, capacityConfirmed: false },
-  { slug: 'recovery-lighthouse', name: 'Recovery Lighthouse', county: 'West Sussex',    region: 'South',    capacity: 22, capacityConfirmed: false },
-  { slug: 'sanctuary-lodge',     name: 'Sanctuary Lodge',     county: 'Essex',          region: 'North',    capacity: 26, capacityConfirmed: false },
-  { slug: 'liberty-house',       name: 'Liberty House',       county: 'Bedfordshire',   region: 'North',    capacity: 20, capacityConfirmed: false },
-  { slug: 'banbury-lodge',       name: 'Banbury Lodge',       county: 'Oxfordshire',    region: 'North',    capacity: 24, capacityConfirmed: false },
-  { slug: 'bayberry-rehab',      name: 'Bayberry Rehab',      county: 'Warwickshire',   region: 'North',    capacity: 18, capacityConfirmed: false },
-  { slug: 'linwood-house',       name: 'Linwood House',       county: 'South Yorkshire', region: 'North',   capacity: 21, capacityConfirmed: false },
-  { slug: 'oasis-runcorn',       name: 'Oasis Runcorn',       county: 'Cheshire',       region: 'North',    capacity: 25, capacityConfirmed: false },
-  { slug: 'oasis-bradford',      name: 'Oasis Bradford',      county: 'West Yorkshire', region: 'North',    capacity: 23, capacityConfirmed: false },
+  { slug: 'primrose-lodge',      name: 'Primrose Lodge',      county: 'Surrey',         region: 'South',    capacity: 19, capacityConfirmed: true,  logoUrl: 'https://cdn.rehabfiles.com/sites/primroselodge/wp-content/uploads/2025/09/primrose-lodge-favicon.png' },
+  { slug: 'providence-projects', name: 'Providence Projects', county: 'Dorset',         region: 'South',    capacity: 32, capacityConfirmed: false, logoUrl: null },
+  { slug: 'recovery-lighthouse', name: 'Recovery Lighthouse', county: 'West Sussex',    region: 'South',    capacity: 22, capacityConfirmed: false, logoUrl: null },
+  { slug: 'sanctuary-lodge',     name: 'Sanctuary Lodge',     county: 'Essex',          region: 'North',    capacity: 26, capacityConfirmed: false, logoUrl: null },
+  { slug: 'liberty-house',       name: 'Liberty House',       county: 'Bedfordshire',   region: 'North',    capacity: 20, capacityConfirmed: false, logoUrl: null },
+  { slug: 'banbury-lodge',       name: 'Banbury Lodge',       county: 'Oxfordshire',    region: 'North',    capacity: 24, capacityConfirmed: false, logoUrl: null },
+  { slug: 'bayberry-rehab',      name: 'Bayberry Rehab',      county: 'Warwickshire',   region: 'North',    capacity: 18, capacityConfirmed: false, logoUrl: null },
+  { slug: 'linwood-house',       name: 'Linwood House',       county: 'South Yorkshire', region: 'North',   capacity: 21, capacityConfirmed: false, logoUrl: null },
+  { slug: 'oasis-runcorn',       name: 'Oasis Runcorn',       county: 'Cheshire',       region: 'North',    capacity: 25, capacityConfirmed: false, logoUrl: null },
+  { slug: 'oasis-bradford',      name: 'Oasis Bradford',      county: 'West Yorkshire', region: 'North',    capacity: 23, capacityConfirmed: false, logoUrl: null },
 ];
 
 /**
