@@ -168,7 +168,6 @@ export function UsersAndRoles() {
         users={users}
         roles={roles}
         organisations={organisations}
-        zones={zones}
         centres={centres}
         permissionCodesByRoleId={permissionCodesByRoleId}
         onGranted={reload}
@@ -521,7 +520,6 @@ function GrantAccessForm({
   users,
   roles,
   organisations,
-  zones,
   centres,
   permissionCodesByRoleId,
   onGranted,
@@ -529,7 +527,6 @@ function GrantAccessForm({
   users: UserProfileRow[];
   roles: RoleRow[];
   organisations: OrganisationRow[];
-  zones: ZoneRow[];
   centres: CentreRow[];
   permissionCodesByRoleId: Map<string, string[]>;
   onGranted: () => void;
@@ -537,36 +534,53 @@ function GrantAccessForm({
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState('');
   const [roleId, setRoleId] = useState('');
-  const [scopeType, setScopeType] = useState<'organisation' | 'zone' | 'centre'>('centre');
+  // 'custom' replaces the old 'zone' scope: rather than being confined to a pre-defined zone
+  // grouping, an admin picks exactly which centres a grant should cover. Under the hood this just
+  // creates one 'centre'-scoped assignment per centre picked — no schema change needed, since a
+  // person having several separate centre grants is already exactly what multi-centre access is.
+  const [scopeType, setScopeType] = useState<'organisation' | 'custom' | 'centre'>('centre');
   const [scopeId, setScopeId] = useState('');
+  const [customCentreIds, setCustomCentreIds] = useState<string[]>([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [endsAt, setEndsAt] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const scopeOptions = scopeType === 'organisation' ? organisations : scopeType === 'zone' ? zones : centres;
-  const canSubmit = userId && roleId && scopeId && reason.trim();
+  const scopeOptions = scopeType === 'organisation' ? organisations : centres;
+  const canSubmit =
+    !!userId && !!roleId && reason.trim() !== '' &&
+    (scopeType === 'custom' ? customCentreIds.length > 0 : !!scopeId);
+
+  const toggleCustomCentre = (id: string) => {
+    setCustomCentreIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
 
   const submit = async () => {
     if (!canSubmit) return;
     setBusy(true);
     setError(null);
     try {
-      await userAdmin.grant({
-        userId,
-        roleId,
-        scopeType,
-        scopeId,
-        reason: reason.trim(),
-        isReadOnly,
-        // End of the chosen day — this is an admin action independent of any one centre's timezone,
-        // so a simple calendar-day boundary is the right level of precision, not a zoned instant.
-        endsAt: endsAt ? new Date(`${endsAt}T23:59:59`).toISOString() : undefined,
-      });
+      // End of the chosen day — this is an admin action independent of any one centre's timezone,
+      // so a simple calendar-day boundary is the right level of precision, not a zoned instant.
+      const endsAtIso = endsAt ? new Date(`${endsAt}T23:59:59`).toISOString() : undefined;
+      if (scopeType === 'custom') {
+        for (const centreId of customCentreIds) {
+          await userAdmin.grant({
+            userId, roleId, scopeType: 'centre', scopeId: centreId,
+            reason: reason.trim(), isReadOnly, endsAt: endsAtIso,
+          });
+        }
+      } else {
+        await userAdmin.grant({
+          userId, roleId, scopeType, scopeId,
+          reason: reason.trim(), isReadOnly, endsAt: endsAtIso,
+        });
+      }
       setUserId('');
       setRoleId('');
       setScopeId('');
+      setCustomCentreIds([]);
       setIsReadOnly(false);
       setEndsAt('');
       setReason('');
@@ -625,26 +639,47 @@ function GrantAccessForm({
             onChange={(e) => {
               setScopeType(e.target.value as typeof scopeType);
               setScopeId('');
+              setCustomCentreIds([]);
             }}
           >
             <option value="centre">One centre</option>
-            <option value="zone">A zone</option>
+            <option value="custom">Custom (multiple centres)</option>
             <option value="organisation">The whole organisation</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">
-            {scopeType === 'organisation' ? 'Organisation' : scopeType === 'zone' ? 'Zone' : 'Centre'}
-          </span>
-          <select className={inputCls} value={scopeId} onChange={(e) => setScopeId(e.target.value)}>
-            <option value="">Select…</option>
-            {scopeOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {scopeType === 'custom' ? (
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">
+              Centres ({customCentreIds.length} selected)
+            </span>
+            <div className="max-h-32 overflow-y-auto rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-1.5">
+              {centres.map((c) => (
+                <label key={c.id} className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[12.5px] hover:bg-black/5 dark:hover:bg-white/10">
+                  <input
+                    type="checkbox"
+                    checked={customCentreIds.includes(c.id)}
+                    onChange={() => toggleCustomCentre(c.id)}
+                  />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          </label>
+        ) : (
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">
+              {scopeType === 'organisation' ? 'Organisation' : 'Centre'}
+            </span>
+            <select className={inputCls} value={scopeId} onChange={(e) => setScopeId(e.target.value)}>
+              <option value="">Select…</option>
+              {scopeOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {roleId && permissionCodesByRoleId.get(roleId)?.length ? (
