@@ -158,7 +158,7 @@ export function UsersAndRoles() {
   }
 
   return (
-    <div className="mx-auto max-w-[860px] px-5 py-8">
+    <div className="mx-auto max-w-[1200px] px-5 py-8">
       <PageHeader
         title="Users & roles"
         description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
@@ -205,9 +205,9 @@ export function UsersAndRoles() {
           <table className="w-full min-w-[640px] border-collapse text-[12.5px]">
             <thead>
               <tr className="border-b border-[var(--color-line)] text-left text-[10px] font-semibold tracking-[0.06em] text-[var(--color-ink-muted)] uppercase">
-                <th className="py-2 pr-3">Name</th>
+                <th className="w-[220px] py-2 pr-3">Name</th>
                 <th className="py-2 pr-3">Access</th>
-                <th className="py-2 pr-3 text-right">Status</th>
+                <th className="w-[130px] py-2 pr-3 text-right">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -337,7 +337,7 @@ function UserRow({
 
   return (
     <tr className="border-b border-[var(--color-line)] align-top last:border-b-0">
-      <td className="py-2.5 pr-3">
+      <td className="w-[220px] py-2.5 pr-3">
         <div className="truncate font-medium">{user.display_name}</div>
         <div className="truncate text-[11px] text-[var(--color-ink-muted)]">
           {user.email}
@@ -371,7 +371,7 @@ function UserRow({
           </div>
         )}
       </td>
-      <td className="py-2.5 pr-3 text-right">
+      <td className="w-[130px] py-2.5 pr-3 text-right">
         <div className="flex flex-col items-end gap-1.5">
           <Chip label={user.is_active ? 'Active' : 'Deactivated'} tone={user.is_active ? 'good' : 'warn'} />
           <button
