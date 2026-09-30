@@ -144,7 +144,16 @@ export function categoryStatus(occupant: Occupant, category: CategoryKey): Categ
 
   if (category === 'gpsummary') {
     const gp = occupant.tasks.find((t) => t.code === 'gp_summary');
-    return rollupTasks(gp ? [gp] : []);
+    const base = rollupTasks(gp ? [gp] : []);
+    // Tone/label/attentionCount still come from the task's own overdue/due/complete state above —
+    // only the fraction (and the modal's "N internal details" count) swap to real progress through
+    // the GP Summary Log's 5 steps, which says far more than the single underlying task's 0/1 or 1/1.
+    if (!occupant.gpSummarySteps) return base;
+    return {
+      ...base,
+      fraction: `${occupant.gpSummarySteps.done}/${occupant.gpSummarySteps.total}`,
+      totalCount: occupant.gpSummarySteps.total,
+    };
   }
 
   // Module-backed categories: contact / survey / familyvisit / lifestep / careplan

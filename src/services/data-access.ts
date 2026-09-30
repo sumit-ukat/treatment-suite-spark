@@ -636,6 +636,15 @@ export const gpSummary = {
     const { error } = await client().rpc('gp_summary_undo_confirmed', { p_task_id: taskId });
     if (error) throw new DataAccessError('gpSummary.undoConfirmed', error);
   },
+
+  /** Steps filled in (0-5) per GP Summary task at a centre, for the board cell's fraction — one
+   * bulk call for the whole board rather than a per-client fetch. */
+  async progress(centreId: string): Promise<Map<string, { done: number; total: number }>> {
+    const { data, error } = await client().rpc('gp_summary_progress', { p_centre_id: centreId });
+    if (error) throw new DataAccessError('gpSummary.progress', error);
+    const rows = (data ?? []) as Array<{ client_task_id: string; steps_done: number; steps_total: number }>;
+    return new Map(rows.map((r) => [r.client_task_id, { done: r.steps_done, total: r.steps_total }]));
+  },
 };
 
 // ─── Concerns ────────────────────────────────────────────────────────────────

@@ -396,6 +396,11 @@ export interface Occupant {
   completedCount: number;
   notApplicableCount: number;
   totalCount: number;
+  /** How many of the GP Summary log's 5 steps (surgery details, request sent, received, doctor
+   * informed, confirmed) are filled in — shown as the GP Summary board cell's fraction instead of
+   * the underlying single task's trivial 0/1. Null on the fictional boards, and whenever there's no
+   * GP Summary task at all (a client outside its due window, or an imported record predating it). */
+  gpSummarySteps: { done: number; total: number } | null;
 }
 
 export interface BoardBed {
@@ -469,6 +474,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     // No database row behind this board — see admissionId's doc comment.
     admissionId: null,
     clientId: null,
+    gpSummarySteps: null,
     dischargeRequest: null,
     isExtendedStay: false,
     extensionDays: null,

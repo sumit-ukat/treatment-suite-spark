@@ -37,7 +37,7 @@ import type {
   TaskCompleterRow,
   TaskReopenRow,
 } from '../../services/data-access.js';
-import { concerns, roomBoard, roomsAndBeds } from '../../services/data-access.js';
+import { concerns, gpSummary, roomBoard, roomsAndBeds } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { assessEligibility } from '../../domain/eligibility.js';
 import { isOverdue } from '../../domain/tasks.js';
@@ -91,6 +91,7 @@ function buildRealOccupant(
   openConcernClientIds: Set<string>,
   admissionNotes: string | null,
   now: Date,
+  gpSummaryStepsByTaskId: Map<string, { done: number; total: number }>,
 ): Occupant | null {
   const c = clientsById.get(admission.client_id);
   // A missing row here means the caller can't even see this client exists — genuinely nothing to
@@ -152,6 +153,9 @@ function buildRealOccupant(
       isManual: (t.origin ?? 'template') === 'manual',
     };
   });
+
+  const gpSummaryTask = tasks.find((t) => t.code === 'gp_summary');
+  const gpSummarySteps = gpSummaryTask?.id ? (gpSummaryStepsByTaskId.get(gpSummaryTask.id) ?? null) : null;
 
   const eligibility = assessEligibility(admittedAt, settings, now);
   const legacyParsed = parseLegacyReason(admissionNotes);
@@ -235,6 +239,7 @@ function buildRealOccupant(
     completedCount: tasks.filter((t) => t.isComplete).length,
     notApplicableCount: tasks.filter((t) => t.isNotApplicable).length,
     totalCount: tasks.length,
+    gpSummarySteps,
   };
 }
 
@@ -247,11 +252,13 @@ export async function buildRealBoard(
   // at that moment, rather than what is occupied right now.
   const isHistorical = now.getTime() < Date.now() - 5 * 60 * 1000;
 
-  const [rooms, beds, data, openConcernIds] = await Promise.all([
+  const [rooms, beds, data, openConcernIds, gpSummaryStepsByTaskId] = await Promise.all([
     roomsAndBeds.rooms(centreId),
     roomsAndBeds.beds(centreId),
     isHistorical ? roomBoard.forCentreAtDate(centreId, now) : roomBoard.forCentre(centreId),
     concerns.openClientIds(centreId).catch(() => new Set<string>()),
+    // Board-cell display only — never worth failing the whole board load over.
+    gpSummary.progress(centreId).catch(() => new Map<string, { done: number; total: number }>()),
   ]);
 
   const roomsById = new Map(rooms.map((r) => [r.id, r]));
@@ -333,6 +340,7 @@ export async function buildRealBoard(
             openConcernIds,
             admissionNotesByBed.get(bed.id) ?? null,
             now,
+            gpSummaryStepsByTaskId,
           )
         : null;
       return {
