@@ -195,9 +195,11 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
                       {r.compliant === null ? (
                         <span className="text-[var(--color-ink-muted)]">—</span>
                       ) : r.compliant ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400">Yes</span>
+                        // Reversed on purpose, per explicit confirmation — Yes is red/No is green
+                        // here, opposite of Overdue/Done everywhere else in the app.
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-overdue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-overdue)]">Yes</span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-overdue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-overdue)]">No</span>
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400">No</span>
                       )}
                     </td>
                   </tr>
