@@ -1,4 +1,4 @@
-import { MailPlus, ShieldPlus, Trash2 } from 'lucide-react';
+import { CircleHelp, MailPlus, ShieldPlus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
@@ -15,6 +15,7 @@ import {
 } from '../../services/data-access.js';
 import { Chip, Panel } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
+import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { formatDate } from '../../lib/format.js';
 
 /**
@@ -54,6 +55,7 @@ export function UsersAndRoles() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [showEnded, setShowEnded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   useEffect(() => {
     if (!canManage) {
@@ -162,7 +164,22 @@ export function UsersAndRoles() {
         description="Invite a new person to create their sign-in, then grant them a role. Access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
       />
 
-      <LevelsLegend />
+      <button
+        type="button"
+        onClick={() => setLegendOpen(true)}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:bg-black/5 dark:hover:bg-white/10"
+      >
+        <CircleHelp className="size-3.5" /> What do the access levels mean?
+      </button>
+
+      {legendOpen ? (
+        <Dialog open onOpenChange={(v) => !v && setLegendOpen(false)}>
+          <DialogContent className="max-w-[720px]">
+            <DialogTitle className="font-display text-[16px] font-semibold">Access levels</DialogTitle>
+            <LevelsLegend />
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       <InviteUserForm onInvited={reload} />
 
