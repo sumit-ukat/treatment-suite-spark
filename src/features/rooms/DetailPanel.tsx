@@ -254,6 +254,17 @@ export function DetailPanel({
     }
   }
 
+  // Resolving/reopening only touches is_resolved/resolved_at — logged_at (the original
+  // flag time) is never overwritten, so an accidental flag can always be undone without
+  // losing the record of when it was first raised.
+  async function toggleConcernResolved(id: string, resolved: boolean) {
+    if (!o?.clientId) return;
+    try {
+      await (resolved ? concerns.resolve(id) : concerns.reopen(id));
+      setConcernRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_resolved: resolved } : r)));
+    } catch { /* non-critical */ }
+  }
+
   const sorted = [...o.tasks].sort((a, b) => {
     if (a.dueAt === null) return 1;
     if (b.dueAt === null) return -1;
@@ -744,13 +755,30 @@ export function DetailPanel({
                           <span className="ml-2 text-[10px] text-[var(--color-ink-muted)]">{formatDate(new Date(r.logged_at))}</span>
                           {r.is_resolved && <span className="ml-1.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">Resolved</span>}
                         </div>
-                        {!r.is_resolved && can('tasks.complete') && concernEditId !== r.id ? (
-                          <button type="button" title="Edit note"
-                            onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
-                            className="shrink-0 rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
-                            <Pencil className="size-2.5" />
-                          </button>
-                        ) : null}
+                        <div className="flex shrink-0 items-center gap-1">
+                          {!r.is_resolved && can('tasks.complete') && !readOnly && concernEditId !== r.id ? (
+                            <button type="button" title="Edit note"
+                              onClick={() => { setConcernEditId(r.id); setConcernEditText(r.note); setConcernError(null); }}
+                              className="rounded p-0.5 text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                              <Pencil className="size-2.5" />
+                            </button>
+                          ) : null}
+                          {can('tasks.complete') && !readOnly && concernEditId !== r.id ? (
+                            !r.is_resolved ? (
+                              <button type="button" title="Resolve this concern"
+                                onClick={() => void toggleConcernResolved(r.id, true)}
+                                className="rounded px-1 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] hover:bg-black/8 dark:hover:bg-white/10">
+                                Resolve
+                              </button>
+                            ) : (
+                              <button type="button" title="Undo — reopen this concern"
+                                onClick={() => void toggleConcernResolved(r.id, false)}
+                                className="rounded px-1 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted hover:bg-black/8 hover:text-red-600 dark:hover:bg-white/10 dark:hover:text-red-400">
+                                Undo
+                              </button>
+                            )
+                          ) : null}
+                        </div>
                       </div>
                     </li>
                   ))}

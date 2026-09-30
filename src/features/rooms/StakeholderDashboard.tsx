@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowRight,
   BedDouble,
   CalendarClock,
   CheckCircle2,
+  ChevronRight,
   ClipboardList,
   FileWarning,
   RefreshCw,
@@ -14,11 +16,25 @@ import {
   Repeat2,
   type LucideIcon,
 } from 'lucide-react';
-import { incidents as incidentsService } from '../../services/data-access.js';
+import {
+  incidents as incidentsService,
+  roomsAndBeds,
+  auditEvents,
+  type BedRow,
+  type AuditEventRow,
+} from '../../services/data-access.js';
+import { actionPhrase, RECORD_NOUN } from '../administration/AuditHistory.tsx';
 import { useBoardData } from './use-board-data.js';
 import { summarise } from './board-data.js';
 import type { BoardBed, Occupant } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
+import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
+import { addCalendar, calendarDaysBetween, fromZonedDateString, zonedWeekday } from '../../domain/zoned-time.js';
+
+// TODO: same scoped simplification as real-board-data.ts — every configured centre today is
+// Europe/London.
+const TZ = PRIMROSE_LODGE_SETTINGS.timezone;
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -117,6 +133,252 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PanelHeader({
+  title,
+  subtitle,
+  linkLabel,
+  onLink,
+  extra,
+}: {
+  title: string;
+  subtitle?: string;
+  linkLabel?: string;
+  onLink?: () => void;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 py-4">
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold">
+          {title}
+          {extra}
+        </h2>
+        {subtitle ? <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{subtitle}</p> : null}
+      </div>
+      {linkLabel && onLink ? (
+        <button
+          type="button"
+          onClick={onLink}
+          className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-[var(--color-accent)] hover:underline"
+        >
+          {linkLabel} <ArrowRight className="size-3" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Occupied/available/maintenance donut. `occupied`/`available` come from the same board data the
+ * KPI tiles above use; `maintenance` is the one piece not on the board (a manual flag on the real
+ * `beds` table — see roomsAndBeds.beds — that the board itself deliberately ignores, since it tracks
+ * disposition, not occupancy).
+ */
+function OccupancyPanel({
+  occupied,
+  available,
+  maintenance,
+  total,
+  roomCount,
+  onOpenBoard,
+}: {
+  occupied: number;
+  available: number;
+  maintenance: number;
+  total: number;
+  roomCount: number;
+  onOpenBoard: () => void;
+}) {
+  const occupiedPct = total > 0 ? (occupied / total) * 100 : 0;
+  const availablePct = total > 0 ? (available / total) * 100 : 0;
+  const occupancyPercent = total > 0 ? Math.round((occupied / total) * 100) : 0;
+  const gradient = `conic-gradient(var(--color-accent) 0 ${occupiedPct}%, var(--color-ontrack) ${occupiedPct}% ${occupiedPct + availablePct}%, var(--color-neutral-status) 0)`;
+  const legend: Array<{ label: string; n: number; color: string }> = [
+    { label: 'Occupied', n: occupied, color: 'var(--color-accent)' },
+    { label: 'Available', n: available, color: 'var(--color-ontrack)' },
+    { label: 'Maintenance', n: maintenance, color: 'var(--color-neutral-status)' },
+  ];
+  return (
+    <section className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+      <PanelHeader
+        title="Bed occupancy"
+        subtitle="A live picture of your centre's capacity"
+        linkLabel="Room Board"
+        onLink={onOpenBoard}
+      />
+      <div className="flex flex-1 items-center gap-8 px-6 pb-6" style={{ minHeight: 170 }}>
+        <div
+          className="relative grid size-[140px] shrink-0 place-items-center rounded-full"
+          style={{ background: gradient }}
+          role="img"
+          aria-label={`${occupied} occupied, ${available} available, ${maintenance} under maintenance`}
+        >
+          <div className="absolute inset-[13px] rounded-full bg-[var(--color-panel)]" />
+          <div className="relative text-center">
+            <strong className="block text-[27px] font-bold tracking-tight text-[var(--color-ink)]">
+              {occupancyPercent}
+              <span className="text-[15px] font-normal text-[var(--color-ink-muted)]">%</span>
+            </strong>
+            <small className="text-[10.5px] text-[var(--color-ink-muted)]">occupancy</small>
+          </div>
+        </div>
+        <div className="grid flex-1 gap-3.5">
+          {legend.map((row) => (
+            <div key={row.label} className="flex items-center gap-2 text-[11.5px] text-[var(--color-ink)]">
+              <span className="size-[7px] shrink-0 rounded-[2px]" style={{ background: row.color }} />
+              {row.label}
+              <strong className="ml-auto text-[12.5px] font-semibold">{row.n}</strong>
+              <small className="min-w-[26px] text-right text-[11px] text-[var(--color-ink-muted)]">
+                {total > 0 ? Math.round((row.n / total) * 100) : 0}%
+              </small>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-2.5 text-[11px] text-[var(--color-ink-muted)]">
+        <span>{total} total beds across {roomCount} room{roomCount === 1 ? '' : 's'}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-[var(--color-ontrack)]" />
+          {available} ready for admission
+        </span>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Admissions vs. planned discharges, Monday–Sunday of the current calendar week — not a rolling
+ * seven days, for the same reason `daysLeftInWeek` (board-data.ts) isn't: the shape of the week
+ * shouldn't shift depending on which day someone looks at it.
+ */
+function MovementsPanel({
+  admissionsByDay,
+  dischargesByDay,
+  weekLabel,
+  todayIndex,
+}: {
+  admissionsByDay: number[];
+  dischargesByDay: number[];
+  weekLabel: string;
+  todayIndex: number;
+}) {
+  const max = Math.max(4, ...admissionsByDay, ...dischargesByDay);
+  const totalAdmissions = admissionsByDay.reduce((a, b) => a + b, 0);
+  const totalDischarges = dischargesByDay.reduce((a, b) => a + b, 0);
+  return (
+    <section className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+      <PanelHeader
+        title="This week's movements"
+        subtitle={weekLabel}
+        extra={
+          <span className="ml-1 flex items-center gap-3 text-[11px] font-normal text-[var(--color-ink-muted)]">
+            <span className="flex items-center gap-1.5">
+              <span className="size-[7px] rounded-[2px] bg-[var(--color-accent)]" /> Admissions
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-[7px] rounded-[2px] bg-[var(--color-accent)]/40" /> Discharges
+            </span>
+          </span>
+        }
+      />
+      <div className="flex flex-1 items-end justify-around gap-1 px-6 pb-1" style={{ height: 150 }}>
+        {WEEKDAY_LABELS.map((d, i) => (
+          <div key={d} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+            <div className="flex h-full items-end gap-[3px]">
+              <div
+                className="w-[10px] rounded-t-[3px] bg-[var(--color-accent)]"
+                style={{ height: `${Math.max(admissionsByDay[i]! > 0 ? 3 : 0, (admissionsByDay[i]! / max) * 100)}%` }}
+                title={`${d}: ${admissionsByDay[i]} admission${admissionsByDay[i] === 1 ? '' : 's'}`}
+              />
+              <div
+                className="w-[10px] rounded-t-[3px] bg-[var(--color-accent)]/40"
+                style={{ height: `${Math.max(dischargesByDay[i]! > 0 ? 3 : 0, (dischargesByDay[i]! / max) * 100)}%` }}
+                title={`${d}: ${dischargesByDay[i]} planned discharge${dischargesByDay[i] === 1 ? '' : 's'}`}
+              />
+            </div>
+            <span className={`text-[11px] ${i === todayIndex ? 'font-semibold text-[var(--color-accent)]' : 'text-[var(--color-ink-muted)]'}`}>
+              {d}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-2.5 text-[11px] text-[var(--color-ink-muted)]">
+        <span>
+          <strong className="text-[var(--color-ink)]">{totalAdmissions}</strong> admission{totalAdmissions === 1 ? '' : 's'}
+          {' · '}
+          <strong className="text-[var(--color-ink)]">{totalDischarges}</strong> planned discharge{totalDischarges === 1 ? '' : 's'}
+        </span>
+        <span>Includes planned movements</span>
+      </div>
+    </section>
+  );
+}
+
+function AttentionRow({
+  icon: Icon,
+  tone,
+  title,
+  description,
+  onClick,
+}: {
+  icon: LucideIcon;
+  tone: 'red' | 'amber';
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 border-t border-[var(--color-line)] px-5 py-3 text-left transition hover:bg-muted/40"
+    >
+      <span
+        className={`grid size-8 shrink-0 place-items-center rounded-lg ${
+          tone === 'red'
+            ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+        }`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <strong className="block text-[12px] font-medium text-[var(--color-ink)]">{title}</strong>
+        <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{description}</p>
+      </div>
+      <ChevronRight className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
+    </button>
+  );
+}
+
+function emailInitials(email: string): string {
+  const local = email.split('@')[0] ?? email;
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((p) => p[0]!.toUpperCase()).join('');
+  return initials || '?';
+}
+
+function ActivityRow({ event: e }: { event: AuditEventRow }) {
+  return (
+    <div className="flex items-start gap-2.5 px-5 py-2.5 text-[11.5px]">
+      <span className="grid size-[26px] shrink-0 place-items-center rounded-full bg-[var(--color-accent-soft)] text-[10px] font-semibold text-[var(--color-accent)]">
+        {emailInitials(e.actor_email ?? '?')}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="leading-snug text-[var(--color-ink)]">
+          <strong className="font-semibold">{e.actor_email}</strong> {actionPhrase(e).toLowerCase()}
+        </p>
+        <p className="mt-0.5 truncate text-[10.5px] text-[var(--color-ink-muted)]">
+          {RECORD_NOUN[e.record_type] ?? e.record_type}
+        </p>
+      </div>
+      <time className="shrink-0 text-[10.5px] text-[var(--color-ink-muted)]">
+        {new Date(e.occurred_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+      </time>
+    </div>
+  );
+}
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 export function StakeholderDashboard({
@@ -129,9 +391,21 @@ export function StakeholderDashboard({
   const navigate = useNavigate();
   const { beds, loading, refreshing, loadedAt, refresh } = useBoardData(centreId);
   const [incidentCount, setIncidentCount] = useState<number | null>(null);
+  const [bedRows, setBedRows] = useState<BedRow[]>([]);
+  const [auditRows, setAuditRows] = useState<AuditEventRow[]>([]);
 
   useEffect(() => {
     incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
+  }, [centreId]);
+
+  useEffect(() => {
+    roomsAndBeds.beds(centreId).then(setBedRows).catch(() => {});
+  }, [centreId]);
+
+  useEffect(() => {
+    auditEvents.list(150)
+      .then((rows) => setAuditRows(rows.filter((r) => r.centre_id === centreId && r.actor_email !== null)))
+      .catch(() => {});
   }, [centreId]);
 
   const stats = useMemo(() => summarise(beds), [beds]);
@@ -147,18 +421,6 @@ export function StakeholderDashboard({
         .filter((b) => b.occupant && b.occupant.daysUntilDischarge >= -1 && b.occupant.daysUntilDischarge <= 7)
         .map((b) => ({ bed: b, o: b.occupant! }))
         .sort((a, b) => a.o.daysUntilDischarge - b.o.daysUntilDischarge),
-    [beds],
-  );
-
-  const needsAttention = useMemo(
-    () =>
-      beds
-        .filter((b) => b.occupant && (b.occupant.hasRestrictedAlert || b.occupant.overdueCount > 0))
-        .map((b) => ({ bed: b, o: b.occupant! }))
-        .sort((a, b) => {
-          if (a.o.hasRestrictedAlert !== b.o.hasRestrictedAlert) return a.o.hasRestrictedAlert ? -1 : 1;
-          return b.o.overdueCount - a.o.overdueCount;
-        }),
     [beds],
   );
 
@@ -181,6 +443,33 @@ export function StakeholderDashboard({
 
   const customPendingClients = occupants.filter((o) => o.tasks.some((t) => t.isManual && !t.isComplete)).length;
   const customOverdueCount   = occupants.reduce((s, o) => s + o.tasks.filter((t) => t.isManual && !t.isComplete && t.isOverdue).length, 0);
+
+  // `beds.status` (roomsAndBeds) is a manual maintenance/closed flag the board itself ignores (see
+  // roomsAndBeds.beds' own comment) — cross-referenced here purely for the occupancy donut, matched
+  // by label since both read the same `beds` table for this centre.
+  const bedStatusByLabel = new Map(bedRows.map((b) => [b.label, b.status]));
+  const maintenanceCount = beds.filter((b) => {
+    if (b.occupant) return false;
+    const status = bedStatusByLabel.get(b.label);
+    return status !== undefined && status !== 'available';
+  }).length;
+  const availableCount = Math.max(0, stats.bedsTotal - stats.bedsOccupied - maintenanceCount);
+  const roomCount = new Set(beds.map((b) => b.room)).size;
+
+  const now = new Date();
+  const weekStart = addCalendar(now, -zonedWeekday(now, TZ), 'days', TZ);
+  const weekEnd = addCalendar(weekStart, 6, 'days', TZ);
+  const todayIndex = zonedWeekday(now, TZ);
+  const admissionsByDay = [0, 0, 0, 0, 0, 0, 0];
+  const dischargesByDay = [0, 0, 0, 0, 0, 0, 0];
+  for (const o of occupants) {
+    const admittedIdx = calendarDaysBetween(weekStart, o.admittedAt, TZ);
+    if (admittedIdx >= 0 && admittedIdx <= 6) admissionsByDay[admittedIdx]!++;
+    const dischargeIdx = calendarDaysBetween(weekStart, fromZonedDateString(o.plannedDischargeDate, TZ), TZ);
+    if (dischargeIdx >= 0 && dischargeIdx <= 6) dischargesByDay[dischargeIdx]!++;
+  }
+  const weekLabel = `${formatDate(weekStart)} – ${formatDate(weekEnd)}`;
+  const attentionTotal = stats.overdue + stats.restrictedAlerts + stats.missingTherapist;
 
   if (loading) {
     return (
@@ -316,87 +605,85 @@ export function StakeholderDashboard({
         </div>
       </div>
 
-      {/* ── Needs attention ── */}
-      <div>
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold tracking-[0.07em] text-[var(--color-ink-muted)] uppercase">
-            Needs attention
-          </h2>
-          {needsAttention.length > 0 && (
-            <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/25 dark:text-red-400">
-              {needsAttention.length}
-            </span>
+      {/* ── Capacity, movements, attention & activity ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <OccupancyPanel
+          occupied={stats.bedsOccupied}
+          available={availableCount}
+          maintenance={maintenanceCount}
+          total={stats.bedsTotal}
+          roomCount={roomCount}
+          onOpenBoard={() => navigate('../board')}
+        />
+        <MovementsPanel
+          admissionsByDay={admissionsByDay}
+          dischargesByDay={dischargesByDay}
+          weekLabel={weekLabel}
+          todayIndex={todayIndex}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_1fr]">
+        <section className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+          <PanelHeader
+            title="Needs attention"
+            linkLabel="View board"
+            onLink={() => navigate('../treatment-board?filter=overdue')}
+            extra={
+              attentionTotal > 0 ? (
+                <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-900/25 dark:text-red-400">
+                  {attentionTotal}
+                </span>
+              ) : null
+            }
+          />
+          {attentionTotal === 0 ? (
+            <div className="flex items-center gap-2 border-t border-[var(--color-line)] px-5 py-6 text-[12px] text-[var(--color-ink-muted)]">
+              <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+              Nothing needs attention right now.
+            </div>
+          ) : (
+            <div>
+              {stats.overdue > 0 ? (
+                <AttentionRow
+                  icon={ClipboardList}
+                  tone="red"
+                  title={`${stats.overdue} overdue care action${stats.overdue === 1 ? '' : 's'}`}
+                  description="Review outstanding actions with your team"
+                  onClick={() => navigate('../treatment-board?filter=overdue')}
+                />
+              ) : null}
+              {stats.restrictedAlerts > 0 ? (
+                <AttentionRow
+                  icon={AlertTriangle}
+                  tone="red"
+                  title={`${stats.restrictedAlerts} high-risk client${stats.restrictedAlerts === 1 ? '' : 's'}`}
+                  description="Confirm safeguarding plans are up to date"
+                  onClick={() => navigate('../board?filter=alerts')}
+                />
+              ) : null}
+              {stats.missingTherapist > 0 ? (
+                <AttentionRow
+                  icon={UserX}
+                  tone="amber"
+                  title={`${stats.missingTherapist} client${stats.missingTherapist === 1 ? '' : 's'} without a therapist`}
+                  description="Assign a therapist to keep care on track"
+                  onClick={() => navigate('../treatment-board?filter=no_therapist')}
+                />
+              ) : null}
+            </div>
           )}
-        </div>
-        {needsAttention.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] px-4 py-5 text-[12px] text-[var(--color-ink-muted)]">
-            <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-            No clients with high-risk flags or overdue tasks.
+        </section>
+
+        <section className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
+          <PanelHeader title="Recent activity" linkLabel="Activity log" onLink={() => navigate('../audit')} />
+          <div className="flex-1 divide-y divide-[var(--color-line)] border-t border-[var(--color-line)]">
+            {auditRows.length === 0 ? (
+              <p className="px-5 py-6 text-[12px] text-[var(--color-ink-muted)]">No recent activity for this centre.</p>
+            ) : (
+              auditRows.slice(0, 5).map((e) => <ActivityRow key={e.id} event={e} />)
+            )}
           </div>
-        ) : (() => {
-          const mid = Math.ceil(needsAttention.length / 2);
-          const leftCol  = needsAttention.slice(0, mid);
-          const rightCol = needsAttention.slice(mid);
-          const AttentionTable = ({ rows }: { rows: typeof needsAttention }) => (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-line)]">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Bed</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Flags</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Overdue</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-line)]">
-                  {rows.map(({ bed, o }) => (
-                    <tr
-                      key={bed.label}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => navigate(`../board?bed=${encodeURIComponent(bed.label)}`)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`../board?bed=${encodeURIComponent(bed.label)}`); } }}
-                      title={`Open ${o.displayName}'s client file`}
-                      className="cursor-pointer bg-[var(--color-panel)] transition hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                    >
-                      <td className="px-3 py-2.5 font-medium text-[var(--color-ink)]">{o.displayName}</td>
-                      <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">{bed.label}</td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex flex-wrap gap-1">
-                          {o.hasRestrictedAlert ? (
-                            <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9.5px] font-bold text-red-600 uppercase dark:bg-red-900/25 dark:text-red-400">
-                              High risk
-                            </span>
-                          ) : null}
-                          {o.hasOpenConcern ? (
-                            <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-600 uppercase dark:bg-amber-900/25 dark:text-amber-400">
-                              Concern
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {o.overdueCount > 0 ? (
-                          <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-900/25 dark:text-red-400">
-                            {o.overdueCount} overdue
-                          </span>
-                        ) : (
-                          <span className="text-[var(--color-ink-muted)]">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-          return (
-            <div className={`grid gap-4 ${rightCol.length > 0 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-              <AttentionTable rows={leftCol} />
-              {rightCol.length > 0 && <AttentionTable rows={rightCol} />}
-            </div>
-          );
-        })()}
+        </section>
       </div>
 
       {/* ── Graduating within 7 days ── */}

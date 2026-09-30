@@ -13,7 +13,7 @@ import {
 } from '../../components/ui/dialog.tsx';
 import { formatDateWithDay } from '../../lib/format.js';
 
-const RECORD_NOUN: Record<string, string> = {
+export const RECORD_NOUN: Record<string, string> = {
   admissions:               'Admission',
   beds:                     'Bed',
   client_photos:            'Client photo',
@@ -75,7 +75,7 @@ const SKIP_FIELDS = new Set([
   'actor_id', 'organisation_id', 'centre_id',
 ]);
 
-function actionPhrase(e: AuditEventRow): string {
+export function actionPhrase(e: AuditEventRow): string {
   const verb = ACTION_VERB[e.action] ?? e.action;
   const noun = RECORD_NOUN[e.record_type] ?? e.record_type;
   return `${verb} ${noun.toLowerCase()}`;
