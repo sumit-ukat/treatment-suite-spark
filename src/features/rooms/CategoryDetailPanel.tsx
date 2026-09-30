@@ -48,7 +48,7 @@ export function CategoryDetailPanel({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`${o.displayName} â€” ${label}`}
+        aria-label={`${o.displayName} — ${label}`}
         className="fixed top-0 right-0 z-50 flex h-full w-full max-w-[520px] flex-col bg-card shadow-2xl"
         style={{ animation: 'cdp-slide-in 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both' }}
       >
@@ -59,7 +59,7 @@ export function CategoryDetailPanel({
             <h2 className="truncate font-display text-[20px] font-semibold tracking-[-0.01em] text-[var(--color-ink)]">
               {o.displayName}
             </h2>
-            <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">Room {bed.label} Â· {label}</p>
+            <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">Room {bed.label} · {label}</p>
           </div>
           <button
             type="button"
@@ -88,11 +88,11 @@ export function CategoryDetailPanel({
             </div>
           </div>
           {status.attentionCount > 0 ? (
-            <Chip icon="âš " label={`${status.attentionCount} need attention`} tone="warn" />
+            <Chip icon="⚠" label={`${status.attentionCount} need attention`} tone="warn" />
           ) : null}
         </div>
 
-        {/* Content â€” scrollable */}
+        {/* Content — scrollable */}
         <div className="flex-1 overflow-y-auto p-6">
           <CategoryContent
             o={o}
@@ -117,7 +117,7 @@ export function CategoryDetailPanel({
   );
 }
 
-/* â”€â”€â”€ Content router â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Content router ─────────────────────────────────────────────────────── */
 
 function CategoryContent({
   o,
@@ -178,7 +178,7 @@ function CategoryContent({
   return <ModuleTaskSection o={o} category={category} onChanged={onChanged} {...(readOnly ? { readOnly } : {})} />;
 }
 
-/* â”€â”€â”€ Module task section (contact / survey / familyvisit / lifestep / careplan) â”€â”€â”€ */
+/* ─── Module task section (contact / survey / familyvisit / lifestep / careplan) ─── */
 
 /** Maps our board category key to the closest valid `addManualTask` category. */
 function toTaskCategory(cat: CategoryKey): 'milestone' | 'session' | 'admin' {
@@ -311,7 +311,7 @@ function AssignRow({
           onClick={assign}
           className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50"
         >
-          {busy ? 'Assigningâ€¦' : 'Assign'}
+          {busy ? 'Assigning…' : 'Assign'}
         </button>
         <button
           type="button"
@@ -326,7 +326,7 @@ function AssignRow({
   );
 }
 
-/* â”€â”€â”€ Manual task section (Doctor â€“ Thursday / Custom) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Manual task section (Doctor – Thursday / Custom) ───────────────────── */
 
 function ManualTaskSection({
   o,
@@ -411,7 +411,7 @@ function ManualTaskSection({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Complete housing formâ€¦"
+              placeholder="e.g. Complete housing form…"
               autoFocus
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-card px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
             />
@@ -433,7 +433,7 @@ function ManualTaskSection({
               onClick={addTask}
               className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50"
             >
-              {busy ? 'Addingâ€¦' : 'Add task'}
+              {busy ? 'Adding…' : 'Add task'}
             </button>
             <button
               type="button"
@@ -450,7 +450,7 @@ function ManualTaskSection({
   );
 }
 
-/* â”€â”€â”€ Shared small components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Shared small components ────────────────────────────────────────────── */
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -461,7 +461,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** A boxed label/value cell in a bordered grid â€” the 1px `bg-[var(--color-line)]` gap between
+/** A boxed label/value cell in a bordered grid — the 1px `bg-[var(--color-line)]` gap between
  * sibling cells (set by the parent grid) draws the dividing lines without per-cell border logic. */
 function Field({ label, children, highlight, wide }: {
   label: string; children: React.ReactNode; highlight?: boolean; wide?: boolean;
@@ -476,7 +476,7 @@ function Field({ label, children, highlight, wide }: {
   );
 }
 
-/* â”€â”€â”€ Admin fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Admin fields ───────────────────────────────────────────────────────── */
 
 function AdminFields({
   o,
@@ -536,22 +536,22 @@ function AdminFields({
         <div className="grid grid-cols-2 gap-2.5">
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Focal therapist
-            <input type="text" value={form.therapist} onChange={(e) => setForm((f) => ({ ...f, therapist: e.target.value }))} placeholder="Nameâ€¦"
+            <input type="text" value={form.therapist} onChange={(e) => setForm((f) => ({ ...f, therapist: e.target.value }))} placeholder="Name…"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Buddy
-            <input type="text" value={form.buddy} onChange={(e) => setForm((f) => ({ ...f, buddy: e.target.value }))} placeholder="Nameâ€¦"
+            <input type="text" value={form.buddy} onChange={(e) => setForm((f) => ({ ...f, buddy: e.target.value }))} placeholder="Name…"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Group
-            <input type="text" value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))} placeholder="e.g. Aâ€¦"
+            <input type="text" value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))} placeholder="e.g. A…"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
           <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
             Substance
-            <input type="text" value={form.substance} onChange={(e) => setForm((f) => ({ ...f, substance: e.target.value }))} placeholder="e.g. Alcoholâ€¦"
+            <input type="text" value={form.substance} onChange={(e) => setForm((f) => ({ ...f, substance: e.target.value }))} placeholder="e.g. Alcohol…"
               className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
           </label>
         </div>
@@ -563,7 +563,7 @@ function AdminFields({
         <div className="flex items-center gap-2">
           <button type="button" disabled={busy} onClick={save}
             className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[12px] font-medium text-white transition disabled:opacity-50">
-            {busy ? 'Savingâ€¦' : 'Save'}
+            {busy ? 'Saving…' : 'Save'}
           </button>
           <button type="button" disabled={busy} onClick={() => setEditMode(false)}
             className="rounded-md px-3 py-1.5 text-[12px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
@@ -584,7 +584,7 @@ function AdminFields({
       ) : null}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-[var(--color-line)] bg-[var(--color-line)]">
         <Field label="Focal Therapist" highlight={!o.therapist}>{o.therapist ?? 'Not assigned'}</Field>
-        <Field label="Substance">{o.substance || 'â€”'}</Field>
+        <Field label="Substance">{o.substance || '—'}</Field>
         <Field label="Treatment Duration">
           {o.treatmentDay} / {o.durationDays} days
           <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/12">
@@ -593,9 +593,9 @@ function AdminFields({
         </Field>
         <Field label="Discharge Date">{formatDate(o.plannedDischargeDate)}</Field>
         <Field label="Detox Ends">Not set</Field>
-        <Field label="Group">{o.group || 'â€”'}</Field>
+        <Field label="Group">{o.group || '—'}</Field>
         <Field label="Doctor">Not set</Field>
-        <Field label="Buddy">{o.buddy || 'â€”'}</Field>
+        <Field label="Buddy">{o.buddy || '—'}</Field>
         <Field label="Peeps" highlight={o.peeps} wide>{o.peeps ? 'Yes' : 'No'}</Field>
       </div>
     </div>
