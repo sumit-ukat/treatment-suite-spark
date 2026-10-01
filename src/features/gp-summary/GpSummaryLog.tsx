@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownAZ, CheckCircle2, Printer, Search } from 'lucide-react';
+import { ArrowDownAZ, CheckCircle2, ClipboardList, Hourglass, Mail, Printer, Search, ShieldCheck } from 'lucide-react';
 import { gpSummary as gpSummaryService, type GpSummaryLogRow } from '../../services/data-access.js';
-import { PageHeader } from '../../components/metric-card.tsx';
+import { MetricCard, PageHeader } from '../../components/metric-card.tsx';
 import { DatePresetBar } from '../../components/date-preset-bar.tsx';
 import { presetRange, type DatePreset } from '../../lib/date-presets.js';
 import { formatDate } from '../../lib/format.js';
@@ -70,6 +70,17 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
       });
   }, [rows, query, dateRange, sortBy]);
 
+  /** Quick snapshot of the GP Summary workflow funnel for whatever's currently shown — this page is
+   * literally a funnel (surgery contacted → request sent → received → doctor informed → confirmed),
+   * so the useful summary is where things stand in it, not a copy of Client Directory's admission/
+   * discharge breakdown, which doesn't apply here. */
+  const funnelCounts = useMemo(() => {
+    const requestSent = visible.filter((r) => r.request_sent_at !== null).length;
+    const received = visible.filter((r) => r.received_at !== null).length;
+    const confirmed = visible.filter((r) => r.confirmed_checked_at !== null).length;
+    return { total: visible.length, requestSent, received, confirmed, outstanding: visible.length - confirmed };
+  }, [visible]);
+
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 sm:px-5">
       <PageHeader
@@ -120,6 +131,14 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
           onPresetChange={(p) => { setDatePreset(p); setMonthValue(''); }}
           onMonthChange={(m) => { setMonthValue(m); setDatePreset(m ? 'month' : 'all'); }}
         />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 print:hidden">
+        <MetricCard label="Total" value={funnelCounts.total} hint="GP summaries shown" icon={<ClipboardList className="size-4" />} />
+        <MetricCard label="Request Sent" value={funnelCounts.requestSent} hint="to the surgery" icon={<Mail className="size-4" />} />
+        <MetricCard label="Received" value={funnelCounts.received} hint="back from the surgery" icon={<CheckCircle2 className="size-4" />} />
+        <MetricCard label="Confirmed" value={funnelCounts.confirmed} hint="signed off" icon={<ShieldCheck className="size-4" />} accent="primary" />
+        <MetricCard label="Outstanding" value={funnelCounts.outstanding} hint="not yet confirmed" icon={<Hourglass className="size-4" />} />
       </div>
 
       <p className="mt-3 hidden text-[10px] text-black print:block">

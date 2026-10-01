@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownAZ, CheckCircle2, Printer, Search } from 'lucide-react';
+import { ArrowDownAZ, ArrowRightLeft, CheckCircle2, CircleDashed, GraduationCap, Printer, Search, UserMinus } from 'lucide-react';
 import { discharge as dischargeService, type DischargeLogRow } from '../../services/data-access.js';
-import { PageHeader } from '../../components/metric-card.tsx';
+import { MetricCard, PageHeader } from '../../components/metric-card.tsx';
 import { Chip } from '../../components/ui.tsx';
 import { DatePresetBar } from '../../components/date-preset-bar.tsx';
 import { presetRange, type DatePreset } from '../../lib/date-presets.js';
@@ -162,6 +162,25 @@ export function DischargeLog({ centreId }: { centreId: string }) {
       });
   }, [tab, upcoming, future, query, dateRange, sortBy]);
 
+  /** Quick snapshot of whatever's currently on screen — a second, orthogonal breakdown to the tab
+   * pills' time-bucket counts. On the discharged-type tabs it's the Type column's own breakdown
+   * (Graduated/Early Discharged/Transferred/Other); discharge_type doesn't exist yet on Upcoming/
+   * Future (nobody's discharged), so those show the care_status staff have manually flagged on the
+   * Treatment Board instead — a different but equally real snapshot for that view. */
+  const typeCounts = useMemo(() => ({
+    graduated: visibleDischarged.filter((r) => r.discharge_type === 'planned').length,
+    early: visibleDischarged.filter((r) => r.discharge_type === 'early').length,
+    transferred: visibleDischarged.filter((r) => r.discharge_type === 'transfer').length,
+    other: visibleDischarged.filter((r) => r.discharge_type === 'other').length,
+  }), [visibleDischarged]);
+
+  const careStatusCounts = useMemo(() => ({
+    graduate: visibleActive.filter((r) => r.occupant.careStatus === 'graduate').length,
+    extended: visibleActive.filter((r) => r.occupant.careStatus === 'extended').length,
+    transferred: visibleActive.filter((r) => r.occupant.careStatus === 'transferred').length,
+    notSet: visibleActive.filter((r) => r.occupant.careStatus === null).length,
+  }), [visibleActive]);
+
   const isDischargedTab = tab !== 'upcoming' && tab !== 'future';
   const loading = isDischargedTab ? rows === null : boardLoading;
   const loadError = isDischargedTab ? error : boardError;
@@ -258,6 +277,24 @@ export function DischargeLog({ centreId }: { centreId: string }) {
           onPresetChange={(p) => { setDatePreset(p); setMonthValue(''); }}
           onMonthChange={(m) => { setMonthValue(m); setDatePreset(m ? 'month' : 'all'); }}
         />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 print:hidden">
+        {isDischargedTab ? (
+          <>
+            <MetricCard label="Graduated" value={typeCounts.graduated} hint="completed treatment" icon={<GraduationCap className="size-4" />} accent="primary" />
+            <MetricCard label="Early Discharged" value={typeCounts.early} hint="left before planned discharge" icon={<UserMinus className="size-4" />} />
+            <MetricCard label="Transferred" value={typeCounts.transferred} hint="moved to another facility" icon={<ArrowRightLeft className="size-4" />} />
+            <MetricCard label="Other" value={typeCounts.other} hint="other discharge type" icon={<CircleDashed className="size-4" />} />
+          </>
+        ) : (
+          <>
+            <MetricCard label="Graduate-flagged" value={careStatusCounts.graduate} hint="status set on Treatment Board" icon={<GraduationCap className="size-4" />} accent="primary" />
+            <MetricCard label="Extended" value={careStatusCounts.extended} hint="status set on Treatment Board" icon={<ArrowRightLeft className="size-4" />} />
+            <MetricCard label="Transferred-flagged" value={careStatusCounts.transferred} hint="status set on Treatment Board" icon={<UserMinus className="size-4" />} />
+            <MetricCard label="Status Not Set" value={careStatusCounts.notSet} hint="no status chosen yet" icon={<CircleDashed className="size-4" />} />
+          </>
+        )}
       </div>
 
       <p className="mt-3 hidden text-[10px] text-black print:block">
