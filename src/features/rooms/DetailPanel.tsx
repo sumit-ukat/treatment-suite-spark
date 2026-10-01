@@ -52,6 +52,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 export function DetailPanel({
   bed,
   centreId,
+  centreName,
   onClose,
   onChanged,
   onPrev,
@@ -60,6 +61,9 @@ export function DetailPanel({
 }: {
   bed: BoardBed;
   centreId: string;
+  /** This centre's display name — passed through to the Discharge workflow's Transfer Reason
+   * dropdown, which excludes it from the list of clinics a client can transfer to. */
+  centreName: string;
   onClose: () => void;
   /**
    * Called after a task completion/reopen or a discharge action lands, so the board re-reads rather
@@ -1219,7 +1223,7 @@ export function DetailPanel({
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            <DischargeWorkflowCard occupant={o} centreId={centreId} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
+            <DischargeWorkflowCard occupant={o} centreId={centreId} centreName={centreName} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
       </Dialog>

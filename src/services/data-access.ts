@@ -952,6 +952,7 @@ export const discharge = {
     destination: string,
     treatmentType: string,
     durationDays: number | null,
+    structured?: { dischargeReason: string; dischargeSubReason: string } | undefined,
   ): Promise<string> {
     const { data, error } = await client().rpc('request_transfer_discharge', {
       p_admission_id: admissionId,
@@ -959,6 +960,8 @@ export const discharge = {
       p_destination: destination,
       p_treatment_type: treatmentType,
       p_duration_days: durationDays,
+      p_discharge_reason: structured?.dischargeReason ?? null,
+      p_discharge_sub_reason: structured?.dischargeSubReason ?? null,
     });
     if (error) throw new DataAccessError('discharge.requestTransfer', error);
     return data as string;

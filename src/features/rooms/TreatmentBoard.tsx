@@ -676,6 +676,7 @@ export function TreatmentBoard({
             key={selected.label}
             bed={selected}
             centreId={centreId}
+            centreName={centreName}
             onClose={() => setOpenBedLabel(null)}
             onChanged={() => refresh()}
             onPrev={idx > 0 ? () => setOpenBedLabel(occupiedVisible[idx - 1]!.label) : undefined}

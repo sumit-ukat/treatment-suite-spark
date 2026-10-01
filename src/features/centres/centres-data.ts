@@ -207,6 +207,20 @@ export function buildCentres(): readonly CentreSummary[] {
   );
 }
 
+export interface CentreBasic {
+  slug: string;
+  name: string;
+}
+
+/**
+ * Just slug + name, for pickers (e.g. the transfer-destination dropdown) that don't need
+ * `buildCentres()`'s full dashboard summary — that one runs the real board queries for Primrose
+ * Lodge and is far heavier than a dropdown's list of centre names needs.
+ */
+export function listCentreNames(): readonly CentreBasic[] {
+  return SPECS.map(({ slug, name }) => ({ slug, name }));
+}
+
 export interface GroupTotals {
   centres: number;
   capacity: number;

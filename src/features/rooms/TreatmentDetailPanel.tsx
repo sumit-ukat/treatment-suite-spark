@@ -660,6 +660,7 @@ function TFact({ label, value }: { label: string; value: string }) {
 export function TreatmentDetailPanel({
   bed,
   centreId,
+  centreName,
   onClose,
   onChanged,
   onPrev,
@@ -667,6 +668,9 @@ export function TreatmentDetailPanel({
 }: {
   bed: BoardBed;
   centreId: string;
+  /** This centre's display name — passed through to the Discharge workflow's Transfer Reason
+   * dropdown, which excludes it from the list of clinics a client can transfer to. */
+  centreName: string;
   onClose: () => void;
   onChanged?: (() => void) | undefined;
   onPrev?: (() => void) | undefined;
@@ -1354,7 +1358,7 @@ export function TreatmentDetailPanel({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              <DischargeWorkflowCard occupant={o} centreId={centreId} onChanged={onChanged} />
+              <DischargeWorkflowCard occupant={o} centreId={centreId} centreName={centreName} onChanged={onChanged} />
             </div>
           </DialogContent>
         </Dialog>

@@ -915,6 +915,7 @@ function BoardPage() {
             key={selected.label}
             bed={selected}
             centreId={authCentre.id}
+            centreName={centre.name}
             onClose={closeBed}
             onChanged={() => refreshBoard()}
             onPrev={idx > 0 ? () => openBed(occupiedVisible[idx - 1]!.label) : undefined}

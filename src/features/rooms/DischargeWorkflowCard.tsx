@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Panel } from '../../components/ui.tsx';
 import { discharge as dischargeService, referralPartners as referralPartnersService, type ReferralPartnerRow } from '../../services/data-access.js';
+import { listCentreNames } from '../centres/centres-data.js';
 import type { DischargeRequestSummary, Occupant } from './board-data.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { fromZonedDateString } from '../../domain/zoned-time.js';
@@ -41,6 +42,16 @@ const EARLY_DISCHARGE_SUB_REASONS: Record<EarlyDischargeReason, readonly string[
     'Physical Needs - cardiac risks',
   ],
 };
+
+// Fixed taxonomy for a Transfer's Reason → Sub Reason, validated again server-side
+// (request_transfer_discharge, migration 0076) — display/UX only, not the source of truth. Reason is
+// which clinic the client is going to (the group's own centre list, current centre excluded — a
+// transfer can't be "to" where the client already is); Sub Reason is the fixed list of why.
+const TRANSFER_SUB_REASONS = [
+  'High Level of Detox required',
+  'Unhappy with the current service',
+  'Secondary Care with Providence',
+] as const;
 
 function dischargeTimestamp(dateStr: string): Date {
   const noon = fromZonedDateString(dateStr, TZ, { hour: 12, minute: 0 });
@@ -104,11 +115,15 @@ function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' 
 export function DischargeWorkflowCard({
   occupant: o,
   centreId,
+  centreName,
   onChanged,
   startInFormMode = false,
 }: {
   occupant: Occupant;
   centreId: string;
+  /** This centre's display name — excluded from the Transfer Reason dropdown's clinic list, since a
+   * client can't transfer to the clinic they're already in. */
+  centreName: string;
   onChanged?: (() => void) | undefined;
   startInFormMode?: boolean;
 }) {
@@ -116,6 +131,8 @@ export function DischargeWorkflowCard({
   const canInitiate = can('discharge.initiate');
   const canApprove = can('discharge.approve');
   const canFinalise = can('discharge.finalise');
+
+  const transferClinics = listCentreNames().filter((c) => c.name !== centreName);
 
   const [partners, setPartners] = useState<ReferralPartnerRow[]>([]);
   const [referralPartnerId, setReferralPartnerId] = useState('');
@@ -154,7 +171,10 @@ export function DischargeWorkflowCard({
   // `reason` above until a taxonomy exists for them too (migration 0073).
   const [earlyReason, setEarlyReason] = useState<EarlyDischargeReason | ''>('');
   const [earlySubReason, setEarlySubReason] = useState('');
+  // transferDestination doubles as the structured Reason (which clinic) — the same value is sent as
+  // both the request's free-text destination and its discharge_reason.
   const [transferDestination, setTransferDestination] = useState('');
+  const [transferSubReason, setTransferSubReason] = useState('');
   const [transferTreatmentType, setTransferTreatmentType] = useState('');
   const [transferDurationDays, setTransferDurationDays] = useState('');
   // What the centre used to track by hand in its discharge-report spreadsheet — captured here, at the
@@ -185,6 +205,7 @@ export function DischargeWorkflowCard({
       setEarlyReason('');
       setEarlySubReason('');
       setTransferDestination('');
+      setTransferSubReason('');
       setTransferTreatmentType('');
       setTransferDurationDays('');
       setReportStatus('');
@@ -213,6 +234,7 @@ export function DischargeWorkflowCard({
   const canSubmitNewDischarge =
     dischargeType === 'planned' ? true
     : dischargeType === 'early' ? !!earlyReason && !!earlySubReason
+    : dischargeType === 'transfer' ? !!transferDestination && !!transferSubReason
     : !!reason.trim();
 
   const submitNewDischarge = () => {
@@ -226,8 +248,9 @@ export function DischargeWorkflowCard({
     } else if (dischargeType === 'transfer') {
       void run(async () => {
         await dischargeService.requestTransfer(
-          admissionId, reason, transferDestination, transferTreatmentType,
+          admissionId, `${transferDestination} — ${transferSubReason}`, transferDestination, transferTreatmentType,
           transferDurationDays ? parseInt(transferDurationDays, 10) : null,
+          { dischargeReason: transferDestination, dischargeSubReason: transferSubReason },
         );
       });
     } else if (dischargeType === 'early') {
@@ -447,6 +470,37 @@ export function DischargeWorkflowCard({
                     </select>
                   </label>
                 </>
+              ) : dischargeType === 'transfer' ? (
+                <>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Reason
+                    <select
+                      autoFocus
+                      value={transferDestination}
+                      onChange={(e) => { setTransferDestination(e.target.value); setTransferSubReason(''); }}
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    >
+                      <option value="">Select a clinic…</option>
+                      {transferClinics.map((c) => (
+                        <option key={c.slug} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Sub Reason
+                    <select
+                      value={transferSubReason}
+                      onChange={(e) => setTransferSubReason(e.target.value)}
+                      disabled={!transferDestination}
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+                    >
+                      <option value="">{transferDestination ? 'Select a sub reason…' : 'Pick a clinic first…'}</option>
+                      {TRANSFER_SUB_REASONS.map((sr) => (
+                        <option key={sr} value={sr}>{sr}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
               ) : (
                 <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                   Reason
@@ -462,12 +516,6 @@ export function DischargeWorkflowCard({
 
               {dischargeType === 'transfer' ? (
                 <>
-                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
-                    Destination facility
-                    <input type="text" value={transferDestination} onChange={(e) => setTransferDestination(e.target.value)}
-                      placeholder="e.g. Castle Craig, another UKAT centre…"
-                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
-                  </label>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
                     Treatment type at destination
                     <input type="text" value={transferTreatmentType} onChange={(e) => setTransferTreatmentType(e.target.value)}
@@ -500,7 +548,7 @@ export function DischargeWorkflowCard({
                   className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
                   {busy ? 'Saving…' : dischargeType === 'planned' ? 'Discharge' : 'Submit for approval'}
                 </button>
-                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setEarlyReason(''); setEarlySubReason(''); setError(null); }}
+                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setEarlyReason(''); setEarlySubReason(''); setTransferDestination(''); setTransferSubReason(''); setError(null); }}
                   className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Cancel
                 </button>
