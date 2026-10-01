@@ -1,5 +1,5 @@
-import { ArrowDownAZ, CalendarDays, Filter, Search, X } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowDownAZ, CalendarDays, Filter, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import type { ClientSearchResult } from '../../services/data-access.js';
@@ -26,6 +26,63 @@ const DISCHARGE_TYPE_STATUS_TONE: Record<string, 'good' | 'warn' | 'accent' | 'n
   transfer: 'accent',
   other: 'neutral',
 };
+
+type DatePreset = 'all' | 'today' | 'this_year' | 'last_year' | 'this_quarter' | 'last_quarter' | 'last_6_months' | 'month';
+
+const DATE_PRESETS: { id: Exclude<DatePreset, 'month'>; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'all', label: 'All Time' },
+  { id: 'this_year', label: 'This Year' },
+  { id: 'last_year', label: `Last Year (${new Date().getFullYear() - 1})` },
+  { id: 'this_quarter', label: 'This Quarter' },
+  { id: 'last_quarter', label: 'Last Quarter' },
+  { id: 'last_6_months', label: 'Last 6 Months' },
+];
+
+/** Inclusive `YYYY-MM-DD` bounds for a preset, computed against today — `null` means no bound (All
+ * Time, or Month before a value has been picked). Compared directly against `last_admitted_at`'s own
+ * `YYYY-MM-DD` prefix, so this stays simple string-range filtering rather than full Date arithmetic
+ * at the call site. */
+function presetRange(preset: DatePreset, monthValue: string): { start: string; end: string } | null {
+  const now = new Date();
+  const y = now.getFullYear();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const startOfMonth = (year: number, month: number) => new Date(year, month, 1);
+  const endOfMonth = (year: number, month: number) => new Date(year, month + 1, 0);
+
+  switch (preset) {
+    case 'all':
+      return null;
+    case 'today': {
+      const t = iso(now);
+      return { start: t, end: t };
+    }
+    case 'this_year':
+      return { start: `${y}-01-01`, end: `${y}-12-31` };
+    case 'last_year':
+      return { start: `${y - 1}-01-01`, end: `${y - 1}-12-31` };
+    case 'this_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      return { start: iso(startOfMonth(y, q * 3)), end: iso(endOfMonth(y, q * 3 + 2)) };
+    }
+    case 'last_quarter': {
+      const thisQ = Math.floor(now.getMonth() / 3);
+      const q = thisQ === 0 ? 3 : thisQ - 1;
+      const yy = thisQ === 0 ? y - 1 : y;
+      return { start: iso(startOfMonth(yy, q * 3)), end: iso(endOfMonth(yy, q * 3 + 2)) };
+    }
+    case 'last_6_months': {
+      const start = new Date(now);
+      start.setMonth(start.getMonth() - 6);
+      return { start: iso(start), end: iso(now) };
+    }
+    case 'month': {
+      if (!monthValue) return null;
+      const [yy, mm] = monthValue.split('-').map(Number) as [number, number];
+      return { start: `${monthValue}-01`, end: iso(endOfMonth(yy, mm - 1)) };
+    }
+  }
+}
 
 /** Initials and a stable 0-2 hue, both derived from real fields rather than stored — a client search
  * result has no "avatar colour" of its own, and shouldn't grow one just to feed ClientAvatar. */
@@ -61,31 +118,30 @@ export function ClientDirectory({
   const { query, setQuery, results, loading, error } = useClientSearch(centre.id);
   const [openClient, setOpenClient] = useState<ClientSearchResult | null>(null);
   const [scope, setScope] = useState<'all' | 'current' | 'former'>('all');
-  const [asOfDate, setAsOfDate] = useState<string>('');
-  /** yyyy-MM, from an <input type="month"> — distinct from asOfDate: this narrows to one calendar
-   * month of admissions rather than a cumulative on-or-before cutoff. */
-  const [monthFilter, setMonthFilter] = useState<string>('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  /** yyyy-MM, from the Month picker — only meaningful while datePreset === 'month'. */
+  const [monthValue, setMonthValue] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'discharge_recent' | 'discharge_oldest'>('recent');
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
 
+  const dateRange = useMemo(() => presetRange(datePreset, monthValue), [datePreset, monthValue]);
+
   // Filters whatever a search already returned — it does not fetch more than the search itself
-  // already asked for. The date filter uses last_admitted_at as a proxy: it shows every client
-  // admitted on or before the chosen date. Former clients without a stored discharge date may
-  // appear even if they left before that date; the label makes this approximation visible.
+  // already asked for. The date filter uses last_admitted_at as a proxy: it shows every client whose
+  // most recent admission falls in the chosen range. Former clients without a stored discharge date
+  // may still appear even if they left before the range's end — this only ever checks when they
+  // arrived, not when they left.
   const visible = results.filter((r) => {
     if (scope === 'current') return r.has_open_admission;
     if (scope === 'former') return !r.has_open_admission;
     return true;
   }).filter((r) => {
-    if (!asOfDate) return true;
+    if (!dateRange) return true;
     if (!r.last_admitted_at) return false;
-    return r.last_admitted_at.slice(0, 10) <= asOfDate;
-  }).filter((r) => {
-    if (!monthFilter) return true;
-    if (!r.last_admitted_at) return false;
-    return r.last_admitted_at.slice(0, 7) === monthFilter;
+    const d = r.last_admitted_at.slice(0, 10);
+    return d >= dateRange.start && d <= dateRange.end;
   }).sort((a, b) => {
     if (sortBy === 'name') return (a.display_name ?? a.reference).localeCompare(b.display_name ?? b.reference);
     if (sortBy === 'discharge_recent' || sortBy === 'discharge_oldest') {
@@ -143,52 +199,6 @@ export function ClientDirectory({
             className="h-9 w-full rounded-lg border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12.5px] transition focus:border-[var(--color-accent)] focus:outline-none"
           />
         </label>
-        <div className="relative flex shrink-0 items-center">
-          <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" aria-hidden />
-          <input
-            type="date"
-            value={asOfDate}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => setAsOfDate(e.target.value)}
-            aria-label="Show clients admitted on or before this date"
-            title="Snapshot date — show clients admitted on or before this date"
-            className="h-9 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-            style={{ width: asOfDate ? '11rem' : '9.5rem' }}
-          />
-          {asOfDate ? (
-            <button
-              type="button"
-              onClick={() => setAsOfDate('')}
-              aria-label="Clear date filter"
-              className="absolute right-1.5 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-3" />
-            </button>
-          ) : null}
-        </div>
-        <div className="relative flex shrink-0 items-center">
-          <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" aria-hidden />
-          <input
-            type="month"
-            value={monthFilter}
-            max={new Date().toISOString().slice(0, 7)}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            aria-label="Show only clients admitted in this month"
-            title="Admission month — show only clients admitted in this calendar month"
-            className="h-9 rounded-lg border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12.5px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-            style={{ width: monthFilter ? '9.5rem' : '8.5rem' }}
-          />
-          {monthFilter ? (
-            <button
-              type="button"
-              onClick={() => setMonthFilter('')}
-              aria-label="Clear month filter"
-              className="absolute right-1.5 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-3" />
-            </button>
-          ) : null}
-        </div>
         <select
           value={scope}
           onChange={(e) => setScope(e.target.value as typeof scope)}
@@ -217,8 +227,52 @@ export function ClientDirectory({
         {results.length > 0 ? (
           <span className="tabular ml-auto shrink-0 pr-1 text-xs text-muted-foreground">
             {visible.length} result{visible.length === 1 ? '' : 's'}
-            {asOfDate ? <span className="ml-1 text-[11px]">as of {asOfDate}</span> : null}
           </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border bg-card p-2.5 shadow-soft">
+        {DATE_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => { setDatePreset(p.id); setMonthValue(''); }}
+            className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition ${
+              datePreset === p.id
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                : 'border-[var(--color-line)] text-[var(--color-ink)] hover:bg-black/5 dark:hover:bg-white/10'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+        <span className="mx-1 h-5 w-px bg-[var(--color-line)]" aria-hidden />
+        <span className="text-[11px] font-medium text-muted-foreground">Month</span>
+        <label
+          className={`relative flex shrink-0 items-center rounded-full border px-3 py-1.5 text-[12px] font-medium transition ${
+            datePreset === 'month'
+              ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+              : 'border-[var(--color-line)] text-[var(--color-ink)] hover:bg-black/5 dark:hover:bg-white/10'
+          }`}
+        >
+          <CalendarDays className="pointer-events-none mr-1.5 size-3.5" aria-hidden />
+          <input
+            type="month"
+            value={monthValue}
+            max={new Date().toISOString().slice(0, 7)}
+            onChange={(e) => { setMonthValue(e.target.value); setDatePreset(e.target.value ? 'month' : 'all'); }}
+            aria-label="Show only clients admitted in this month"
+            className="w-[7.5rem] appearance-none bg-transparent outline-none [color-scheme:light] dark:[color-scheme:dark]"
+          />
+        </label>
+        {datePreset !== 'all' ? (
+          <button
+            type="button"
+            onClick={() => { setDatePreset('all'); setMonthValue(''); }}
+            className="rounded-full px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
+          >
+            Clear
+          </button>
         ) : null}
       </div>
 
