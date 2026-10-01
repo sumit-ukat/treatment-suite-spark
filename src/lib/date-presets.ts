@@ -15,23 +15,13 @@ export type DatePreset =
   | 'month';
 
 export const DATE_PRESETS: { id: Exclude<DatePreset, 'month'>; label: string }[] = [
-  { id: 'today', label: 'Today' },
+  { id: 'this_month', label: 'This Month' },
   { id: 'all', label: 'All Time' },
   { id: 'this_year', label: 'This Year' },
   { id: 'last_year', label: `Last Year (${new Date().getFullYear() - 1})` },
   { id: 'this_quarter', label: 'This Quarter' },
   { id: 'last_quarter', label: 'Last Quarter' },
   { id: 'last_6_months', label: 'Last 6 Months' },
-];
-
-/** A shorter set for places that want Today/This Month/This Quarter/This Year only — e.g. the
- * Executive Hub's Client activity row, which has no use for "All Time" since every figure there is
- * necessarily period-scoped. */
-export const SHORT_DATE_PRESETS: { id: Exclude<DatePreset, 'month'>; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'this_month', label: 'This Month' },
-  { id: 'this_quarter', label: 'This Quarter' },
-  { id: 'this_year', label: 'This Year' },
 ];
 
 /** Inclusive `YYYY-MM-DD` bounds for a preset, computed against today — `null` means no bound (All
