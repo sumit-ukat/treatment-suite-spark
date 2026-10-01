@@ -6,10 +6,26 @@ import type { ClientSearchResult } from '../../services/data-access.js';
 import { formatDate } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
-import { StatusBadge } from '../../components/status-badge.tsx';
 import { ClientAvatar } from '../../components/brand.tsx';
 import { useClientSearch } from './useClientSearch.js';
 import { ClientFilePanel } from './ClientFilePanel.tsx';
+
+/** The directory's "Status" column follows the discharge workflow's own taxonomy (Graduated / Early
+ * Discharged / Transferred / Other, from discharge_type — see migration 0072) rather than the
+ * separate Treatment Board care_status flag, since Reason/Sub Reason only ever come from a
+ * discharge record, not from care_status. "In Treatment" covers anyone still admitted. */
+const DISCHARGE_TYPE_STATUS_LABEL: Record<string, string> = {
+  planned: 'Graduated',
+  early: 'Early Discharged',
+  transfer: 'Transferred',
+  other: 'Other',
+};
+const DISCHARGE_TYPE_STATUS_TONE: Record<string, 'good' | 'warn' | 'accent' | 'neutral'> = {
+  planned: 'good',
+  early: 'warn',
+  transfer: 'accent',
+  other: 'neutral',
+};
 
 /** Initials and a stable 0-2 hue, both derived from real fields rather than stored — a client search
  * result has no "avatar colour" of its own, and shouldn't grow one just to feed ClientAvatar. */
@@ -219,40 +235,79 @@ export function ClientDirectory({
               <p className="text-[13px] font-medium">No results match this filter</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--color-line)] bg-card">
-              <ul className="divide-y divide-[var(--color-line)]">
-                {visible.map((r) => {
-                  const label = r.display_name ?? r.reference;
-                  return (
-                    <li key={r.client_id}>
-                      <button
-                        type="button"
+            <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-card">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Name</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Admission Date</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Discharge Date</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Status</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Reason</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Sub Reason</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Total Tasks</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Completed</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Due / Overdue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-line)]">
+                  {visible.map((r) => {
+                    const label = r.display_name ?? r.reference;
+                    const statusLabel = r.has_open_admission
+                      ? 'In Treatment'
+                      : r.last_discharge_type
+                        ? (DISCHARGE_TYPE_STATUS_LABEL[r.last_discharge_type] ?? r.last_discharge_type)
+                        : r.last_admission_status
+                          ? (STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status)
+                          : null;
+                    const statusTone = r.has_open_admission
+                      ? 'accent'
+                      : r.last_discharge_type
+                        ? (DISCHARGE_TYPE_STATUS_TONE[r.last_discharge_type] ?? 'neutral')
+                        : 'neutral';
+                    return (
+                      <tr
+                        key={r.client_id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setOpenClient(r)}
-                        className="flex min-h-[64px] w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-[var(--color-accent-soft)]"
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenClient(r); } }}
+                        className="cursor-pointer bg-card transition hover:bg-[var(--color-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                       >
-                        <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[14px] font-semibold">{label}</div>
-                          <div className="nums truncate text-[12px] text-muted-foreground">{r.reference}</div>
-                        </div>
-                        {r.last_admitted_at ? (
-                          <div className="hidden shrink-0 text-right text-xs sm:block">
-                            <p className="text-muted-foreground">Latest admission</p>
-                            <p className="tabular font-medium">{formatDate(new Date(r.last_admitted_at))}</p>
+                        <td className="px-4 py-2.5">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} />
+                            <div className="min-w-0">
+                              <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{label}</div>
+                              <div className="nums truncate text-[11px] text-muted-foreground">{r.reference}</div>
+                            </div>
                           </div>
-                        ) : null}
-                        <div className="shrink-0">
-                          {r.has_open_admission ? (
-                            <StatusBadge status="ontrack" label="Currently resident" size="sm" />
-                          ) : r.last_admission_status ? (
-                            <Chip label={STATUS_LABEL[r.last_admission_status] ?? r.last_admission_status} />
-                          ) : null}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                        </td>
+                        <td className="nums px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                          {r.last_admitted_at ? formatDate(new Date(r.last_admitted_at)) : '—'}
+                        </td>
+                        <td className="nums px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                          {r.last_discharge_at ? formatDate(new Date(r.last_discharge_at)) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {statusLabel ? <Chip label={statusLabel} tone={statusTone} /> : <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.last_discharge_reason ?? <span className="text-muted-foreground">—</span>}</td>
+                        <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.last_discharge_sub_reason ?? <span className="text-muted-foreground">—</span>}</td>
+                        <td className="nums px-3 py-2.5 text-right text-[var(--color-ink)]">{r.last_total_tasks}</td>
+                        <td className="nums px-3 py-2.5 text-right text-[var(--color-ink)]">{r.last_completed_tasks}</td>
+                        <td className="nums px-3 py-2.5 text-right">
+                          {r.last_due_overdue_tasks > 0 ? (
+                            <span className="font-semibold text-[var(--color-overdue)]">{r.last_due_overdue_tasks}</span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )
         )}

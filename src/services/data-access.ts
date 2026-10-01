@@ -384,6 +384,15 @@ export interface ClientSearchResult {
   has_open_admission: boolean;
   last_admission_status: string | null;
   last_admitted_at: string | null;
+  /** Everything below is for that same most-recent admission — migration 0074/0075. */
+  last_discharge_at: string | null;
+  last_discharge_type: 'planned' | 'early' | 'transfer' | 'other' | null;
+  last_care_status: 'graduate' | 'discharged' | 'extended' | 'transferred' | null;
+  last_discharge_reason: string | null;
+  last_discharge_sub_reason: string | null;
+  last_total_tasks: number;
+  last_completed_tasks: number;
+  last_due_overdue_tasks: number;
 }
 
 export const clients = {
