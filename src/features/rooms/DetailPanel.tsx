@@ -1184,9 +1184,9 @@ export function DetailPanel({
     {/* Extend Stay — sibling dialog so it gets its own full-screen overlay */}
     {extendStayOpen && o.admissionId ? (
       <Dialog open onOpenChange={(v) => !v && setExtendStayOpen(false)}>
-        <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+        <DialogContent hideClose className="flex max-h-[85vh] w-full max-w-[480px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
           <DialogTitle className="sr-only">Extend stay — {o.displayName}</DialogTitle>
-          <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
             <div>
               <p className="font-semibold text-[13.5px]">Extend stay</p>
               <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
@@ -1196,7 +1196,7 @@ export function DetailPanel({
               <X className="size-4" />
             </button>
           </div>
-          <div className="overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4">
             <ExtendStayCard occupant={o} centreId={centreId} startInFormMode onChanged={() => { setExtendStayOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
@@ -1206,9 +1206,9 @@ export function DetailPanel({
     {/* Discharge Workflow — sibling dialog so it gets its own full-screen overlay */}
     {dischargeOpen && o.admissionId ? (
       <Dialog open onOpenChange={(v) => !v && setDischargeOpen(false)}>
-        <DialogContent hideClose className="w-full max-w-[480px] gap-0 overflow-hidden p-0 sm:rounded-2xl">
+        <DialogContent hideClose className="flex max-h-[85vh] w-full max-w-[480px] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl">
           <DialogTitle className="sr-only">Discharge — {o.displayName}</DialogTitle>
-          <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-line)] px-4 py-3">
             <div>
               <p className="font-semibold text-[13.5px]">Discharge</p>
               <p className="text-[11px] text-[var(--color-ink-muted)]">{o.displayName}</p>
@@ -1218,7 +1218,7 @@ export function DetailPanel({
               <X className="size-4" />
             </button>
           </div>
-          <div className="overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4">
             <DischargeWorkflowCard occupant={o} centreId={centreId} startInFormMode onChanged={() => { setDischargeOpen(false); onChanged?.(); }} />
           </div>
         </DialogContent>
