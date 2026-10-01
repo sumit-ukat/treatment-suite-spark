@@ -1,4 +1,4 @@
-import { Building2, Copy, Eye, EyeOff, HeartPulse, Shield, ShieldPlus, Trash2, UserPlus, Wrench } from 'lucide-react';
+import { Activity, Building2, ChevronDown, Copy, Eye, EyeOff, HeartPulse, Shield, ShieldPlus, Trash2, UserPlus, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
@@ -233,7 +233,7 @@ export function UsersAndRoles() {
 }
 
 /**
- * Plain-English reference for the 4 roles the Role picker offers, keyed by the stable `roles.code`
+ * Plain-English reference for the 5 roles the Role picker offers, keyed by the stable `roles.code`
  * — not generated from `permissions`/`role_permissions`: the live data would list dozens of raw
  * permission codes, which is exactly the unreadable thing this exists to translate away from. Shared
  * between the always-visible cards below and the role picker inside AddTeamMemberModal, so the two
@@ -241,7 +241,8 @@ export function UsersAndRoles() {
  *
  * Deliberately named after the job, not an abstract "Level N" — the migration that once proposed that
  * framing (0062) was written but never actually applied to this database, so these are also just the
- * first real names these roles have ever had in production.
+ * first real names these roles have ever had in production. Order here is display order: Super Admin,
+ * Operations Manager, Centre Manager, Clinical Staff, View Only.
  */
 const ROLE_CARD_DATA: Record<string, {
   icon: typeof Shield;
@@ -260,6 +261,21 @@ const ROLE_CARD_DATA: Record<string, {
       'Creating and configuring centres',
     ],
   },
+  operations_manager: {
+    icon: Activity,
+    tone: 'alert',
+    summary: 'Oversight and approval across every centre — no hands-on clinical work.',
+    covers: [
+      'Signing off discharges and stay extensions, group-wide',
+      'Reports, audit history, and operational detail at every centre',
+      'See client details and that a risk/safeguarding flag exists (not the written detail)',
+    ],
+    excludes: [
+      'Managing other staff’s access',
+      'Creating or configuring centres',
+      'Admitting clients, room/bed management, or any clinical recording',
+    ],
+  },
   centre_manager: {
     icon: Building2,
     tone: 'good',
@@ -274,7 +290,7 @@ const ROLE_CARD_DATA: Record<string, {
   therapist: {
     icon: HeartPulse,
     tone: 'accent',
-    summary: 'Does the clinical work — sessions, tasks, family contact.',
+    summary: 'Does the clinical work — therapists, support workers, and similar roles.',
     covers: [
       'View and complete assigned tasks',
       'Record treatment sessions and family contact',
@@ -303,43 +319,61 @@ const ROLE_CARD_DATA: Record<string, {
 };
 
 function RoleCards() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   return (
-    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {Object.entries(ROLE_CARD_DATA).map(([code, r]) => (
-        <div key={code} className="rounded-2xl border bg-card p-3.5 shadow-soft">
-          <div className="flex items-center gap-1.5">
-            <r.icon className="size-3.5" aria-hidden />
-            <Chip label={ROLE_DISPLAY_NAME[code] ?? code} tone={r.tone} />
+    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {Object.entries(ROLE_CARD_DATA).map(([code, r]) => {
+        const isOpen = expanded === code;
+        return (
+          <div key={code} className="rounded-2xl border bg-card p-3.5 shadow-soft">
+            <div className="flex items-center gap-1.5">
+              <r.icon className="size-3.5" aria-hidden />
+              <Chip label={ROLE_DISPLAY_NAME[code] ?? code} tone={r.tone} />
+            </div>
+            <p className="mt-2 text-[11.5px] font-medium text-[var(--color-ink)]">{r.summary}</p>
+            <button
+              type="button"
+              onClick={() => setExpanded(isOpen ? null : code)}
+              className="mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-[var(--color-ink-muted)] underline decoration-dotted transition hover:text-[var(--color-ink)]"
+            >
+              <ChevronDown className={`size-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+              {isOpen ? 'Hide details' : 'Show details'}
+            </button>
+            {isOpen ? (
+              <>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-[var(--color-ink-muted)]">
+                  {r.covers.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                {r.excludes ? (
+                  <ul className="mt-2 space-y-1 border-t border-[var(--color-line)] pt-2 text-[11px] text-[var(--color-ink-muted)]">
+                    {r.excludes.map((c) => (
+                      <li key={c} className="flex gap-1.5">
+                        <span aria-hidden="true">&#8722;</span>
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </>
+            ) : null}
           </div>
-          <p className="mt-2 text-[11.5px] font-medium text-[var(--color-ink)]">{r.summary}</p>
-          <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-[var(--color-ink-muted)]">
-            {r.covers.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-          {r.excludes ? (
-            <ul className="mt-2 space-y-1 border-t border-[var(--color-line)] pt-2 text-[11px] text-[var(--color-ink-muted)]">
-              {r.excludes.map((c) => (
-                <li key={c} className="flex gap-1.5">
-                  <span aria-hidden="true">&#8722;</span>
-                  {c}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-/** Display name fallback used before migration 0079 has landed — once it has, `roles.name` itself
- * already reads "Super Admin" etc. and this is never reached for these 4 codes. */
+/** Display name fallback used before migration 0083 has landed — once it has, `roles.name` itself
+ * already reads "Super Admin" etc. and this is never reached for these 5 codes. */
 const ROLE_DISPLAY_NAME: Record<string, string> = {
   platform_admin: 'Super Admin',
+  operations_manager: 'Operations Manager',
   centre_manager: 'Centre Manager',
-  therapist: 'Therapist',
-  centre_staff: 'Centre Staff',
+  therapist: 'Clinical Staff',
+  centre_staff: 'View Only',
 };
 
 function UserRow({
