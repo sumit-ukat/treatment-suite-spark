@@ -48,6 +48,45 @@ function dischargeTimestamp(dateStr: string): Date {
   return noon.getTime() > now.getTime() ? now : noon;
 }
 
+/** Discharge-type picker — same card style as ExtendStayCard's programme picker, so the common case
+ * (Planned/Graduated, listed and selected first) is an obviously-highlighted big target rather than
+ * one option buried in a plain dropdown. */
+function TypeOption({
+  selected,
+  onClick,
+  title,
+  description,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-start gap-3 rounded-xl border p-3 text-left transition hover:opacity-90 ${
+        selected
+          ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
+          : 'border-[var(--color-line)]'
+      }`}
+    >
+      <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold ${
+        selected
+          ? 'bg-[var(--color-accent)] text-white'
+          : 'bg-black/[0.06] dark:bg-white/10'
+      }`}>
+        {selected ? '✓' : ''}
+      </span>
+      <div>
+        <p className={`text-[12px] font-semibold ${selected ? 'text-[var(--color-accent)]' : ''}`}>{title}</p>
+        <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">{description}</p>
+      </div>
+    </button>
+  );
+}
+
 function WorkflowStatus({ label, variant }: { label: string; variant: 'pending' | 'approved' | 'neutral' }) {
   const colours =
     variant === 'approved'
@@ -335,29 +374,48 @@ export function DischargeWorkflowCard({
             )
           ) : (
             <div className="flex flex-col gap-3">
-              <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
-                Type
-                <select
-                  value={dischargeType}
-                  onChange={(e) => setDischargeType(e.target.value as typeof dischargeType)}
-                  className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-                >
-                  {canFinalise ? <option value="planned">Planned (on schedule)</option> : null}
-                  {canInitiate ? <option value="early">Early discharge</option> : null}
-                  {canInitiate ? <option value="transfer">Transfer</option> : null}
-                  {canInitiate ? <option value="other">Other</option> : null}
-                </select>
-              </label>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10.5px] text-[var(--color-ink-muted)]">Type</p>
+                {canFinalise ? (
+                  <TypeOption
+                    selected={dischargeType === 'planned'}
+                    onClick={() => setDischargeType('planned')}
+                    title="Planned (Graduated)"
+                    description="Completed the full programme on schedule — discharges immediately, no approval needed."
+                  />
+                ) : null}
+                {canInitiate ? (
+                  <TypeOption
+                    selected={dischargeType === 'early'}
+                    onClick={() => setDischargeType('early')}
+                    title="Early discharge"
+                    description="Leaving before the planned end date — needs sign-off from someone else first."
+                  />
+                ) : null}
+                {canInitiate ? (
+                  <TypeOption
+                    selected={dischargeType === 'transfer'}
+                    onClick={() => setDischargeType('transfer')}
+                    title="Transfer"
+                    description="Moving to another facility or programme — needs sign-off from someone else first."
+                  />
+                ) : null}
+                {canInitiate ? (
+                  <TypeOption
+                    selected={dischargeType === 'other'}
+                    onClick={() => setDischargeType('other')}
+                    title="Other"
+                    description="Anything else — needs sign-off from someone else first."
+                  />
+                ) : null}
+              </div>
 
               {dateField}
 
               {dischargeType === 'planned' ? (
-                // Graduated: exactly one valid reason, so it's shown as a fixed confirmation line
-                // rather than a dropdown with a single pointless option.
-                <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]">
-                  <span className="text-[10.5px] text-[var(--color-ink-muted)]">Reason</span>
-                  <p className="mt-0.5 font-medium text-[var(--color-ink)]">Completed Treatment</p>
-                </div>
+                // Graduated: exactly one valid reason ("Completed Treatment"), applied automatically
+                // server-side — nothing to show or confirm here, straight on to the date/report.
+                null
               ) : dischargeType === 'early' ? (
                 <>
                   <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
