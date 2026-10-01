@@ -173,21 +173,23 @@ export function UsersAndRoles() {
 
       <RoleCards />
 
-      <AddTeamMemberModal
-        roles={roles}
-        organisations={organisations}
-        centres={centres}
-        onAdded={reload}
-      />
+      <div className="mt-5 flex flex-wrap items-start gap-2">
+        <AddTeamMemberModal
+          roles={roles}
+          organisations={organisations}
+          centres={centres}
+          onAdded={reload}
+        />
 
-      <GrantAccessForm
-        users={users}
-        roles={roles}
-        organisations={organisations}
-        centres={centres}
-        permissionCodesByRoleId={permissionCodesByRoleId}
-        onGranted={reload}
-      />
+        <GrantAccessForm
+          users={users}
+          roles={roles}
+          organisations={organisations}
+          centres={centres}
+          permissionCodesByRoleId={permissionCodesByRoleId}
+          onGranted={reload}
+        />
+      </div>
 
       <Panel
         title="Users"
@@ -700,7 +702,7 @@ function AddTeamMemberModal({
   };
 
   return (
-    <div className="mt-5">
+    <div>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -963,7 +965,7 @@ function GrantAccessForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
       >
         <ShieldPlus className="size-3.5" /> Grant additional access&hellip;
       </button>
@@ -971,7 +973,7 @@ function GrantAccessForm({
   }
 
   return (
-    <div className="mt-2.5 rounded-2xl border bg-card p-4 shadow-soft">
+    <div className="w-full rounded-2xl border bg-card p-4 shadow-soft">
       <h3 className="font-display text-[13px] font-semibold">Grant additional access</h3>
       <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
         For someone who already has a sign-in, or a grant &ldquo;Add team member&rdquo; above doesn&rsquo;t
