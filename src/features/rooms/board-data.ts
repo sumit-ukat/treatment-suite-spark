@@ -377,6 +377,10 @@ export interface Occupant {
   /** `admissions.detox_ends` — captured at admission time but never surfaced anywhere until now.
    * `YYYY-MM-DD`, null on the fictional boards and whenever unset. */
   detoxEnds: string | null;
+  /** `admissions.care_status` — a status staff set themselves at any point (not derived from any
+   * other field), independent of the discharge workflow. Null on the fictional boards and whenever
+   * unset. */
+  careStatus: 'graduate' | 'discharged' | 'extended' | 'transferred' | null;
   group: string;
   peeps: boolean;
   photoState: 'present' | 'missing';
@@ -503,6 +507,7 @@ function buildOccupant(row: RealRow, now: Date): Occupant {
     buddy: BUDDIES[row.buddyIdx] ?? '—',
     doctor: null,
     detoxEnds: null,
+    careStatus: null,
     group: row.group,
     peeps: row.peeps,
     // The workbook holds eight photographs but no verification state — it has no concept of one.

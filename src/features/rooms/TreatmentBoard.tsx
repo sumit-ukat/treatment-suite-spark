@@ -4,13 +4,13 @@ import { ArrowRight, Check, CircleAlert, Clock3, Flag, History, Minus, Plus, Pri
 import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
-import { type Tone } from '../../components/ui.tsx';
+import { Chip, type Tone } from '../../components/ui.tsx';
 import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
 import { CategoryDetailPanel } from './CategoryDetailPanel.tsx';
-import { CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
+import { CARE_STATUS_LABEL, CARE_STATUS_TONE, CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 
 // Soft card radius/shadow used across the reskinned board — kept local to this screen (not the
@@ -438,6 +438,7 @@ export function TreatmentBoard({
               </th>
               {/* Shadow on Programme marks the freeze boundary — it's the last frozen column */}
               <th className={`sticky left-[304px] z-30 w-[120px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>Programme</th>
+              <th className={`w-[110px] border-r border-[var(--color-line)] ${th}`}>Status</th>
               {CATEGORY_ORDER.map((key) => (
                 <th
                   key={key}
@@ -472,6 +473,7 @@ export function TreatmentBoard({
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
                     <td className={`${stickyCell} left-[304px] w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>—</td>
+                    <td className={`${cb} w-[110px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
                     {CATEGORY_ORDER.map((key) => (
                       <td key={key} className={`${cb} w-[126px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)] last:border-r-0`}>—</td>
                     ))}
@@ -562,6 +564,15 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
+                  {/* Status: staff-set, independent of the discharge workflow — see migration 0070 */}
+                  <td className={`${cb} w-[110px] border-r border-[var(--color-line)] px-3 py-3`}>
+                    {o.careStatus ? (
+                      <Chip label={CARE_STATUS_LABEL[o.careStatus]} tone={CARE_STATUS_TONE[o.careStatus]} />
+                    ) : (
+                      <span className="text-[var(--color-ink-muted)]">—</span>
+                    )}
+                  </td>
+
                   {/* Category cells */}
                   {CATEGORY_ORDER.map((key) => (
                     <CategoryCell
@@ -595,6 +606,7 @@ export function TreatmentBoard({
               <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Therapist</th>
               <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Day</th>
               <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Discharge</th>
+              <th className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">Status</th>
               {CATEGORY_ORDER.map((key) => (
                 <th key={key} className="border border-black/40 bg-black/5 px-1.5 py-1 text-left font-semibold">
                   {CATEGORY_LABEL[key]}
@@ -609,7 +621,7 @@ export function TreatmentBoard({
                 return (
                   <tr key={bed.label}>
                     <td className="border border-black/20 px-1.5 py-1">{bed.label}</td>
-                    <td className="border border-black/20 px-1.5 py-1 italic" colSpan={4 + CATEGORY_ORDER.length}>
+                    <td className="border border-black/20 px-1.5 py-1 italic" colSpan={5 + CATEGORY_ORDER.length}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
                   </tr>
@@ -624,6 +636,7 @@ export function TreatmentBoard({
                   <td className="border border-black/20 px-1.5 py-1">{o.therapist ?? 'Not assigned'}</td>
                   <td className="border border-black/20 px-1.5 py-1">Day {o.treatmentDay} of {o.durationDays}</td>
                   <td className="border border-black/20 px-1.5 py-1">{fmtStr(o.plannedDischargeDate)}</td>
+                  <td className="border border-black/20 px-1.5 py-1">{o.careStatus ? CARE_STATUS_LABEL[o.careStatus] : '—'}</td>
                   {CATEGORY_ORDER.map((key) => {
                     const status = categoryStatus(o, key);
                     return (

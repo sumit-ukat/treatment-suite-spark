@@ -342,6 +342,7 @@ export const admissions = {
     detoxEnds?: string | null | undefined;
     plannedDuration?: number | undefined;
     plannedDurationUnit?: 'days' | 'weeks' | undefined;
+    careStatus?: 'graduate' | 'discharged' | 'extended' | 'transferred' | null | undefined;
   }): Promise<void> {
     const { error } = await client().rpc('update_admission_details', {
       p_admission_id:          admissionId,
@@ -355,6 +356,7 @@ export const admissions = {
       p_detox_ends:            details.detoxEnds || null,
       p_planned_duration:      details.plannedDuration ?? null,
       p_planned_duration_unit: details.plannedDurationUnit ?? null,
+      p_care_status:           details.careStatus || null,
     });
     if (error) throw new DataAccessError('admissions.updateDetails', error);
   },
@@ -451,6 +453,7 @@ export interface AdmissionRow {
   admission_notes_updated_at: string | null;
   detox_ends: string | null;
   programme_modules: string[];
+  care_status: 'graduate' | 'discharged' | 'extended' | 'transferred' | null;
 }
 
 export interface ClientRow {
@@ -1019,6 +1022,7 @@ export interface DischargeLogRow {
   discharge_report_sent_at: string | null;
   discharged_by_name: string | null;
   referral_partner_name: string | null;
+  care_status: 'graduate' | 'discharged' | 'extended' | 'transferred' | null;
 }
 
 export interface ReferralPartnerRow {
@@ -1169,7 +1173,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules,care_status',
           )
           .eq('centre_id', centreId)
           .eq('status', 'active'),
@@ -1360,7 +1364,7 @@ export const roomBoard = {
         client()
           .from('admissions')
           .select(
-            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules',
+            'id,client_id,admitted_at,planned_duration,planned_duration_unit,current_planned_discharge_date,treatment_group,primary_substance_id,peep_required,high_risk,admission_notes,admission_notes_updated_by_name,admission_notes_updated_at,detox_ends,programme_modules,care_status',
           )
           .in('id', admissionIds),
       ),

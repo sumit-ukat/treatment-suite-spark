@@ -220,6 +220,7 @@ function buildRealOccupant(
     buddy: buddyLabel,
     doctor: doctorLabel,
     detoxEnds: admission.detox_ends,
+    careStatus: admission.care_status,
     group: admission.treatment_group ?? '',
     peeps: admission.peep_required,
     photoState: photoUrlByClientId.has(admission.client_id) ? 'present' : 'missing',

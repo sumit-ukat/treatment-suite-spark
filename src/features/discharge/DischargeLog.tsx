@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownAZ, CalendarDays, CheckCircle2, Printer, Search, X } from 'lucide-react';
 import { discharge as dischargeService, type DischargeLogRow } from '../../services/data-access.js';
 import { PageHeader } from '../../components/metric-card.tsx';
+import { Chip } from '../../components/ui.tsx';
+import { CARE_STATUS_LABEL, CARE_STATUS_TONE } from '../rooms/category-status.js';
 import { formatDate } from '../../lib/format.js';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -155,6 +157,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">KIPU No.</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Left treatment</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Type</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Status</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Reports / transfer</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Location</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Referral partner</th>
@@ -177,6 +180,13 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${TYPE_TONE[r.discharge_type] ?? TYPE_TONE.other}`}>
                           {TYPE_LABEL[r.discharge_type] ?? r.discharge_type}
                         </span>
+                      ) : (
+                        <span className="text-[var(--color-ink-muted)]">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {r.care_status ? (
+                        <Chip label={CARE_STATUS_LABEL[r.care_status]} tone={CARE_STATUS_TONE[r.care_status]} />
                       ) : (
                         <span className="text-[var(--color-ink-muted)]">—</span>
                       )}

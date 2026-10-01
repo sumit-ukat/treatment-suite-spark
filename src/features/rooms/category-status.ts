@@ -24,6 +24,25 @@ export const CATEGORY_LABEL: Record<CategoryKey, string> = {
   custom: 'Side assignment',
 };
 
+/** `admissions.care_status` (migration 0070) — a status staff set themselves at any point, shown as
+ * a small coloured chip. Shared between the Treatment Board, Room Board, client detail panel and
+ * Discharge Log so the label/colour for a given value never drifts between screens. */
+export type CareStatus = 'graduate' | 'discharged' | 'extended' | 'transferred';
+
+export const CARE_STATUS_LABEL: Record<CareStatus, string> = {
+  graduate: 'Graduate',
+  discharged: 'Discharged',
+  extended: 'Extended',
+  transferred: 'Transferred',
+};
+
+export const CARE_STATUS_TONE: Record<CareStatus, Tone> = {
+  graduate: 'good',
+  discharged: 'neutral',
+  extended: 'warn',
+  transferred: 'accent',
+};
+
 /** One row per real task code, grouped by the category it belongs to on the board. Single source of
  * truth for both the board's category rollups and each category's internal-detail modal. */
 export const COLUMNS = [

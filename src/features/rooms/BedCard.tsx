@@ -2,6 +2,7 @@ import type { BoardBed, Occupant } from './board-data.js';
 import { formatDate } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
 import { StatusBadge } from '../../components/status-badge.tsx';
+import { CARE_STATUS_LABEL, CARE_STATUS_TONE } from './category-status.js';
 
 /**
  * Photograph, when a real one has been uploaded — initials otherwise.
@@ -230,6 +231,9 @@ export function OccupiedCard({ bed, onOpen }: { bed: BoardBed; onOpen: () => voi
           the border stripe or the corner count. */}
       <div className="flex items-center gap-2 text-[11.5px]">
         <span className={`font-medium ${STATUS_TONE_CLS[status.tone]}`}>{status.label}</span>
+        {o.careStatus ? (
+          <Chip label={CARE_STATUS_LABEL[o.careStatus]} tone={CARE_STATUS_TONE[o.careStatus]} />
+        ) : null}
         {o.isExtendedStay ? (
           <span className="ml-auto text-[11px] font-medium text-teal-600 dark:text-teal-400">
             +{o.extensionDays ?? '?'}d ext.

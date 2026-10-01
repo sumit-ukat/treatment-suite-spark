@@ -7,6 +7,7 @@ import { formatBytes } from '../../lib/image.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { StatusBadge, type StatusKey } from '../../components/status-badge.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
+import { CARE_STATUS_LABEL, type CareStatus } from './category-status.js';
 import { admissions, clients, clientPhotos, concerns, tasks as taskService, type ConcernRow, type TaskDateChangeRow } from '../../services/data-access.js';
 import { DischargeWorkflowCard } from './DischargeWorkflowCard.tsx';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
@@ -81,7 +82,7 @@ export function DetailPanel({
   const [notesBusy, setNotesBusy] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [editDetailsMode, setEditDetailsMode] = useState(false);
-  const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false, durationDays: '' });
+  const [detailsForm, setDetailsForm] = useState({ therapist: '', buddy: '', keyworker: '', group: '', substance: '', peep: false, durationDays: '', careStatus: '' as CareStatus | '' });
   const [detailsBusy, setDetailsBusy] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [editNameMode, setEditNameMode] = useState(false);
@@ -175,6 +176,7 @@ export function DetailPanel({
       substance:  o?.substance  ?? '',
       peep:       o?.peeps      ?? false,
       durationDays: o?.durationDays != null ? String(o.durationDays) : '',
+      careStatus: o?.careStatus ?? '',
     });
     setDetailsError(null);
     setEditDetailsMode(true);
@@ -245,6 +247,7 @@ export function DetailPanel({
         peepRequired:        detailsForm.peep,
         plannedDuration:     duration,
         plannedDurationUnit: 'days',
+        careStatus:          detailsForm.careStatus || null,
       });
       setEditDetailsMode(false);
       onChanged?.();
@@ -709,6 +712,20 @@ export function DetailPanel({
                       Changes the planned discharge date — can move it earlier or later.
                     </span>
                   </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Status
+                    <select
+                      value={detailsForm.careStatus}
+                      onChange={(e) => setDetailsForm((f) => ({ ...f, careStatus: e.target.value as CareStatus | '' }))}
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    >
+                      <option value="">Not set</option>
+                      <option value="graduate">Graduate</option>
+                      <option value="discharged">Discharged</option>
+                      <option value="extended">Extended</option>
+                      <option value="transferred">Transferred</option>
+                    </select>
+                  </label>
                   <div className="flex flex-col justify-end pb-1">
                     <label className="flex cursor-pointer items-center gap-2 text-[10.5px] text-[var(--color-ink-muted)]">
                       <input
@@ -749,6 +766,7 @@ export function DetailPanel({
                 <Fact label="Admitted" value={formatDate(o.admittedAt)} />
                 <Fact label="Planned discharge" value={formatDate(o.plannedDischargeDate)} />
                 <Fact label="Programme" value={`${o.durationDays} days`} />
+                <Fact label="Status" value={o.careStatus ? CARE_STATUS_LABEL[o.careStatus] : 'Not set'} />
                 <Fact label="Primary concern" value={o.substance || '—'} />
                 <Fact
                   label="Family meeting"
