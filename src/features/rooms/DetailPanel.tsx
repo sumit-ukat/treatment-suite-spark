@@ -593,18 +593,21 @@ export function DetailPanel({
                   </div>
                 </div>
               ) : (
-                <div className="nums flex items-center gap-1 text-[13px] font-semibold text-[var(--color-ink)]">
-                  Kipu No. {localReference ?? o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
-                  {can('clients.edit_identity') && !readOnly && (
-                    <button
-                      type="button"
-                      onClick={openEditRef}
-                      title="Edit Kipu No."
-                      className="rounded p-0.5 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-ink)]"
-                    >
-                      <Pencil className="size-3" aria-hidden />
-                    </button>
-                  )}
+                <div className="nums flex flex-col gap-0.5 text-[13px] font-semibold text-[var(--color-ink)]">
+                  <div className="flex items-center gap-1">
+                    Kipu No. {localReference ?? o.reference}
+                    {can('clients.edit_identity') && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={openEditRef}
+                        title="Edit Kipu No."
+                        className="rounded p-0.5 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-ink)]"
+                      >
+                        <Pencil className="size-3" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                  <div>Bed {bed.label} &middot; {o.group || 'No group'}</div>
                 </div>
               )}
             </div>
