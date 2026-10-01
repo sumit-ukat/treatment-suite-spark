@@ -1,24 +1,30 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Activity,
+  ArrowRightLeft,
   BedDouble,
   Building2,
   CalendarCheck,
   ChevronDown,
   CircleAlert,
   FileWarning,
+  LogOut,
   Percent,
   TrendingDown,
   TrendingUp,
+  UserMinus,
+  UserPlus,
   Users,
   X,
 } from 'lucide-react';
-import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
-import { discharge as dischargeService, incidents as incidentsService } from '../../services/data-access.js';
+import { buildCentres, fictionalClientActivity, groupTotals, occupancyExtremes, type CentreSummary, type ClientActivity } from './centres-data.js';
+import { centres as centresService, discharge as dischargeService, incidents as incidentsService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
 import { Panel } from '../../components/ui.tsx';
+import { DatePresetBar } from '../../components/date-preset-bar.tsx';
+import { presetRange, SHORT_DATE_PRESETS, type DatePreset } from '../../lib/date-presets.js';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -332,6 +338,43 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   }, [baseCentres, primroseDischargeCount, primroseIncidentCount]);
 
   /**
+   * Client activity — Total Clients / Discharged / Early Discharged / Transferred, scoped to a
+   * period rather than a snapshot (unlike every other figure on this page). Kept out of
+   * `CentreSummary` itself: that object is memoised once and meant to stay stable, where this
+   * recomputes whenever the period changes. Real for Primrose Lodge via migration 0080's RPC;
+   * fictional (deterministic, scaled by period length) for every other centre, same honesty split
+   * as the rest of this page.
+   */
+  const [activityPreset, setActivityPreset] = useState<DatePreset>('this_month');
+  const [activityMonthValue, setActivityMonthValue] = useState('');
+  const activityRange = useMemo(
+    () => presetRange(activityPreset, activityMonthValue) ?? presetRange('this_month', ''),
+    [activityPreset, activityMonthValue],
+  )!;
+  const activityRangeLabel = useMemo(() => {
+    const now = new Date();
+    switch (activityPreset) {
+      case 'today': return 'today';
+      case 'this_month': return now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      case 'this_quarter': return `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
+      case 'this_year': return String(now.getFullYear());
+      case 'month': {
+        if (!activityMonthValue) return '';
+        const [yy, mm] = activityMonthValue.split('-').map(Number) as [number, number];
+        return new Date(yy, mm - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      }
+      default: return '';
+    }
+  }, [activityPreset, activityMonthValue]);
+
+  const [primroseActivity, setPrimroseActivity] = useState<ClientActivity | null>(null);
+  useEffect(() => {
+    centresService.clientActivity(PRIMROSE_CENTRE_ID, activityRange.start, activityRange.end)
+      .then(setPrimroseActivity)
+      .catch(() => setPrimroseActivity(null));
+  }, [activityRange.start, activityRange.end]);
+
+  /**
    * Two ways to narrow, deliberately mutually exclusive: picking a region clears the manual picks and
    * vice versa. Intersecting them would let a reader select three northern centres, switch to South,
    * and land on an empty page that is technically correct and completely unhelpful.
@@ -362,6 +405,24 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   );
 
   const totals = useMemo(() => groupTotals(visible), [visible]);
+
+  const activityTotals = useMemo(() => {
+    let admitted = 0, discharged = 0, early = 0, transferred = 0;
+    for (const c of visible) {
+      const a: ClientActivity =
+        c.slug === 'primrose-lodge' && primroseActivity
+          ? primroseActivity
+          : c.slug === 'primrose-lodge'
+            ? { admittedCount: 0, dischargedCount: 0, earlyDischargedCount: 0, transferredCount: 0 }
+            : fictionalClientActivity(c.slug, activityRange.start, activityRange.end);
+      admitted += a.admittedCount;
+      discharged += a.dischargedCount;
+      early += a.earlyDischargedCount;
+      transferred += a.transferredCount;
+    }
+    return { admitted, discharged, early, transferred };
+  }, [visible, primroseActivity, activityRange]);
+
   const assessed = useMemo(() => visible.map(assess), [visible]);
   const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
   const nearFullCentres = useMemo(() => visible.filter((c) => c.occupancyPercent >= 90), [visible]);
@@ -681,6 +742,62 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         />
       </div>
 
+      {/* ── Client activity — period events (admitted/discharged/early discharged/transferred),
+             distinct from Estate overview's current-state snapshot above. Its own date filter governs
+             only this row. ── */}
+      <div className="mt-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+            Client activity
+          </h2>
+          <span className="text-[11.5px] text-muted-foreground">
+            Showing: <strong className="font-semibold text-foreground">{activityRangeLabel}</strong>
+          </span>
+        </div>
+        <DatePresetBar
+          preset={activityPreset}
+          monthValue={activityMonthValue}
+          presets={SHORT_DATE_PRESETS}
+          clearTo="this_month"
+          onPresetChange={(p) => { setActivityPreset(p); setActivityMonthValue(''); }}
+          onMonthChange={(m) => { setActivityMonthValue(m); setActivityPreset(m ? 'month' : 'this_month'); }}
+        />
+        <div className="mt-3">
+          <MetricGrid
+            cards={[
+              {
+                label: 'Total Clients',
+                value: activityTotals.admitted,
+                hint: `admitted · ${visible.length} centre${visible.length === 1 ? '' : 's'}`,
+                icon: <UserPlus className="size-4" />,
+                accent: 'neutral',
+              },
+              {
+                label: 'Discharged',
+                value: activityTotals.discharged,
+                hint: 'any discharge type',
+                icon: <LogOut className="size-4" />,
+                accent: 'neutral',
+              },
+              {
+                label: 'Early Discharged',
+                value: activityTotals.early,
+                hint: 'left before planned discharge',
+                icon: <UserMinus className="size-4" />,
+                accent: activityTotals.early > 0 ? 'warn' : 'neutral',
+              },
+              {
+                label: 'Transferred',
+                value: activityTotals.transferred,
+                hint: 'moved to another facility',
+                icon: <ArrowRightLeft className="size-4" />,
+                accent: 'neutral',
+              },
+            ]}
+          />
+        </div>
+      </div>
+
       {/* ── Region comparison — shown before the centre breakdown so the regional picture is visible
              before stepping through individual centres. ── */}
       {picked.length === 0 && regionRollup.length > 1 ? (
@@ -927,7 +1044,10 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             grouping is a placeholder. The highest/lowest-occupied figures above are a{' '}
             <strong className="font-semibold">placeholder 3-month average for every centre, Primrose
             Lodge included</strong> — no centre&rsquo;s occupancy history is tracked yet, so there is
-            nothing real to average until that exists.
+            nothing real to average until that exists. The Client activity row above is real for
+            Primrose Lodge (admissions/discharges within the selected period) and{' '}
+            <strong className="font-semibold">fictional, scaled to the period length</strong> for every
+            other centre.
           </p>
         </div>
       </div>

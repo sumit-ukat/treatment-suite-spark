@@ -1,22 +1,30 @@
 import { CalendarDays } from 'lucide-react';
 import { DATE_PRESETS, type DatePreset } from '../lib/date-presets.js';
 
-/** The quick date-range filter bar shared by Client Directory, GP Summary, and Discharge — see
- * lib/date-presets.ts for the range math each preset resolves to. */
+/** The quick date-range filter bar shared by Client Directory, GP Summary, Discharge, and the
+ * Executive Hub — see lib/date-presets.ts for the range math each preset resolves to. */
 export function DatePresetBar({
   preset,
   monthValue,
   onPresetChange,
   onMonthChange,
+  presets = DATE_PRESETS,
+  clearTo = 'all',
 }: {
   preset: DatePreset;
   monthValue: string;
   onPresetChange: (preset: Exclude<DatePreset, 'month'>) => void;
   onMonthChange: (month: string) => void;
+  /** Defaults to the full 7-preset list; pass SHORT_DATE_PRESETS for a trimmed set. */
+  presets?: { id: Exclude<DatePreset, 'month'>; label: string }[];
+  /** What "Clear" resets to, and the preset that hides the Clear button because it's already the
+   * resting state. Defaults to 'all'; pass the set's own default (e.g. 'this_month') when 'all'
+   * isn't one of the presets offered. */
+  clearTo?: Exclude<DatePreset, 'month'>;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border bg-card p-2.5 shadow-soft">
-      {DATE_PRESETS.map((p) => (
+      {presets.map((p) => (
         <button
           key={p.id}
           type="button"
@@ -49,10 +57,10 @@ export function DatePresetBar({
           className="w-[7.5rem] appearance-none bg-transparent outline-none [color-scheme:light] dark:[color-scheme:dark]"
         />
       </label>
-      {preset !== 'all' ? (
+      {preset !== clearTo ? (
         <button
           type="button"
-          onClick={() => onPresetChange('all')}
+          onClick={() => onPresetChange(clearTo)}
           className="rounded-full px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
         >
           Clear

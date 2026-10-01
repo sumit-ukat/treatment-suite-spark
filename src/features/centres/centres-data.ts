@@ -207,6 +207,43 @@ export function buildCentres(): readonly CentreSummary[] {
   );
 }
 
+export interface ClientActivity {
+  admittedCount: number;
+  dischargedCount: number;
+  earlyDischargedCount: number;
+  transferredCount: number;
+}
+
+/**
+ * Deterministic placeholder client-activity figures for every centre except Primrose Lodge, which
+ * uses real figures from `centres.clientActivity` (migration 0080) instead of this. Scaled by the
+ * selected period's length in days so a wider range plausibly shows more activity rather than a
+ * fixed number regardless of range — a `This Year` count that looked the same as `Today`'s would be
+ * a more obviously fake number than any individual figure on its own.
+ */
+export function fictionalClientActivity(slug: string, startDate: string, endDate: string): ClientActivity {
+  const days = Math.max(
+    1,
+    Math.round((new Date(`${endDate}T00:00:00Z`).getTime() - new Date(`${startDate}T00:00:00Z`).getTime()) / 86_400_000) + 1,
+  );
+  const [admitRate, dischargeRate, earlyFrac, transferFrac] = seededValues(`${slug}:activity`, 4) as [
+    number, number, number, number,
+  ];
+  // Plausible monthly throughput: 2-8 admissions a month, discharges running a little behind
+  // admissions (a steady or growing centre), rather than drawing admits/discharges independently,
+  // which would let a centre show more discharges than admissions in the same stretch.
+  const monthlyAdmits = 2 + admitRate * 6;
+  const monthlyDischarges = monthlyAdmits * (0.75 + dischargeRate * 0.2);
+  const admittedCount = Math.round((monthlyAdmits / 30) * days);
+  const dischargedCount = Math.round((monthlyDischarges / 30) * days);
+  return {
+    admittedCount,
+    dischargedCount,
+    earlyDischargedCount: Math.round(dischargedCount * (0.25 + earlyFrac * 0.25)),
+    transferredCount: Math.round(dischargedCount * (0.05 + transferFrac * 0.1)),
+  };
+}
+
 export interface CentreBasic {
   slug: string;
   name: string;

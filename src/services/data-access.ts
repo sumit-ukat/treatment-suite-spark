@@ -131,6 +131,32 @@ export const centres = {
       zones: Array.isArray(r.zones) ? (r.zones[0] ?? null) : r.zones,
     }));
   },
+
+  /** Period-scoped admitted/discharged/early-discharged/transferred counts for one centre — see
+   * migration 0080. Powers the Executive Hub's Client activity row; `start`/`end` are `YYYY-MM-DD`,
+   * inclusive. */
+  async clientActivity(centreId: string, start: string, end: string): Promise<{
+    admittedCount: number;
+    dischargedCount: number;
+    earlyDischargedCount: number;
+    transferredCount: number;
+  }> {
+    const { data, error } = await client().rpc('centre_client_activity', {
+      p_centre_id: centreId,
+      p_start: start,
+      p_end: end,
+    });
+    if (error) throw new DataAccessError('centres.clientActivity', error);
+    const row = (data as Array<{
+      admitted_count: number; discharged_count: number; early_discharged_count: number; transferred_count: number;
+    }>)[0];
+    return {
+      admittedCount: row?.admitted_count ?? 0,
+      dischargedCount: row?.discharged_count ?? 0,
+      earlyDischargedCount: row?.early_discharged_count ?? 0,
+      transferredCount: row?.transferred_count ?? 0,
+    };
+  },
 };
 
 export interface RoomRow {
