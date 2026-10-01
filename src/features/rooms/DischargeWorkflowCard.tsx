@@ -175,6 +175,7 @@ export function DischargeWorkflowCard({
   // both the request's free-text destination and its discharge_reason.
   const [transferDestination, setTransferDestination] = useState('');
   const [transferSubReason, setTransferSubReason] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
   const [transferTreatmentType, setTransferTreatmentType] = useState('');
   const [transferDurationDays, setTransferDurationDays] = useState('');
   // What the centre used to track by hand in its discharge-report spreadsheet — captured here, at the
@@ -206,6 +207,7 @@ export function DischargeWorkflowCard({
       setEarlySubReason('');
       setTransferDestination('');
       setTransferSubReason('');
+      setTransferNotes('');
       setTransferTreatmentType('');
       setTransferDurationDays('');
       setReportStatus('');
@@ -247,8 +249,9 @@ export function DischargeWorkflowCard({
       }));
     } else if (dischargeType === 'transfer') {
       void run(async () => {
+        const reasonText = `${transferDestination} — ${transferSubReason}${transferNotes.trim() ? ` — ${transferNotes.trim()}` : ''}`;
         await dischargeService.requestTransfer(
-          admissionId, `${transferDestination} — ${transferSubReason}`, transferDestination, transferTreatmentType,
+          admissionId, reasonText, transferDestination, transferTreatmentType,
           transferDurationDays ? parseInt(transferDurationDays, 10) : null,
           { dischargeReason: transferDestination, dischargeSubReason: transferSubReason },
         );
@@ -528,6 +531,16 @@ export function DischargeWorkflowCard({
                       placeholder="Leave blank if unknown"
                       className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]" />
                   </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Anything else to add (optional)
+                    <textarea
+                      rows={2}
+                      value={transferNotes}
+                      onChange={(e) => setTransferNotes(e.target.value)}
+                      placeholder="Any extra detail the approver should know…"
+                      className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
                 </>
               ) : null}
 
@@ -548,7 +561,7 @@ export function DischargeWorkflowCard({
                   className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
                   {busy ? 'Saving…' : dischargeType === 'planned' ? 'Discharge' : 'Submit for approval'}
                 </button>
-                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setEarlyReason(''); setEarlySubReason(''); setTransferDestination(''); setTransferSubReason(''); setError(null); }}
+                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setEarlyReason(''); setEarlySubReason(''); setTransferDestination(''); setTransferSubReason(''); setTransferNotes(''); setError(null); }}
                   className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Cancel
                 </button>
