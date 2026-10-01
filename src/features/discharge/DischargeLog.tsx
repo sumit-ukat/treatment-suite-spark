@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownAZ, CalendarDays, CheckCircle2, Printer, Search, X } from 'lucide-react';
+import { ArrowDownAZ, CheckCircle2, Printer, Search } from 'lucide-react';
 import { discharge as dischargeService, type DischargeLogRow } from '../../services/data-access.js';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { Chip } from '../../components/ui.tsx';
+import { DatePresetBar } from '../../components/date-preset-bar.tsx';
+import { presetRange, type DatePreset } from '../../lib/date-presets.js';
 import { CARE_STATUS_LABEL, CARE_STATUS_TONE } from '../rooms/category-status.js';
 import { useBoardData } from '../rooms/use-board-data.js';
 import type { Occupant } from '../rooms/board-data.js';
@@ -64,10 +66,14 @@ export function DischargeLog({ centreId }: { centreId: string }) {
   const [rows, setRows] = useState<DischargeLogRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  /** yyyy-MM, from an <input type="month"> — narrows by the date relevant to the active tab (left
-   * treatment for Today/Past, planned discharge for Upcoming/Future). */
-  const [monthFilter, setMonthFilter] = useState('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  /** yyyy-MM, from the Month picker — only meaningful while datePreset === 'month'. Applied against
+   * whichever date is relevant to the active tab (left treatment for Today/Past, planned discharge
+   * for Upcoming/Future). */
+  const [monthValue, setMonthValue] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'admission_recent' | 'admission_oldest'>('recent');
+
+  const dateRange = useMemo(() => presetRange(datePreset, monthValue), [datePreset, monthValue]);
 
   const { beds, loading: boardLoading, error: boardError } = useBoardData(centreId);
 
@@ -113,8 +119,10 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         );
       })
       .filter((r) => {
-        if (!monthFilter) return true;
-        return !!r.actual_discharge_at && r.actual_discharge_at.slice(0, 7) === monthFilter;
+        if (!dateRange) return true;
+        if (!r.actual_discharge_at) return false;
+        const d = r.actual_discharge_at.slice(0, 10);
+        return d >= dateRange.start && d <= dateRange.end;
       })
       .sort((a, b) => {
         if (sortBy === 'name') return (a.client_name ?? a.client_reference).localeCompare(b.client_name ?? b.client_reference);
@@ -127,7 +135,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         const bTime = b.actual_discharge_at ? new Date(b.actual_discharge_at).getTime() : 0;
         return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
       });
-  }, [tab, dischargedToday, pastDischarges, query, monthFilter, sortBy]);
+  }, [tab, dischargedToday, pastDischarges, query, dateRange, sortBy]);
 
   const visibleActive = useMemo(() => {
     const source = tab === 'upcoming' ? upcoming : future;
@@ -138,8 +146,9 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         return r.occupant.displayName.toLowerCase().includes(q) || r.occupant.reference.toLowerCase().includes(q);
       })
       .filter((r) => {
-        if (!monthFilter) return true;
-        return r.occupant.plannedDischargeDate.slice(0, 7) === monthFilter;
+        if (!dateRange) return true;
+        const d = r.occupant.plannedDischargeDate;
+        return d >= dateRange.start && d <= dateRange.end;
       })
       .sort((a, b) => {
         if (sortBy === 'name') return a.occupant.displayName.localeCompare(b.occupant.displayName);
@@ -151,7 +160,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
         const cmp = a.occupant.plannedDischargeDate.localeCompare(b.occupant.plannedDischargeDate);
         return sortBy === 'oldest' ? -cmp : cmp;
       });
-  }, [tab, upcoming, future, query, monthFilter, sortBy]);
+  }, [tab, upcoming, future, query, dateRange, sortBy]);
 
   const isDischargedTab = tab !== 'upcoming' && tab !== 'future';
   const loading = isDischargedTab ? rows === null : boardLoading;
@@ -181,29 +190,6 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                 className="h-9 w-[220px] rounded-[7px] border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
             </label>
-            <div className="relative flex shrink-0 items-center">
-              <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
-              <input
-                type="month"
-                value={monthFilter}
-                max={isDischargedTab ? new Date().toISOString().slice(0, 7) : undefined}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                aria-label={isDischargedTab ? 'Show only clients discharged in this month' : 'Show only clients planned to discharge in this month'}
-                title={isDischargedTab ? 'Discharge month — show only clients discharged in this calendar month' : 'Planned discharge month'}
-                className="h-9 rounded-[7px] border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-                style={{ width: monthFilter ? '9.5rem' : '8.5rem' }}
-              />
-              {monthFilter ? (
-                <button
-                  type="button"
-                  onClick={() => setMonthFilter('')}
-                  aria-label="Clear month filter"
-                  className="absolute right-1.5 rounded p-0.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                >
-                  <X className="size-3" />
-                </button>
-              ) : null}
-            </div>
             <div className="relative flex shrink-0 items-center">
               <ArrowDownAZ className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
               <select
@@ -263,6 +249,15 @@ export function DischargeLog({ centreId }: { centreId: string }) {
             </span>
           </button>
         ))}
+      </div>
+
+      <div className="mt-3 print:hidden">
+        <DatePresetBar
+          preset={datePreset}
+          monthValue={monthValue}
+          onPresetChange={(p) => { setDatePreset(p); setMonthValue(''); }}
+          onMonthChange={(m) => { setMonthValue(m); setDatePreset(m ? 'month' : 'all'); }}
+        />
       </div>
 
       <p className="mt-3 hidden text-[10px] text-black print:block">

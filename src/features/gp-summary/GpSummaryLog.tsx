@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownAZ, CalendarDays, CheckCircle2, Printer, Search, X } from 'lucide-react';
+import { ArrowDownAZ, CheckCircle2, Printer, Search } from 'lucide-react';
 import { gpSummary as gpSummaryService, type GpSummaryLogRow } from '../../services/data-access.js';
 import { PageHeader } from '../../components/metric-card.tsx';
+import { DatePresetBar } from '../../components/date-preset-bar.tsx';
+import { presetRange, type DatePreset } from '../../lib/date-presets.js';
 import { formatDate } from '../../lib/format.js';
 
 /**
@@ -16,9 +18,12 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
   const [rows, setRows] = useState<GpSummaryLogRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  /** yyyy-MM, from an <input type="month"> — narrows to clients admitted in one calendar month. */
-  const [monthFilter, setMonthFilter] = useState('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  /** yyyy-MM, from the Month picker — only meaningful while datePreset === 'month'. */
+  const [monthValue, setMonthValue] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'discharge_recent' | 'discharge_oldest'>('recent');
+
+  const dateRange = useMemo(() => presetRange(datePreset, monthValue), [datePreset, monthValue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,8 +46,9 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
         );
       })
       .filter((r) => {
-        if (!monthFilter) return true;
-        return r.admitted_at.slice(0, 7) === monthFilter;
+        if (!dateRange) return true;
+        const d = r.admitted_at.slice(0, 10);
+        return d >= dateRange.start && d <= dateRange.end;
       })
       .sort((a, b) => {
         if (sortBy === 'name') return (a.client_name ?? a.client_reference).localeCompare(b.client_name ?? b.client_reference);
@@ -62,7 +68,7 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
         const bTime = new Date(b.admitted_at).getTime();
         return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
       });
-  }, [rows, query, monthFilter, sortBy]);
+  }, [rows, query, dateRange, sortBy]);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 sm:px-5">
@@ -81,29 +87,6 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
                 className="h-9 w-[220px] rounded-[7px] border border-[var(--color-line)] bg-card pl-9 pr-3 text-[12px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
               />
             </label>
-            <div className="relative flex shrink-0 items-center">
-              <CalendarDays className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
-              <input
-                type="month"
-                value={monthFilter}
-                max={new Date().toISOString().slice(0, 7)}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                aria-label="Show only clients admitted in this month"
-                title="Admission month — show only clients admitted in this calendar month"
-                className="h-9 rounded-[7px] border border-[var(--color-line)] bg-card pl-8 pr-2 text-[12px] text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-                style={{ width: monthFilter ? '9.5rem' : '8.5rem' }}
-              />
-              {monthFilter ? (
-                <button
-                  type="button"
-                  onClick={() => setMonthFilter('')}
-                  aria-label="Clear month filter"
-                  className="absolute right-1.5 rounded p-0.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                >
-                  <X className="size-3" />
-                </button>
-              ) : null}
-            </div>
             <div className="relative flex shrink-0 items-center">
               <ArrowDownAZ className="pointer-events-none absolute left-2.5 size-3.5 text-[var(--color-ink-muted)]" aria-hidden />
               <select
@@ -129,6 +112,15 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
           </>
         }
       />
+
+      <div className="mt-4 print:hidden">
+        <DatePresetBar
+          preset={datePreset}
+          monthValue={monthValue}
+          onPresetChange={(p) => { setDatePreset(p); setMonthValue(''); }}
+          onMonthChange={(m) => { setMonthValue(m); setDatePreset(m ? 'month' : 'all'); }}
+        />
+      </div>
 
       <p className="mt-3 hidden text-[10px] text-black print:block">
         Printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
