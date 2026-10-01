@@ -1,11 +1,11 @@
-import { ArrowDownAZ, Filter, Search } from 'lucide-react';
+import { ArrowDownAZ, ArrowRightLeft, Filter, GraduationCap, LogOut, Search, UserMinus, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import type { ClientSearchResult } from '../../services/data-access.js';
 import { formatDate } from '../../lib/format.js';
 import { Chip } from '../../components/ui.tsx';
-import { PageHeader } from '../../components/metric-card.tsx';
+import { MetricCard, PageHeader } from '../../components/metric-card.tsx';
 import { ClientAvatar } from '../../components/brand.tsx';
 import { DatePresetBar } from '../../components/date-preset-bar.tsx';
 import { presetRange, type DatePreset } from '../../lib/date-presets.js';
@@ -72,6 +72,35 @@ export function ClientDirectory({
   const canSeeNames = can('clients.view_identity');
 
   const dateRange = useMemo(() => presetRange(datePreset, monthValue), [datePreset, monthValue]);
+
+  /**
+   * Centre census for the selected period — moved here from the Executive Hub, where the same
+   * breakdown had to be fictional for 9 of 10 centres. Here it's real outright: `results` already
+   * carries `last_admitted_at`/`last_discharge_at`/`last_discharge_type` for this one real centre, no
+   * separate query needed. Computed from `results` (whatever the search box currently returned, which
+   * is everyone when it's empty) rather than `visible`, so the `scope` toggle (Currently resident /
+   * Former) — a different dimension, who's still here — doesn't also narrow what's meant to be a
+   * period-wide activity count.
+   */
+  const activityCounts = useMemo(() => {
+    const inRange = (d: string | null) => {
+      if (!d) return false;
+      if (!dateRange) return true;
+      const day = d.slice(0, 10);
+      return day >= dateRange.start && day <= dateRange.end;
+    };
+    let admitted = 0, discharged = 0, graduated = 0, early = 0, transferred = 0;
+    for (const r of results) {
+      if (inRange(r.last_admitted_at)) admitted++;
+      if (r.last_discharge_type && inRange(r.last_discharge_at)) {
+        discharged++;
+        if (r.last_discharge_type === 'planned') graduated++;
+        else if (r.last_discharge_type === 'early') early++;
+        else if (r.last_discharge_type === 'transfer') transferred++;
+      }
+    }
+    return { admitted, discharged, graduated, early, transferred };
+  }, [results, dateRange]);
 
   // Filters whatever a search already returned — it does not fetch more than the search itself
   // already asked for. The date filter uses last_admitted_at as a proxy: it shows every client whose
@@ -182,6 +211,40 @@ export function ClientDirectory({
         onPresetChange={(p) => { setDatePreset(p); setMonthValue(''); }}
         onMonthChange={(m) => { setMonthValue(m); setDatePreset(m ? 'month' : 'all'); }}
       />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <MetricCard
+          label="Total Clients"
+          value={activityCounts.admitted}
+          hint="admitted in period"
+          icon={<UserPlus className="size-4" />}
+        />
+        <MetricCard
+          label="Discharged"
+          value={activityCounts.discharged}
+          hint="any discharge type"
+          icon={<LogOut className="size-4" />}
+        />
+        <MetricCard
+          label="Graduated"
+          value={activityCounts.graduated}
+          hint="completed treatment"
+          icon={<GraduationCap className="size-4" />}
+          accent="primary"
+        />
+        <MetricCard
+          label="Early Discharged"
+          value={activityCounts.early}
+          hint="left before planned discharge"
+          icon={<UserMinus className="size-4" />}
+        />
+        <MetricCard
+          label="Transferred"
+          value={activityCounts.transferred}
+          hint="moved to another facility"
+          icon={<ArrowRightLeft className="size-4" />}
+        />
+      </div>
 
       {error ? (
         <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-[12.5px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">

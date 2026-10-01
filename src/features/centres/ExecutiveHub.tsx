@@ -1,31 +1,24 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Activity,
-  ArrowRightLeft,
   BedDouble,
   Building2,
   CalendarCheck,
-  CalendarDays,
   ChevronDown,
   CircleAlert,
   FileWarning,
-  GraduationCap,
-  LogOut,
   Percent,
   TrendingDown,
   TrendingUp,
-  UserMinus,
-  UserPlus,
   Users,
   X,
 } from 'lucide-react';
-import { buildCentres, fictionalClientActivity, groupTotals, occupancyExtremes, type CentreSummary, type ClientActivity } from './centres-data.js';
-import { centres as centresService, discharge as dischargeService, incidents as incidentsService } from '../../services/data-access.js';
+import { buildCentres, groupTotals, occupancyExtremes, type CentreSummary } from './centres-data.js';
+import { discharge as dischargeService, incidents as incidentsService } from '../../services/data-access.js';
 import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
 import { Panel } from '../../components/ui.tsx';
-import { presetRange, SHORT_DATE_PRESETS, type DatePreset } from '../../lib/date-presets.js';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -338,42 +331,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
     });
   }, [baseCentres, primroseDischargeCount, primroseIncidentCount]);
 
-  /**
-   * Client activity — Total Clients / Discharged / Early Discharged / Transferred, scoped to a
-   * period rather than a snapshot (unlike every other figure on this page). Kept out of
-   * `CentreSummary` itself: that object is memoised once and meant to stay stable, where this
-   * recomputes whenever the period changes. Real for Primrose Lodge via migration 0080's RPC;
-   * fictional (deterministic, scaled by period length) for every other centre, same honesty split
-   * as the rest of this page.
-   */
-  const [activityPreset, setActivityPreset] = useState<DatePreset>('this_month');
-  const [activityMonthValue, setActivityMonthValue] = useState('');
-  const activityRange = useMemo(
-    () => presetRange(activityPreset, activityMonthValue) ?? presetRange('this_month', ''),
-    [activityPreset, activityMonthValue],
-  )!;
-  const activityRangeLabel = useMemo(() => {
-    const now = new Date();
-    switch (activityPreset) {
-      case 'today': return 'today';
-      case 'this_month': return now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-      case 'this_quarter': return `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
-      case 'this_year': return String(now.getFullYear());
-      case 'month': {
-        if (!activityMonthValue) return '';
-        const [yy, mm] = activityMonthValue.split('-').map(Number) as [number, number];
-        return new Date(yy, mm - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-      }
-      default: return '';
-    }
-  }, [activityPreset, activityMonthValue]);
-
-  const [primroseActivity, setPrimroseActivity] = useState<ClientActivity | null>(null);
-  useEffect(() => {
-    centresService.clientActivity(PRIMROSE_CENTRE_ID, activityRange.start, activityRange.end)
-      .then(setPrimroseActivity)
-      .catch(() => setPrimroseActivity(null));
-  }, [activityRange.start, activityRange.end]);
 
   /**
    * Two ways to narrow, deliberately mutually exclusive: picking a region clears the manual picks and
@@ -406,24 +363,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   );
 
   const totals = useMemo(() => groupTotals(visible), [visible]);
-
-  const activityTotals = useMemo(() => {
-    let admitted = 0, discharged = 0, early = 0, transferred = 0, graduated = 0;
-    for (const c of visible) {
-      const a: ClientActivity =
-        c.slug === 'primrose-lodge' && primroseActivity
-          ? primroseActivity
-          : c.slug === 'primrose-lodge'
-            ? { admittedCount: 0, dischargedCount: 0, earlyDischargedCount: 0, transferredCount: 0, graduatedCount: 0 }
-            : fictionalClientActivity(c.slug, activityRange.start, activityRange.end);
-      admitted += a.admittedCount;
-      discharged += a.dischargedCount;
-      early += a.earlyDischargedCount;
-      transferred += a.transferredCount;
-      graduated += a.graduatedCount;
-    }
-    return { admitted, discharged, early, transferred, graduated };
-  }, [visible, primroseActivity, activityRange]);
 
   const assessed = useMemo(() => visible.map(assess), [visible]);
   const extremes = useMemo(() => occupancyExtremes(visible), [visible]);
@@ -744,96 +683,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         />
       </div>
 
-      {/* ── Client activity — period events (admitted/discharged/graduated/early discharged/
-             transferred), distinct from Estate overview's current-state snapshot above. Its own
-             date filter governs only this row, styled as a segmented control to match the page's
-             own Region toggle up top rather than the separate pill-row style Clients/GP Summary/
-             Discharge use — two different filter idioms on one page would read as inconsistent. ── */}
-      <div className="mt-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-[var(--color-line)] bg-card p-0.5">
-            {SHORT_DATE_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => { setActivityPreset(p.id); setActivityMonthValue(''); }}
-                className={`rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
-                  activityPreset === p.id
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <label
-            className={`relative flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-              activityPreset === 'month'
-                ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
-                : 'border-[var(--color-line)] bg-card text-foreground hover:bg-black/5 dark:hover:bg-white/10'
-            }`}
-          >
-            <CalendarDays className="pointer-events-none size-3.5" aria-hidden />
-            <input
-              type="month"
-              value={activityMonthValue}
-              max={new Date().toISOString().slice(0, 7)}
-              onChange={(e) => { setActivityMonthValue(e.target.value); setActivityPreset(e.target.value ? 'month' : 'this_month'); }}
-              aria-label="Show client activity for a specific month"
-              className="w-[7rem] appearance-none bg-transparent outline-none [color-scheme:light] dark:[color-scheme:dark]"
-            />
-          </label>
-          <span className="ml-auto text-[11.5px] text-muted-foreground">
-            Showing: <strong className="font-semibold text-foreground">{activityRangeLabel}</strong>
-          </span>
-        </div>
-
-        <h2 className="mt-3 mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-          Client activity
-        </h2>
-
-        <MetricGrid
-          cards={[
-            {
-              label: 'Total Clients',
-              value: activityTotals.admitted,
-              hint: `admitted · ${visible.length} centre${visible.length === 1 ? '' : 's'}`,
-              icon: <UserPlus className="size-4" />,
-              accent: 'neutral',
-            },
-            {
-              label: 'Discharged',
-              value: activityTotals.discharged,
-              hint: 'any discharge type',
-              icon: <LogOut className="size-4" />,
-              accent: 'neutral',
-            },
-            {
-              label: 'Graduated',
-              value: activityTotals.graduated,
-              hint: 'completed treatment',
-              icon: <GraduationCap className="size-4" />,
-              accent: 'good',
-            },
-            {
-              label: 'Early Discharged',
-              value: activityTotals.early,
-              hint: 'left before planned discharge',
-              icon: <UserMinus className="size-4" />,
-              accent: activityTotals.early > 0 ? 'warn' : 'neutral',
-            },
-            {
-              label: 'Transferred',
-              value: activityTotals.transferred,
-              hint: 'moved to another facility',
-              icon: <ArrowRightLeft className="size-4" />,
-              accent: 'neutral',
-            },
-          ]}
-        />
-      </div>
-
       {/* ── Region comparison — shown before the centre breakdown so the regional picture is visible
              before stepping through individual centres. ── */}
       {picked.length === 0 && regionRollup.length > 1 ? (
@@ -1080,10 +929,7 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             grouping is a placeholder. The highest/lowest-occupied figures above are a{' '}
             <strong className="font-semibold">placeholder 3-month average for every centre, Primrose
             Lodge included</strong> — no centre&rsquo;s occupancy history is tracked yet, so there is
-            nothing real to average until that exists. The Client activity row above is real for
-            Primrose Lodge (admissions/discharges within the selected period) and{' '}
-            <strong className="font-semibold">fictional, scaled to the period length</strong> for every
-            other centre.
+            nothing real to average until that exists.
           </p>
         </div>
       </div>
