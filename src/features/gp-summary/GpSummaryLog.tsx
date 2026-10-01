@@ -18,7 +18,7 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
   const [query, setQuery] = useState('');
   /** yyyy-MM, from an <input type="month"> — narrows to clients admitted in one calendar month. */
   const [monthFilter, setMonthFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'discharge_recent' | 'discharge_oldest'>('recent');
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +46,18 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
       })
       .sort((a, b) => {
         if (sortBy === 'name') return (a.client_name ?? a.client_reference).localeCompare(b.client_name ?? b.client_reference);
+        if (sortBy === 'discharge_recent' || sortBy === 'discharge_oldest') {
+          // Still-admitted clients (no discharge date yet) always sort after every discharged one,
+          // in either direction — there's no meaningful "oldest"/"newest" among clients who haven't
+          // reached that milestone, so grouping them at the end is clearer than epoch-0 flipping
+          // which end they land on depending on sort direction.
+          if (!a.actual_discharge_at && !b.actual_discharge_at) return 0;
+          if (!a.actual_discharge_at) return 1;
+          if (!b.actual_discharge_at) return -1;
+          const aTime = new Date(a.actual_discharge_at).getTime();
+          const bTime = new Date(b.actual_discharge_at).getTime();
+          return sortBy === 'discharge_oldest' ? aTime - bTime : bTime - aTime;
+        }
         const aTime = new Date(a.admitted_at).getTime();
         const bTime = new Date(b.admitted_at).getTime();
         return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
@@ -102,6 +114,8 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
               >
                 <option value="recent">Admission (newest)</option>
                 <option value="oldest">Admission (oldest)</option>
+                <option value="discharge_recent">Discharge (newest)</option>
+                <option value="discharge_oldest">Discharge (oldest)</option>
                 <option value="name">Name (A–Z)</option>
               </select>
             </div>
@@ -141,6 +155,7 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Client</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">KIPU No.</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Admitted</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Discharged</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Surgery</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Email</th>
                   <th className="px-3 py-2 text-left text-[10px] font-semibold tracking-wider text-[var(--color-ink-muted)] uppercase">Telephone</th>
@@ -160,6 +175,9 @@ export function GpSummaryLog({ centreId }: { centreId: string }) {
                     </td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">{r.client_reference}</td>
                     <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">{formatDate(new Date(r.admitted_at))}</td>
+                    <td className="nums px-3 py-2.5 text-[var(--color-ink-muted)]">
+                      {r.actual_discharge_at ? formatDate(new Date(r.actual_discharge_at)) : '—'}
+                    </td>
                     <td className="px-3 py-2.5 text-[var(--color-ink)]">{r.surgery_name ?? <span className="text-[var(--color-ink-muted)]">—</span>}</td>
                     <td className="px-3 py-2.5 text-[var(--color-ink-muted)]">
                       {r.surgery_email == null ? (

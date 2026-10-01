@@ -644,6 +644,7 @@ export interface GpSummaryLogRow {
   client_name: string | null;
   admitted_at: string;
   admission_status: 'active' | 'discharged' | string;
+  actual_discharge_at: string | null;
   surgery_name: string | null;
   surgery_email: string | null;
   surgery_phone: string | null;

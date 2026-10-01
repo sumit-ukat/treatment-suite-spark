@@ -65,7 +65,7 @@ export function ClientDirectory({
   /** yyyy-MM, from an <input type="month"> — distinct from asOfDate: this narrows to one calendar
    * month of admissions rather than a cumulative on-or-before cutoff. */
   const [monthFilter, setMonthFilter] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'discharge_recent' | 'discharge_oldest'>('recent');
 
   const canSearch = can('clients.view_operational') || can('clients.view_identity');
   const canSeeNames = can('clients.view_identity');
@@ -88,6 +88,16 @@ export function ClientDirectory({
     return r.last_admitted_at.slice(0, 7) === monthFilter;
   }).sort((a, b) => {
     if (sortBy === 'name') return (a.display_name ?? a.reference).localeCompare(b.display_name ?? b.reference);
+    if (sortBy === 'discharge_recent' || sortBy === 'discharge_oldest') {
+      // Clients still admitted (no discharge date) always sort after every discharged one, in either
+      // direction — there's no meaningful "oldest"/"newest" discharge for someone who hasn't left yet.
+      if (!a.last_discharge_at && !b.last_discharge_at) return 0;
+      if (!a.last_discharge_at) return 1;
+      if (!b.last_discharge_at) return -1;
+      const aTime = new Date(a.last_discharge_at).getTime();
+      const bTime = new Date(b.last_discharge_at).getTime();
+      return sortBy === 'discharge_oldest' ? aTime - bTime : bTime - aTime;
+    }
     const aTime = a.last_admitted_at ? new Date(a.last_admitted_at).getTime() : 0;
     const bTime = b.last_admitted_at ? new Date(b.last_admitted_at).getTime() : 0;
     return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
@@ -199,6 +209,8 @@ export function ClientDirectory({
           >
             <option value="recent">Latest admission (newest)</option>
             <option value="oldest">Latest admission (oldest)</option>
+            <option value="discharge_recent">Discharge date (newest)</option>
+            <option value="discharge_oldest">Discharge date (oldest)</option>
             <option value="name">Name (A–Z)</option>
           </select>
         </div>
