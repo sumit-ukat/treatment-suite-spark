@@ -433,11 +433,11 @@ export function TreatmentBoard({
           <thead className="sticky top-0 z-20">
             <tr>
               <th className={`sticky left-0 z-30 w-16 ${th}`}>Bed</th>
-              {/* Shadow on Client column marks the freeze boundary */}
-              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>
+              <th className={`sticky left-16 z-30 w-[240px] border-r border-[var(--color-line)] ${th}`}>
                 Client &amp; Placement
               </th>
-              <th className={`w-[120px] border-r border-[var(--color-line)] ${th}`}>Programme</th>
+              {/* Shadow on Programme marks the freeze boundary — it's the last frozen column */}
+              <th className={`sticky left-[304px] z-30 w-[120px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>Programme</th>
               {CATEGORY_ORDER.map((key) => (
                 <th
                   key={key}
@@ -468,10 +468,10 @@ export function TreatmentBoard({
                         {bed.label}
                       </span>
                     </td>
-                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>
+                    <td className={`${stickyCell} left-16 w-[240px] border-r border-[var(--color-line)] px-3 py-3 italic text-[var(--color-ink-muted)]`}>
                       Available{bed.shared ? ' — shared room' : ''}
                     </td>
-                    <td className={`${cb} w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)]`}>—</td>
+                    <td className={`${stickyCell} left-[304px] w-[120px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)] shadow-[2px_0_6px_rgba(0,0,0,0.04)]`}>—</td>
                     {CATEGORY_ORDER.map((key) => (
                       <td key={key} className={`${cb} w-[126px] border-r border-[var(--color-line)] px-3 py-3 text-[var(--color-ink-muted)] last:border-r-0`}>—</td>
                     ))}
@@ -504,7 +504,7 @@ export function TreatmentBoard({
                     onClick={() => setOpenBedLabel(bed.label)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
                     title="Open full client file"
-                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+                    className={`${osc} relative left-16 w-[240px] cursor-pointer px-3 py-3 transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
                       o.hasRestrictedAlert
                         ? 'border-r-[3px] border-r-red-400 dark:border-r-red-500'
                         : o.hasOpenConcern
@@ -549,8 +549,8 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Programme: treatment day + planned discharge */}
-                  <td className={`${cb} w-[120px] overflow-hidden border-r border-[var(--color-line)] bg-card px-3 py-3 whitespace-nowrap`}>
+                  {/* Programme: treatment day + planned discharge — last frozen column, shadow marks the boundary */}
+                  <td className={`${osc} left-[304px] w-[120px] overflow-hidden border-r border-[var(--color-line)] px-3 py-3 whitespace-nowrap shadow-[2px_0_6px_rgba(0,0,0,0.05)]`}>
                     <div className="nums text-[12.5px] font-medium text-[var(--color-ink)]">
                       Day {o.treatmentDay} <span className="text-[var(--color-ink-muted)]">of {o.durationDays}</span>
                     </div>
