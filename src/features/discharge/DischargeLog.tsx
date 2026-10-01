@@ -67,7 +67,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
   /** yyyy-MM, from an <input type="month"> — narrows by the date relevant to the active tab (left
    * treatment for Today/Past, planned discharge for Upcoming/Future). */
   const [monthFilter, setMonthFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'name' | 'admission_recent' | 'admission_oldest'>('recent');
 
   const { beds, loading: boardLoading, error: boardError } = useBoardData(centreId);
 
@@ -118,6 +118,11 @@ export function DischargeLog({ centreId }: { centreId: string }) {
       })
       .sort((a, b) => {
         if (sortBy === 'name') return (a.client_name ?? a.client_reference).localeCompare(b.client_name ?? b.client_reference);
+        if (sortBy === 'admission_recent' || sortBy === 'admission_oldest') {
+          const aTime = new Date(a.admitted_at).getTime();
+          const bTime = new Date(b.admitted_at).getTime();
+          return sortBy === 'admission_oldest' ? aTime - bTime : bTime - aTime;
+        }
         const aTime = a.actual_discharge_at ? new Date(a.actual_discharge_at).getTime() : 0;
         const bTime = b.actual_discharge_at ? new Date(b.actual_discharge_at).getTime() : 0;
         return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
@@ -138,6 +143,11 @@ export function DischargeLog({ centreId }: { centreId: string }) {
       })
       .sort((a, b) => {
         if (sortBy === 'name') return a.occupant.displayName.localeCompare(b.occupant.displayName);
+        if (sortBy === 'admission_recent' || sortBy === 'admission_oldest') {
+          const aTime = a.occupant.admittedAt.getTime();
+          const bTime = b.occupant.admittedAt.getTime();
+          return sortBy === 'admission_oldest' ? aTime - bTime : bTime - aTime;
+        }
         const cmp = a.occupant.plannedDischargeDate.localeCompare(b.occupant.plannedDischargeDate);
         return sortBy === 'oldest' ? -cmp : cmp;
       });
@@ -213,6 +223,8 @@ export function DischargeLog({ centreId }: { centreId: string }) {
                     <option value="oldest">Planned discharge (latest)</option>
                   </>
                 )}
+                <option value="admission_recent">Admission date (newest)</option>
+                <option value="admission_oldest">Admission date (oldest)</option>
                 <option value="name">Name (A–Z)</option>
               </select>
             </div>
