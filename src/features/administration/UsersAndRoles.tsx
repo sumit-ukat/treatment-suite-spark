@@ -1,4 +1,4 @@
-import { CircleHelp, MailPlus, ShieldPlus, Trash2 } from 'lucide-react';
+import { Building2, Copy, Eye, EyeOff, HeartPulse, Shield, ShieldPlus, Trash2, UserPlus, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
@@ -29,11 +29,12 @@ import { formatDate } from '../../lib/format.js';
  * item as Rooms & Beds because both are administrative concerns, not because either is centre-scoped
  * the same way.
  *
- * Real account creation (`InviteUserForm` below) goes through the `invite-user` Edge Function
+ * Real account creation (`AddTeamMemberModal` below) goes through the `invite-user` Edge Function
  * (migration 0031) — the one place in this project that ever touches the `service_role` key, which
- * must never reach the browser. It creates the Supabase Auth login and sends an invite email; the new
- * person sets their own password themselves, no admin ever sees or sets one. It grants no access on
- * its own — granting is `GrantAccessForm` below, a deliberate separate step.
+ * must never reach the browser. It creates the Supabase Auth login with a real password (admin-typed
+ * or auto-generated, shown back exactly once) and grants the chosen role in the same step —
+ * `GrantAccessForm` further down remains for anything that one-step flow doesn't cover: an existing
+ * login, multiple centres, a time limit, or read-only access.
  *
  * Also deliberately absent: any way to create a new role or permission. `roles`/`permissions`/
  * `role_permissions` have no write policy at all (migration 0030) — they are a fixed, migration-seeded
@@ -55,7 +56,6 @@ export function UsersAndRoles() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [showEnded, setShowEnded] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
 
   useEffect(() => {
     if (!canManage) {
@@ -167,28 +167,18 @@ export function UsersAndRoles() {
   return (
     <div className="mx-auto max-w-[1200px] px-5 py-8">
       <PageHeader
-        title="People & access"
-        description="Everyone with access, their role and scope, at a glance below. Invite a new person to create their sign-in, then grant them a role — access can be granted at the whole organisation, one centre, or a custom set of centres, independent of which centre you navigated through to reach this page."
+        title="User Management"
+        description="Everyone with access, their role and scope, at a glance below. Add a team member to create their sign-in and grant their role in one step; the advanced form further down handles anything beyond the common case — multiple centres, a time-limited grant, or extra access for someone who already has a login."
       />
 
-      <button
-        type="button"
-        onClick={() => setLegendOpen(true)}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition hover:bg-black/5 dark:hover:bg-white/10"
-      >
-        <CircleHelp className="size-3.5" /> What do the access levels mean?
-      </button>
+      <RoleCards />
 
-      {legendOpen ? (
-        <Dialog open onOpenChange={(v) => !v && setLegendOpen(false)}>
-          <DialogContent className="max-w-[720px]">
-            <DialogTitle className="font-display text-[16px] font-semibold">Access levels</DialogTitle>
-            <LevelsLegend />
-          </DialogContent>
-        </Dialog>
-      ) : null}
-
-      <InviteUserForm onInvited={reload} />
+      <AddTeamMemberModal
+        roles={roles}
+        organisations={organisations}
+        centres={centres}
+        onAdded={reload}
+      />
 
       <GrantAccessForm
         users={users}
@@ -243,66 +233,93 @@ export function UsersAndRoles() {
 }
 
 /**
- * Plain-English reference for the three roles the Role dropdown offers — the role names themselves
- * ("Level 1 — Full access" etc.) say the tier, not what it actually covers. Kept as static copy
- * rather than generated from `permissions`/`role_permissions`: the live data would list 41 raw
- * permission codes, which is exactly the unreadable thing this legend exists to translate away from.
+ * Plain-English reference for the 4 roles the Role picker offers, keyed by the stable `roles.code`
+ * — not generated from `permissions`/`role_permissions`: the live data would list dozens of raw
+ * permission codes, which is exactly the unreadable thing this exists to translate away from. Shared
+ * between the always-visible cards below and the role picker inside AddTeamMemberModal, so the two
+ * never describe a role differently.
+ *
+ * Deliberately named after the job, not an abstract "Level N" — the migration that once proposed that
+ * framing (0062) was written but never actually applied to this database, so these are also just the
+ * first real names these roles have ever had in production.
  */
-function LevelsLegend() {
-  const levels = [
-    {
-      name: 'Level 1 — Full access',
-      tone: 'accent' as const,
-      summary: 'Everything, organisation-wide.',
-      covers: [
-        'Every permission in the system',
-        'Managing other staff’s access (inviting, granting, revoking)',
-        'Creating and configuring centres',
-      ],
-    },
-    {
-      name: 'Level 2 — Centre admin',
-      tone: 'good' as const,
-      summary: 'Full control, but only for the centre(s) this is granted at.',
-      covers: [
-        'Admissions, discharge, stay extensions',
-        'Room/bed management, all clinical recording (treatment, medical, risk, safeguarding)',
-        'Client identity editing, photos, tasks, family contact, reports, audit history',
-      ],
-      excludes: ['Managing other staff’s access', 'Creating or configuring centres'],
-    },
-    {
-      name: 'Level 3 — Operational access',
-      tone: 'warn' as const,
-      summary: 'Day-to-day clinical/support work — no admin or approval capability.',
-      covers: [
-        'View and complete assigned tasks',
-        'Record routine treatment sessions and family contact',
-        'See client details, photos, and that a risk/safeguarding flag exists (not the written detail)',
-      ],
-      excludes: [
-        'Admitting, discharging, or extending a stay',
-        'Room/bed management, editing client identity',
-        'Recording or reading risk/safeguarding/medical detail',
-        'Reports, audit history, or managing anyone’s access',
-      ],
-    },
-  ];
+const ROLE_CARD_DATA: Record<string, {
+  icon: typeof Shield;
+  tone: 'alert' | 'good' | 'accent' | 'neutral';
+  summary: string;
+  covers: string[];
+  excludes?: string[];
+}> = {
+  platform_admin: {
+    icon: Shield,
+    tone: 'alert',
+    summary: 'Full system access — every centre, every permission. For the operations team.',
+    covers: [
+      'Every permission in the system, at every centre',
+      'Managing other staff’s access (adding, granting, revoking)',
+      'Creating and configuring centres',
+    ],
+  },
+  centre_manager: {
+    icon: Building2,
+    tone: 'good',
+    summary: 'Full control of one centre — admissions through discharge, all of it.',
+    covers: [
+      'Admissions, discharge, stay extensions',
+      'Room/bed management, all clinical recording (treatment, medical, risk, safeguarding)',
+      'Client identity editing, photos, tasks, family contact, reports, audit history',
+    ],
+    excludes: ['Managing other staff’s access', 'Creating or configuring centres'],
+  },
+  therapist: {
+    icon: HeartPulse,
+    tone: 'accent',
+    summary: 'Does the clinical work — sessions, tasks, family contact.',
+    covers: [
+      'View and complete assigned tasks',
+      'Record treatment sessions and family contact',
+      'See client details, photos, and that a risk/safeguarding flag exists (not the written detail)',
+    ],
+    excludes: [
+      'Admitting, discharging, or extending a stay',
+      'Room/bed management, editing client identity',
+      'Recording or reading risk/safeguarding/medical detail',
+    ],
+  },
+  centre_staff: {
+    icon: Wrench,
+    tone: 'neutral',
+    summary: 'View-only, for maintenance, reception, or other centre staff.',
+    covers: [
+      'Which beds/rooms are occupied or free, and the task list',
+      'Client names and basic facts',
+    ],
+    excludes: [
+      'Any clinical, risk, or safeguarding detail',
+      'Completing tasks or recording anything clinical',
+      'Admissions, discharge, or room management',
+    ],
+  },
+};
 
+function RoleCards() {
   return (
-    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {levels.map((l) => (
-        <div key={l.name} className="rounded-2xl border bg-card p-3.5 shadow-soft">
-          <Chip label={l.name} tone={l.tone} />
-          <p className="mt-2 text-[11.5px] font-medium text-[var(--color-ink)]">{l.summary}</p>
+    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {Object.entries(ROLE_CARD_DATA).map(([code, r]) => (
+        <div key={code} className="rounded-2xl border bg-card p-3.5 shadow-soft">
+          <div className="flex items-center gap-1.5">
+            <r.icon className="size-3.5" aria-hidden />
+            <Chip label={ROLE_DISPLAY_NAME[code] ?? code} tone={r.tone} />
+          </div>
+          <p className="mt-2 text-[11.5px] font-medium text-[var(--color-ink)]">{r.summary}</p>
           <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-[var(--color-ink-muted)]">
-            {l.covers.map((c) => (
+            {r.covers.map((c) => (
               <li key={c}>{c}</li>
             ))}
           </ul>
-          {l.excludes ? (
+          {r.excludes ? (
             <ul className="mt-2 space-y-1 border-t border-[var(--color-line)] pt-2 text-[11px] text-[var(--color-ink-muted)]">
-              {l.excludes.map((c) => (
+              {r.excludes.map((c) => (
                 <li key={c} className="flex gap-1.5">
                   <span aria-hidden="true">&#8722;</span>
                   {c}
@@ -315,6 +332,15 @@ function LevelsLegend() {
     </div>
   );
 }
+
+/** Display name fallback used before migration 0079 has landed — once it has, `roles.name` itself
+ * already reads "Super Admin" etc. and this is never reached for these 4 codes. */
+const ROLE_DISPLAY_NAME: Record<string, string> = {
+  platform_admin: 'Super Admin',
+  centre_manager: 'Centre Manager',
+  therapist: 'Therapist',
+  centre_staff: 'Centre Staff',
+};
 
 function UserRow({
   user,
@@ -530,39 +556,100 @@ function AssignmentRow({
 const inputCls =
   'rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] focus:border-[var(--color-accent)] focus:outline-none';
 
+/** 16 characters, no visually-ambiguous glyphs — a client-side suggestion only, for the "Generate"
+ * button's convenience. The authoritative password either comes from this (if the admin keeps it) or
+ * from the Edge Function's own generator (if the field is left blank) — either way the server is
+ * what actually sets it on the account, this is just a starting point the admin can see and edit. */
+function suggestPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('');
+}
+
 /**
  * Real account creation, via the `invite-user` Edge Function — see this file's header comment and
- * migration 0031. No password field anywhere here: the new person sets their own via the emailed
- * invite link. This form grants no access; the person appears below with "No access assigned" until
- * `GrantAccessForm` is used separately.
+ * migration 0031 — combined with a single `GrantAccessForm`-equivalent grant in the same submit, so
+ * adding someone is one step instead of two. Deliberately sets a real password directly (an admin
+ * either types one or leaves it blank to get one generated) rather than emailing an invite link —
+ * see invite-user/index.ts's header comment for why that trade was made. The password is shown back
+ * exactly once, in this modal's success state; nothing stores it after that.
  */
-function InviteUserForm({ onInvited }: { onInvited: () => void }) {
+function AddTeamMemberModal({
+  roles,
+  organisations,
+  centres,
+  onAdded,
+}: {
+  roles: RoleRow[];
+  organisations: OrganisationRow[];
+  centres: CentreRow[];
+  onAdded: () => void;
+}) {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  const [roleCode, setRoleCode] = useState<string>('therapist');
+  const [centreId, setCentreId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [reason, setReason] = useState('New team member onboarding');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  const [result, setResult] = useState<{ displayName: string; password: string; grantError: string | null } | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const canSubmit = email.trim() && displayName.trim();
+  const role = roles.find((r) => r.code === roleCode);
+  const isOrgWide = roleCode === 'platform_admin';
+  const canSubmit =
+    displayName.trim() !== '' && email.trim() !== '' && !!role && reason.trim() !== '' &&
+    (isOrgWide ? organisations.length > 0 : !!centreId) &&
+    (password === '' || password.length >= 8);
+
+  const reset = () => {
+    setDisplayName('');
+    setEmail('');
+    setJobTitle('');
+    setRoleCode('therapist');
+    setCentreId('');
+    setPassword('');
+    setShowPassword(false);
+    setReason('New team member onboarding');
+    setError(null);
+    setResult(null);
+    setCopied(false);
+  };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !role) return;
     setBusy(true);
     setError(null);
     try {
-      await userAdmin.invite({
+      const invited = await userAdmin.invite({
         email: email.trim(),
         displayName: displayName.trim(),
         jobTitle: jobTitle.trim() || undefined,
+        password: password.trim() || undefined,
       });
-      setDone(`Invited ${displayName.trim()} — they will get an email to set their password.`);
-      setEmail('');
-      setDisplayName('');
-      setJobTitle('');
-      setOpen(false);
-      onInvited();
+
+      let grantError: string | null = null;
+      try {
+        await userAdmin.grant({
+          userId: invited.userId,
+          roleId: role.id,
+          scopeType: isOrgWide ? 'organisation' : 'centre',
+          scopeId: isOrgWide ? organisations[0]!.id : centreId,
+          reason: reason.trim(),
+        });
+      } catch (err) {
+        // The login exists either way — surface this so the admin knows to grant access manually
+        // below (GrantAccessForm) rather than assuming it already happened.
+        grantError = err instanceof Error ? err.message : 'Could not grant access.';
+      }
+
+      setResult({ displayName: displayName.trim(), password: invited.password, grantError });
+      onAdded();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not work.');
     } finally {
@@ -570,75 +657,192 @@ function InviteUserForm({ onInvited }: { onInvited: () => void }) {
     }
   };
 
-  if (!open) {
-    return (
-      <div className="mt-5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-            setDone(null);
-          }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[var(--color-accent-hover)]"
-        >
-          <MailPlus className="size-3.5" /> Invite a new user&hellip;
-        </button>
-        {done ? <span className="text-[11.5px] text-[var(--color-ink-muted)]">{done}</span> : null}
-      </div>
-    );
-  }
+  const copyPassword = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(result.password).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
-    <div className="mt-5 rounded-2xl border bg-card p-4 shadow-soft">
-      <h3 className="font-display text-[13px] font-semibold">Invite a new user</h3>
-      <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
-        Creates their sign-in and sends them an email to set their own password. Grants no access —
-        do that separately below once their account exists.
-      </p>
-      <div className="mt-2 grid grid-cols-2 gap-2.5">
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Email</span>
-          <input
-            type="email"
-            className={inputCls}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Display name</span>
-          <input className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        </label>
-        <label className="col-span-2 flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Job title (optional)</span>
-          <input className={inputCls} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-        </label>
-      </div>
+    <div className="mt-5">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-[var(--color-accent-hover)]"
+      >
+        <UserPlus className="size-3.5" /> Add team member&hellip;
+      </button>
 
-      {error ? (
-        <div className="mt-2 rounded-lg border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-          {error}
-        </div>
-      ) : null}
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); reset(); } }}>
+        <DialogContent className="max-w-[560px]">
+          <DialogTitle className="font-display text-[16px] font-semibold">Add team member</DialogTitle>
 
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          disabled={busy || !canSubmit}
-          onClick={() => void submit()}
-          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition disabled:opacity-40"
-        >
-          {busy ? 'Inviting…' : 'Send invite'}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setOpen(false)}
-          className="rounded-lg px-3 py-1.5 text-[12.5px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
-        >
-          Cancel
-        </button>
-      </div>
+          {result ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-[12.5px] text-[var(--color-ink)]">
+                {result.displayName}&rsquo;s sign-in has been created.
+              </p>
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+                <p className="text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                  Temporary password — shown once, share it with them directly:
+                </p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <code className="nums flex-1 rounded-md border border-amber-300 bg-card px-2.5 py-1.5 text-[13px] dark:border-amber-800">
+                    {result.password}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyPassword}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[var(--color-line)] px-2 py-1.5 text-[11px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    <Copy className="size-3" /> {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              {result.grantError ? (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                  Their sign-in was created, but granting access failed: {result.grantError} — use
+                  &ldquo;Grant additional access&rdquo; below once you&rsquo;re ready to retry.
+                </div>
+              ) : null}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); reset(); }}
+                  className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Full name *</span>
+                  <input autoFocus className={inputCls} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Email address *</span>
+                  <input type="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />
+                </label>
+                <label className="col-span-2 flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Job title (optional)</span>
+                  <input className={inputCls} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                </label>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Role *</span>
+                <div className="mt-1 flex flex-col gap-1.5">
+                  {Object.entries(ROLE_CARD_DATA).map(([code, r]) => {
+                    const selected = roleCode === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setRoleCode(code)}
+                        className={`flex items-start gap-2.5 rounded-lg border p-2.5 text-left transition ${
+                          selected ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'border-[var(--color-line)] hover:bg-black/5 dark:hover:bg-white/10'
+                        }`}
+                      >
+                        <r.icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+                        <span>
+                          <span className="block text-[12.5px] font-semibold text-[var(--color-ink)]">
+                            {ROLE_DISPLAY_NAME[code] ?? code}
+                          </span>
+                          <span className="block text-[11px] text-[var(--color-ink-muted)]">{r.summary}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {!isOrgWide ? (
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Centre *</span>
+                  <select className={inputCls} value={centreId} onChange={(e) => setCentreId(e.target.value)}>
+                    <option value="">Select a centre…</option>
+                    {centres.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="text-[11px] text-[var(--color-ink-muted)]">
+                  Super Admin applies across the whole organisation — no centre to pick.
+                </p>
+              )}
+
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">
+                  Temporary password (optional — auto-generated if blank)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className={`${inputCls} flex-1`}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Leave blank to auto-generate"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    title={showPassword ? 'Hide' : 'Show'}
+                    className="shrink-0 rounded-md border border-[var(--color-line)] p-1.5 transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPassword(suggestPassword()); setShowPassword(true); }}
+                    className="shrink-0 rounded-md border border-[var(--color-line)] px-2 py-1.5 text-[11px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    Generate
+                  </button>
+                </div>
+                {password && password.length < 8 ? (
+                  <span className="text-[10.5px] text-red-600 dark:text-red-400">At least 8 characters.</span>
+                ) : null}
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">Reason *</span>
+                <input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} />
+              </label>
+
+              {error ? (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !canSubmit}
+                  onClick={() => void submit()}
+                  className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-medium text-white transition disabled:opacity-40"
+                >
+                  {busy ? 'Adding…' : 'Add team member'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => { setOpen(false); reset(); }}
+                  className="rounded-lg px-3 py-1.5 text-[12.5px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -727,14 +931,19 @@ function GrantAccessForm({
         onClick={() => setOpen(true)}
         className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-[12.5px] font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
       >
-        <ShieldPlus className="size-3.5" /> Grant access&hellip;
+        <ShieldPlus className="size-3.5" /> Grant additional access&hellip;
       </button>
     );
   }
 
   return (
     <div className="mt-2.5 rounded-2xl border bg-card p-4 shadow-soft">
-      <h3 className="font-display text-[13px] font-semibold">Grant access</h3>
+      <h3 className="font-display text-[13px] font-semibold">Grant additional access</h3>
+      <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
+        For someone who already has a sign-in, or a grant &ldquo;Add team member&rdquo; above doesn&rsquo;t
+        cover — multiple centres, the whole organisation for a non-Super-Admin role, a time limit, or
+        read-only access.
+      </p>
       <div className="mt-2 grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-[var(--color-ink-muted)]">User</span>

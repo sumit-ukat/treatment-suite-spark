@@ -1665,17 +1665,25 @@ export const userAdmin = {
 
   /**
    * The one call in this file that reaches an Edge Function instead of PostgREST directly — see
-   * `supabase/functions/invite-user/`. Creates a real Supabase Auth login (the new person sets their
-   * own password via the emailed invite) and its `user_profiles` row. Does not grant any access —
-   * `userAdmin.grant` is a separate, deliberate second step once the login exists.
+   * `supabase/functions/invite-user/`. Creates a real Supabase Auth login and its `user_profiles`
+   * row. `password` is optional — leave it out and the Edge Function generates one — but either way
+   * the return value's `password` is the ONLY time it is ever available: show it to the admin once,
+   * then let it go. Does not grant any access — `userAdmin.grant` is a separate, deliberate second
+   * step once the login exists.
    */
   async invite(input: {
     email: string;
     displayName: string;
     jobTitle?: string | undefined;
-  }): Promise<string> {
+    password?: string | undefined;
+  }): Promise<{ userId: string; password: string }> {
     const { data, error } = await client().functions.invoke('invite-user', {
-      body: { email: input.email, displayName: input.displayName, jobTitle: input.jobTitle ?? null },
+      body: {
+        email: input.email,
+        displayName: input.displayName,
+        jobTitle: input.jobTitle ?? null,
+        password: input.password ?? null,
+      },
     });
     if (error) {
       // supabase-js does not surface the function's own JSON error body as error.message — on a
@@ -1692,7 +1700,7 @@ export const userAdmin = {
       }
       throw new DataAccessError('userAdmin.invite', { message });
     }
-    return (data as { userId: string }).userId;
+    return data as { userId: string; password: string };
   },
 };
 

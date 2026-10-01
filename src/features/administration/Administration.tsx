@@ -9,7 +9,7 @@ export function Administration({ centre }: { centre: AccessibleCentre }) {
   const [tab, setTab] = useState<'people' | 'rooms'>('people');
 
   const TABS = [
-    { id: 'people', label: 'People & access' },
+    { id: 'people', label: 'User Management' },
     { id: 'rooms',  label: 'Rooms & beds' },
   ] as const;
 
