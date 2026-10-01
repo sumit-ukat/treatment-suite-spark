@@ -593,7 +593,7 @@ export function DetailPanel({
                   </div>
                 </div>
               ) : (
-                <div className="nums flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
+                <div className="nums flex items-center gap-1 text-[13px] font-semibold text-[var(--color-ink)]">
                   Kipu No. {localReference ?? o.reference} &middot; Bed {bed.label} &middot; {o.group || 'No group'}
                   {can('clients.edit_identity') && !readOnly && (
                     <button
