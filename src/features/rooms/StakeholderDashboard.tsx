@@ -584,13 +584,13 @@ export function StakeholderDashboard({
           <KpiTile
             icon={CheckCircle2}
             value={customPendingClients}
-            label="Custom assignments"
+            label="Side assignments"
             sub={
               customOverdueCount > 0
-                ? `${customOverdueCount} overdue custom task${customOverdueCount !== 1 ? 's' : ''}`
+                ? `${customOverdueCount} overdue side assignment${customOverdueCount !== 1 ? 's' : ''}`
                 : customPendingClients > 0
-                ? `${customPendingClients} client${customPendingClients !== 1 ? 's' : ''} with pending custom tasks`
-                : 'No pending custom assignments'
+                ? `${customPendingClients} client${customPendingClients !== 1 ? 's' : ''} with pending side assignments`
+                : 'No pending side assignments'
             }
             accent={customOverdueCount > 0 ? 'red' : customPendingClients > 0 ? 'amber' : 'green'}
             onClick={() => navigate('../treatment-board?filter=custom_pending')}

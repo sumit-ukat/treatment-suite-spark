@@ -169,7 +169,7 @@ function CategoryContent({
           onChanged={onChanged}
           filterFn={isCustomTask}
           taskCategory="milestone"
-          emptyMessage={sideAssignment ? 'No other custom assignments for this client.' : 'No custom assignments for this client.'}
+          emptyMessage={sideAssignment ? 'No other side assignments for this client.' : 'No side assignments for this client.'}
           {...(readOnly ? { readOnly } : {})}
         />
       </div>
@@ -349,7 +349,7 @@ function AssignRow({
   );
 }
 
-/* ─── Manual task section (Doctor – Thursday / Custom) ───────────────────── */
+/* ─── Manual task section (Doctor – Thursday / Side assignment) ──────────── */
 
 function ManualTaskSection({
   o,

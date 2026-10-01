@@ -310,7 +310,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           {clientLabel} has been admitted to bed {selectedBed?.bed.label} at {centre.name}. 20 standard
           tasks were generated automatically
           {form.extraAssignments.filter((e) => e.name.trim()).length > 0
-            ? `, plus ${form.extraAssignments.filter((e) => e.name.trim()).length} custom assignment${form.extraAssignments.filter((e) => e.name.trim()).length !== 1 ? 's' : ''}.`
+            ? `, plus ${form.extraAssignments.filter((e) => e.name.trim()).length} side assignment${form.extraAssignments.filter((e) => e.name.trim()).length !== 1 ? 's' : ''}.`
             : '.'
           }
         </p>
@@ -476,7 +476,7 @@ export function AdmitClientForm({ centre }: { centre: AccessibleCentre }) {
           </div>
           {form.extraAssignments.filter((e) => e.name.trim()).length > 0 ? (
             <div className="col-span-2">
-              <dt className="text-[11px] text-[var(--color-ink-muted)]">Custom assignments</dt>
+              <dt className="text-[11px] text-[var(--color-ink-muted)]">Side assignments</dt>
               <dd className="mt-1 flex flex-col gap-1">
                 {form.extraAssignments.filter((e) => e.name.trim()).map((ea, i) => (
                   <span key={i} className="text-[12.5px]">

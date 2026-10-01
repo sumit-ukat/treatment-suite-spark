@@ -1045,7 +1045,7 @@ export function DetailPanel({
           </div>
         </div>
 
-        {/* Add custom assignment */}
+        {/* Add side assignment */}
         {!readOnly && o.admissionId ? (
           <div className="shrink-0 border-b border-[var(--color-line)] px-5 py-2">
             {!addTaskOpen ? (
@@ -1054,7 +1054,7 @@ export function DetailPanel({
                 onClick={() => setAddTaskOpen(true)}
                 className="text-[11.5px] font-medium text-[var(--color-accent)] hover:underline"
               >
-                + Add custom assignment
+                + Add side assignment
               </button>
             ) : (
               <div className="flex flex-col gap-2">
@@ -1426,7 +1426,7 @@ export function TaskRow({
           </span>
           {t.isManual ? (
             <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[9.5px] font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-400">
-              ✎ Custom
+              ✎ Side
             </span>
           ) : null}
           {t.hasDateChanges ? (
@@ -1508,7 +1508,7 @@ export function TaskRow({
         {canDelete && mode === 'idle' ? (
           <button
             type="button"
-            title="Delete custom assignment"
+            title="Delete side assignment"
             disabled={deleteBusy}
             onClick={() => {
               if (!t.id) return;

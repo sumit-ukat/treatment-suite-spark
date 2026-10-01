@@ -47,7 +47,8 @@ export const COLUMNS = [
 const CATEGORY_TASK_TITLES = new Set<string>(COLUMNS.map((c) => c.full));
 
 /** Manual tasks assigned from the Doctor – Thursday panel use category 'medical' — the only manual
- * tasks that do, since the Custom panel always assigns 'milestone' (see addTask in CustomSection). */
+ * tasks that do, since the Side assignment panel always assigns 'milestone' (see ManualTaskSection
+ * in CategoryDetailPanel.tsx). */
 export function isDoctorTask(task: BoardTask): boolean {
   return task.isManual && task.category === 'medical';
 }
@@ -94,7 +95,7 @@ function rollupTasks(tasks: readonly BoardTask[]): CategoryStatus {
   const overdue = applicable.filter((t) => t.isOverdue);
   const dueToday = applicable.filter((t) => t.isDueToday);
   const done = applicable.filter((t) => t.isComplete);
-  // Shown even for a single-item category (Family Visit, Doctor, Custom often have just one task) so
+  // Shown even for a single-item category (Family Visit, Doctor, Side assignment often have just one task) so
   // those columns read the same as a busy one, instead of looking empty next to it.
   const fractionProp = { fraction: `${done.length}/${applicable.length}` };
 
