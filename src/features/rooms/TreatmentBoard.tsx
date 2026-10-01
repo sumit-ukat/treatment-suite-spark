@@ -10,6 +10,7 @@ import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
 import { CategoryDetailPanel } from './CategoryDetailPanel.tsx';
+import { StatusDetailPanel } from './StatusDetailPanel.tsx';
 import { CARE_STATUS_LABEL, CARE_STATUS_TONE, CATEGORY_LABEL, categoryStatus, type CategoryKey } from './category-status.js';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 
@@ -185,6 +186,7 @@ export function TreatmentBoard({
   });
   const [openBedLabel, setOpenBedLabel] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<{ bedLabel: string; category: CategoryKey } | null>(null);
+  const [openStatusBedLabel, setOpenStatusBedLabel] = useState<string | null>(null);
   // Default excludes empty beds from the printed report — they're rarely wanted on a handover sheet;
   // staff can opt back in from the print options dialog.
   const [printIncludeAvailable, setPrintIncludeAvailable] = useState(false);
@@ -197,6 +199,7 @@ export function TreatmentBoard({
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
   const selectedCategoryBed = openCategory ? beds.find((b) => b.label === openCategory.bedLabel) ?? null : null;
+  const selectedStatusBed = openStatusBedLabel ? beds.find((b) => b.label === openStatusBedLabel) ?? null : null;
 
   // Keep top scrollbar phantom width in sync with real table scroll width.
   useEffect(() => {
@@ -438,7 +441,12 @@ export function TreatmentBoard({
               </th>
               {/* Shadow on Programme marks the freeze boundary — it's the last frozen column */}
               <th className={`sticky left-[304px] z-30 w-[120px] border-r border-[var(--color-line)] shadow-[2px_0_6px_rgba(0,0,0,0.06)] ${th}`}>Programme</th>
-              <th className={`w-[110px] border-r border-[var(--color-line)] ${th}`}>Status</th>
+              <th className={`w-[110px] whitespace-normal border-r border-[var(--color-line)] ${th}`} style={{ whiteSpace: 'normal' }}>
+                <span className="font-bold text-[var(--color-ink)]">Status</span>
+                <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-[var(--color-ink-muted)]">
+                  Open details
+                </span>
+              </th>
               {CATEGORY_ORDER.map((key) => (
                 <th
                   key={key}
@@ -564,8 +572,15 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Status: staff-set, independent of the discharge workflow — see migration 0070 */}
-                  <td className={`${cb} w-[110px] border-r border-[var(--color-line)] px-3 py-3`}>
+                  {/* Status: staff-set, independent of the discharge workflow — see migration 0070/0071 */}
+                  <td
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpenStatusBedLabel(bed.label)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenStatusBedLabel(bed.label); } }}
+                    title="Open details"
+                    className={`${cb} w-[110px] cursor-pointer border-r border-[var(--color-line)] px-3 py-3 transition hover:bg-black/[0.02] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)] dark:hover:bg-white/[0.03]`}
+                  >
                     {o.careStatus ? (
                       <Chip label={CARE_STATUS_LABEL[o.careStatus]} tone={CARE_STATUS_TONE[o.careStatus]} />
                     ) : (
@@ -677,6 +692,17 @@ export function TreatmentBoard({
           bed={selectedCategoryBed}
           category={openCategory.category}
           onClose={() => setOpenCategory(null)}
+          onChanged={() => refresh()}
+          readOnly={!!asOf}
+        />
+      ) : null}
+
+      {/* ── Status picker, opened from the Status cell ── */}
+      {openStatusBedLabel && selectedStatusBed ? (
+        <StatusDetailPanel
+          key={openStatusBedLabel}
+          bed={selectedStatusBed}
+          onClose={() => setOpenStatusBedLabel(null)}
           onChanged={() => refresh()}
           readOnly={!!asOf}
         />

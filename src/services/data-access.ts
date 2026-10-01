@@ -326,6 +326,19 @@ export const admissions = {
   },
 
   /**
+   * Set or clear Status alone (migration 0071) — deliberately narrower than `updateDetails`, which
+   * sets several other fields in the same statement and would clobber them if called with only this
+   * one populated. Use this from anywhere that only ever changes Status (the quick-pick popup).
+   */
+  async setCareStatus(admissionId: string, careStatus: 'graduate' | 'discharged' | 'extended' | 'transferred' | null): Promise<void> {
+    const { error } = await client().rpc('set_admission_care_status', {
+      p_admission_id: admissionId,
+      p_care_status: careStatus,
+    });
+    if (error) throw new DataAccessError('admissions.setCareStatus', error);
+  },
+
+  /**
    * Edit care-team labels, treatment group, substance, PEEP flag and programme length post-admission.
    * A changed plannedDuration/plannedDurationUnit recomputes the planned discharge date server-side
    * (app.calculate_planned_discharge) — it can move the discharge date earlier or later, unlike
