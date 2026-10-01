@@ -393,6 +393,10 @@ export interface ClientSearchResult {
   last_total_tasks: number;
   last_completed_tasks: number;
   last_due_overdue_tasks: number;
+  /** A signed URL for the client's active photo, valid for one hour — null when no active photo
+   * exists, or when the caller lacks `photos.view` (RLS silently returns nothing for those rows,
+   * not an error, so this just degrades to "no photo shown" like the Room Board's own photos do). */
+  photo_url: string | null;
 }
 
 export const clients = {
@@ -401,12 +405,44 @@ export const clients = {
    * `clients.view_identity`. See migration 0028: the server withholds a name-based match entirely for
    * a caller who cannot see names, rather than matching and then hiding the result, which would leak
    * whether the name exists via a present-but-blank row.
+   *
+   * Photos are signed here, client-side, the same way `roomBoard.forCentre` already does it —
+   * `search_clients` itself doesn't return them (storage signing isn't something SQL can do), and a
+   * bare `storage_path` is never displayable on its own since `client-photos` has no public access.
    */
-  search(centreId: string, query: string): Promise<ClientSearchResult[]> {
-    return run(
+  async search(centreId: string, query: string): Promise<ClientSearchResult[]> {
+    const rows = await run<Omit<ClientSearchResult, 'photo_url'>[]>(
       'clients.search',
       client().rpc('search_clients', { p_centre_id: centreId, p_query: query }),
     );
+    if (rows.length === 0) return [];
+
+    const clientIds = [...new Set(rows.map((r) => r.client_id))];
+    const { data: photoRows, error: photoError } = await client()
+      .from('client_photos')
+      .select('client_id,storage_path')
+      .eq('is_active', true)
+      .in('client_id', clientIds);
+    if (photoError) console.error('clients.search.photos', photoError);
+
+    const signedByClientId = new Map<string, string>();
+    if (photoRows?.length) {
+      const { data: signed, error: signError } = await client()
+        .storage.from('client-photos')
+        .createSignedUrls(photoRows.map((p) => p.storage_path), 3600);
+      if (signError) console.error('clients.search.photos.sign', signError);
+      const pathToClientId = new Map(photoRows.map((p) => [p.storage_path, p.client_id]));
+      for (const s of signed ?? []) {
+        if (s.error) {
+          console.error('clients.search.photos.sign', s.path, s.error);
+          continue;
+        }
+        const cid = pathToClientId.get(s.path ?? '');
+        if (cid && s.signedUrl) signedByClientId.set(cid, s.signedUrl);
+      }
+    }
+
+    return rows.map((r) => ({ ...r, photo_url: signedByClientId.get(r.client_id) ?? null }));
   },
 
   /**

@@ -49,7 +49,7 @@ export function ClientFilePanel({
   onClose,
   onOpenBed,
 }: {
-  client: { client_id: string; reference: string; display_name: string | null };
+  client: { client_id: string; reference: string; display_name: string | null; photo_url?: string | null };
   centre: AccessibleCentre;
   onClose: () => void;
   /** Jumps to the client's live bed on the room board. Only rendered when there's an active
@@ -166,6 +166,7 @@ export function ClientFilePanel({
           <ClientAvatar
             initials={initialsOf(client.display_name ?? client.reference)}
             hue={hueOf(client.client_id)}
+            photoUrl={client.photo_url}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">

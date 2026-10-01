@@ -312,7 +312,7 @@ export function ClientDirectory({
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex min-w-0 items-center gap-2.5">
-                            <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} />
+                            <ClientAvatar initials={initialsOf(label)} hue={hueOf(r.client_id)} photoUrl={r.photo_url} />
                             <div className="min-w-0">
                               <div className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{label}</div>
                               <div className="nums truncate text-[11px] text-muted-foreground">{r.reference}</div>
