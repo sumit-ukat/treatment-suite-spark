@@ -5,9 +5,11 @@ import {
   BedDouble,
   Building2,
   CalendarCheck,
+  CalendarDays,
   ChevronDown,
   CircleAlert,
   FileWarning,
+  GraduationCap,
   LogOut,
   Percent,
   TrendingDown,
@@ -23,7 +25,6 @@ import { PRIMROSE_LODGE_SETTINGS } from '../../domain/centre-settings.js';
 import { daysLeftInWeek } from '../../domain/zoned-time.js';
 import { formatDate } from '../../lib/format.js';
 import { Panel } from '../../components/ui.tsx';
-import { DatePresetBar } from '../../components/date-preset-bar.tsx';
 import { presetRange, SHORT_DATE_PRESETS, type DatePreset } from '../../lib/date-presets.js';
 import {
   DropdownMenu,
@@ -407,20 +408,21 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
   const totals = useMemo(() => groupTotals(visible), [visible]);
 
   const activityTotals = useMemo(() => {
-    let admitted = 0, discharged = 0, early = 0, transferred = 0;
+    let admitted = 0, discharged = 0, early = 0, transferred = 0, graduated = 0;
     for (const c of visible) {
       const a: ClientActivity =
         c.slug === 'primrose-lodge' && primroseActivity
           ? primroseActivity
           : c.slug === 'primrose-lodge'
-            ? { admittedCount: 0, dischargedCount: 0, earlyDischargedCount: 0, transferredCount: 0 }
+            ? { admittedCount: 0, dischargedCount: 0, earlyDischargedCount: 0, transferredCount: 0, graduatedCount: 0 }
             : fictionalClientActivity(c.slug, activityRange.start, activityRange.end);
       admitted += a.admittedCount;
       discharged += a.dischargedCount;
       early += a.earlyDischargedCount;
       transferred += a.transferredCount;
+      graduated += a.graduatedCount;
     }
-    return { admitted, discharged, early, transferred };
+    return { admitted, discharged, early, transferred, graduated };
   }, [visible, primroseActivity, activityRange]);
 
   const assessed = useMemo(() => visible.map(assess), [visible]);
@@ -742,60 +744,94 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         />
       </div>
 
-      {/* ── Client activity — period events (admitted/discharged/early discharged/transferred),
-             distinct from Estate overview's current-state snapshot above. Its own date filter governs
-             only this row. ── */}
+      {/* ── Client activity — period events (admitted/discharged/graduated/early discharged/
+             transferred), distinct from Estate overview's current-state snapshot above. Its own
+             date filter governs only this row, styled as a segmented control to match the page's
+             own Region toggle up top rather than the separate pill-row style Clients/GP Summary/
+             Discharge use — two different filter idioms on one page would read as inconsistent. ── */}
       <div className="mt-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-            Client activity
-          </h2>
-          <span className="text-[11.5px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-[var(--color-line)] bg-card p-0.5">
+            {SHORT_DATE_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => { setActivityPreset(p.id); setActivityMonthValue(''); }}
+                className={`rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                  activityPreset === p.id
+                    ? 'bg-[var(--color-accent)] text-white'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <label
+            className={`relative flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
+              activityPreset === 'month'
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+                : 'border-[var(--color-line)] bg-card text-foreground hover:bg-black/5 dark:hover:bg-white/10'
+            }`}
+          >
+            <CalendarDays className="pointer-events-none size-3.5" aria-hidden />
+            <input
+              type="month"
+              value={activityMonthValue}
+              max={new Date().toISOString().slice(0, 7)}
+              onChange={(e) => { setActivityMonthValue(e.target.value); setActivityPreset(e.target.value ? 'month' : 'this_month'); }}
+              aria-label="Show client activity for a specific month"
+              className="w-[7rem] appearance-none bg-transparent outline-none [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </label>
+          <span className="ml-auto text-[11.5px] text-muted-foreground">
             Showing: <strong className="font-semibold text-foreground">{activityRangeLabel}</strong>
           </span>
         </div>
-        <DatePresetBar
-          preset={activityPreset}
-          monthValue={activityMonthValue}
-          presets={SHORT_DATE_PRESETS}
-          clearTo="this_month"
-          onPresetChange={(p) => { setActivityPreset(p); setActivityMonthValue(''); }}
-          onMonthChange={(m) => { setActivityMonthValue(m); setActivityPreset(m ? 'month' : 'this_month'); }}
+
+        <h2 className="mt-3 mb-3 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+          Client activity
+        </h2>
+
+        <MetricGrid
+          cards={[
+            {
+              label: 'Total Clients',
+              value: activityTotals.admitted,
+              hint: `admitted · ${visible.length} centre${visible.length === 1 ? '' : 's'}`,
+              icon: <UserPlus className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Discharged',
+              value: activityTotals.discharged,
+              hint: 'any discharge type',
+              icon: <LogOut className="size-4" />,
+              accent: 'neutral',
+            },
+            {
+              label: 'Graduated',
+              value: activityTotals.graduated,
+              hint: 'completed treatment',
+              icon: <GraduationCap className="size-4" />,
+              accent: 'good',
+            },
+            {
+              label: 'Early Discharged',
+              value: activityTotals.early,
+              hint: 'left before planned discharge',
+              icon: <UserMinus className="size-4" />,
+              accent: activityTotals.early > 0 ? 'warn' : 'neutral',
+            },
+            {
+              label: 'Transferred',
+              value: activityTotals.transferred,
+              hint: 'moved to another facility',
+              icon: <ArrowRightLeft className="size-4" />,
+              accent: 'neutral',
+            },
+          ]}
         />
-        <div className="mt-3">
-          <MetricGrid
-            cards={[
-              {
-                label: 'Total Clients',
-                value: activityTotals.admitted,
-                hint: `admitted · ${visible.length} centre${visible.length === 1 ? '' : 's'}`,
-                icon: <UserPlus className="size-4" />,
-                accent: 'neutral',
-              },
-              {
-                label: 'Discharged',
-                value: activityTotals.discharged,
-                hint: 'any discharge type',
-                icon: <LogOut className="size-4" />,
-                accent: 'neutral',
-              },
-              {
-                label: 'Early Discharged',
-                value: activityTotals.early,
-                hint: 'left before planned discharge',
-                icon: <UserMinus className="size-4" />,
-                accent: activityTotals.early > 0 ? 'warn' : 'neutral',
-              },
-              {
-                label: 'Transferred',
-                value: activityTotals.transferred,
-                hint: 'moved to another facility',
-                icon: <ArrowRightLeft className="size-4" />,
-                accent: 'neutral',
-              },
-            ]}
-          />
-        </div>
       </div>
 
       {/* ── Region comparison — shown before the centre breakdown so the regional picture is visible

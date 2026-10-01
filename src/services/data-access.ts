@@ -132,14 +132,15 @@ export const centres = {
     }));
   },
 
-  /** Period-scoped admitted/discharged/early-discharged/transferred counts for one centre — see
-   * migration 0080. Powers the Executive Hub's Client activity row; `start`/`end` are `YYYY-MM-DD`,
-   * inclusive. */
+  /** Period-scoped admitted/discharged/early-discharged/transferred/graduated counts for one centre
+   * — see migrations 0080/0081. Powers the Executive Hub's Client activity row; `start`/`end` are
+   * `YYYY-MM-DD`, inclusive. */
   async clientActivity(centreId: string, start: string, end: string): Promise<{
     admittedCount: number;
     dischargedCount: number;
     earlyDischargedCount: number;
     transferredCount: number;
+    graduatedCount: number;
   }> {
     const { data, error } = await client().rpc('centre_client_activity', {
       p_centre_id: centreId,
@@ -148,13 +149,15 @@ export const centres = {
     });
     if (error) throw new DataAccessError('centres.clientActivity', error);
     const row = (data as Array<{
-      admitted_count: number; discharged_count: number; early_discharged_count: number; transferred_count: number;
+      admitted_count: number; discharged_count: number; early_discharged_count: number;
+      transferred_count: number; graduated_count: number;
     }>)[0];
     return {
       admittedCount: row?.admitted_count ?? 0,
       dischargedCount: row?.discharged_count ?? 0,
       earlyDischargedCount: row?.early_discharged_count ?? 0,
       transferredCount: row?.transferred_count ?? 0,
+      graduatedCount: row?.graduated_count ?? 0,
     };
   },
 };

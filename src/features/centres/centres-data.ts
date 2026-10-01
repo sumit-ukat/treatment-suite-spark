@@ -212,14 +212,20 @@ export interface ClientActivity {
   dischargedCount: number;
   earlyDischargedCount: number;
   transferredCount: number;
+  graduatedCount: number;
 }
 
 /**
  * Deterministic placeholder client-activity figures for every centre except Primrose Lodge, which
- * uses real figures from `centres.clientActivity` (migration 0080) instead of this. Scaled by the
- * selected period's length in days so a wider range plausibly shows more activity rather than a
+ * uses real figures from `centres.clientActivity` (migrations 0080/0081) instead of this. Scaled by
+ * the selected period's length in days so a wider range plausibly shows more activity rather than a
  * fixed number regardless of range — a `This Year` count that looked the same as `Today`'s would be
  * a more obviously fake number than any individual figure on its own.
+ *
+ * `graduatedCount` is everything left over after early-discharged and transferred — the real RPC
+ * counts `discharge_type = 'planned'` precisely and separately; this placeholder has no real
+ * `'other'` bucket to subtract first, so it folds that sliver into graduated rather than inventing a
+ * fifth tracked fraction for a type nothing here actually models yet.
  */
 export function fictionalClientActivity(slug: string, startDate: string, endDate: string): ClientActivity {
   const days = Math.max(
@@ -236,11 +242,14 @@ export function fictionalClientActivity(slug: string, startDate: string, endDate
   const monthlyDischarges = monthlyAdmits * (0.75 + dischargeRate * 0.2);
   const admittedCount = Math.round((monthlyAdmits / 30) * days);
   const dischargedCount = Math.round((monthlyDischarges / 30) * days);
+  const earlyDischargedCount = Math.round(dischargedCount * (0.25 + earlyFrac * 0.25));
+  const transferredCount = Math.round(dischargedCount * (0.05 + transferFrac * 0.1));
   return {
     admittedCount,
     dischargedCount,
-    earlyDischargedCount: Math.round(dischargedCount * (0.25 + earlyFrac * 0.25)),
-    transferredCount: Math.round(dischargedCount * (0.05 + transferFrac * 0.1)),
+    earlyDischargedCount,
+    transferredCount,
+    graduatedCount: Math.max(0, dischargedCount - earlyDischargedCount - transferredCount),
   };
 }
 
