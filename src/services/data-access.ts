@@ -919,11 +919,18 @@ export const discharge = {
    * person to approve it first: `discharge.initiate` proposes, `discharge.approve` — enforced
    * server-side to be someone other than the requester — signs off, then `discharge.finalise` executes.
    */
-  async request(admissionId: string, dischargeType: 'early' | 'other', reason: string): Promise<string> {
+  async request(
+    admissionId: string,
+    dischargeType: 'early' | 'other',
+    reason: string,
+    structured?: { dischargeReason: string; dischargeSubReason: string } | undefined,
+  ): Promise<string> {
     const { data, error } = await client().rpc('request_early_discharge', {
       p_admission_id: admissionId,
       p_discharge_type: dischargeType,
       p_reason: reason,
+      p_discharge_reason: structured?.dischargeReason ?? null,
+      p_discharge_sub_reason: structured?.dischargeSubReason ?? null,
     });
     if (error) throw new DataAccessError('discharge.request', error);
     return data as string;
@@ -994,6 +1001,10 @@ export const discharge = {
       notes?: string | undefined;
       reportSentAt?: string | undefined; // ISO date (YYYY-MM-DD)
       referralPartnerId?: string | undefined;
+      /** Validated server-side against a fixed taxonomy for 'planned'/'early' (migration 0072).
+       * Unvalidated for 'transfer'/'other' until a taxonomy exists for them too. */
+      dischargeReason?: string | undefined;
+      dischargeSubReason?: string | undefined;
     },
   ): Promise<void> {
     const { error } = await client().rpc('finalise_discharge', {
@@ -1006,6 +1017,8 @@ export const discharge = {
       p_notes: report?.notes ?? null,
       p_report_sent_at: report?.reportSentAt ?? null,
       p_referral_partner_id: report?.referralPartnerId ?? null,
+      p_discharge_reason: report?.dischargeReason ?? null,
+      p_discharge_sub_reason: report?.dischargeSubReason ?? null,
     });
     if (error) throw new DataAccessError('discharge.finalise', error);
   },

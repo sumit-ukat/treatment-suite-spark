@@ -14,6 +14,34 @@ const DISCHARGE_TYPE_LABEL: Record<DischargeRequestSummary['dischargeType'], str
   other: 'Other',
 };
 
+// Fixed taxonomy for an early discharge's Reason → Sub Reason, validated again server-side
+// (request_early_discharge, migration 0073) — this is display/UX only, not the source of truth.
+const EARLY_DISCHARGE_REASONS = ['Self Discharged', 'Medical / Treatment Discharged'] as const;
+type EarlyDischargeReason = (typeof EARLY_DISCHARGE_REASONS)[number];
+const EARLY_DISCHARGE_SUB_REASONS: Record<EarlyDischargeReason, readonly string[]> = {
+  'Self Discharged': [
+    'Against Clinical Advice',
+    'Personal Reasons',
+    'Family Emergency',
+    'Lack of Motivation',
+    'Cravings / Relapse Intention',
+    'Homesickness or isolation',
+  ],
+  'Medical / Treatment Discharged': [
+    'Non-compliance with Treatment',
+    'Failed Substance Test',
+    'Behavioural Issues - Risk to Others',
+    'Psychiatric Needs - Needs a higher level of treatment setting',
+    'Psychiatric Needs - High Suicidal Risk',
+    'Psychiatric Needs - High-Level Mental Health Diagnosis',
+    'Psychiatric Needs - Communication needs',
+    'Psychiatric Needs - Other Cognitive Function',
+    'Physical Needs - self-care/mobility',
+    'Physical Needs - risk of infection',
+    'Physical Needs - cardiac risks',
+  ],
+};
+
 function dischargeTimestamp(dateStr: string): Date {
   const noon = fromZonedDateString(dateStr, TZ, { hour: 12, minute: 0 });
   const now = new Date();
@@ -83,6 +111,10 @@ export function DischargeWorkflowCard({
   );
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState('');
+  // Structured Reason/Sub Reason — used only for 'early'; 'transfer'/'other' still use the free-text
+  // `reason` above until a taxonomy exists for them too (migration 0073).
+  const [earlyReason, setEarlyReason] = useState<EarlyDischargeReason | ''>('');
+  const [earlySubReason, setEarlySubReason] = useState('');
   const [transferDestination, setTransferDestination] = useState('');
   const [transferTreatmentType, setTransferTreatmentType] = useState('');
   const [transferDurationDays, setTransferDurationDays] = useState('');
@@ -111,6 +143,8 @@ export function DischargeWorkflowCard({
       await action();
       setMode('idle');
       setReason('');
+      setEarlyReason('');
+      setEarlySubReason('');
       setTransferDestination('');
       setTransferTreatmentType('');
       setTransferDurationDays('');
@@ -134,16 +168,34 @@ export function DischargeWorkflowCard({
     referralPartnerId: referralPartnerId || undefined,
   });
 
+  // Whether the discharge-reason part of the form is actually filled in — differs by type, since
+  // 'planned' needs nothing (fixed), 'early' needs both structured dropdowns, and 'transfer'/'other'
+  // still use the free-text box.
+  const canSubmitNewDischarge =
+    dischargeType === 'planned' ? true
+    : dischargeType === 'early' ? !!earlyReason && !!earlySubReason
+    : !!reason.trim();
+
   const submitNewDischarge = () => {
-    if (!reason.trim()) return;
+    if (!canSubmitNewDischarge) return;
     const at = dischargeTimestamp(date).toISOString();
     if (dischargeType === 'planned') {
-      void run(() => dischargeService.finalise(admissionId, 'planned', at, reason, reportInput()));
+      void run(() => dischargeService.finalise(admissionId, 'planned', at, 'Completed Treatment', {
+        ...reportInput(),
+        dischargeReason: 'Completed Treatment',
+      }));
     } else if (dischargeType === 'transfer') {
       void run(async () => {
         await dischargeService.requestTransfer(
           admissionId, reason, transferDestination, transferTreatmentType,
           transferDurationDays ? parseInt(transferDurationDays, 10) : null,
+        );
+      });
+    } else if (dischargeType === 'early') {
+      void run(async () => {
+        await dischargeService.request(
+          admissionId, 'early', `${earlyReason} — ${earlySubReason}`,
+          { dischargeReason: earlyReason, dischargeSubReason: earlySubReason },
         );
       });
     } else {
@@ -299,16 +351,56 @@ export function DischargeWorkflowCard({
 
               {dateField}
 
-              <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
-                Reason
-                <textarea
-                  autoFocus
-                  rows={2}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+              {dischargeType === 'planned' ? (
+                // Graduated: exactly one valid reason, so it's shown as a fixed confirmation line
+                // rather than a dropdown with a single pointless option.
+                <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]">
+                  <span className="text-[10.5px] text-[var(--color-ink-muted)]">Reason</span>
+                  <p className="mt-0.5 font-medium text-[var(--color-ink)]">Completed Treatment</p>
+                </div>
+              ) : dischargeType === 'early' ? (
+                <>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Reason
+                    <select
+                      autoFocus
+                      value={earlyReason}
+                      onChange={(e) => { setEarlyReason(e.target.value as EarlyDischargeReason | ''); setEarlySubReason(''); }}
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                    >
+                      <option value="">Select a reason…</option>
+                      {EARLY_DISCHARGE_REASONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                    Sub Reason
+                    <select
+                      value={earlySubReason}
+                      onChange={(e) => setEarlySubReason(e.target.value)}
+                      disabled={!earlyReason}
+                      className="mt-0.5 block w-full rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+                    >
+                      <option value="">{earlyReason ? 'Select a sub reason…' : 'Pick a reason first…'}</option>
+                      {(earlyReason ? EARLY_DISCHARGE_SUB_REASONS[earlyReason] : []).map((sr) => (
+                        <option key={sr} value={sr}>{sr}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <label className="block text-[10.5px] text-[var(--color-ink-muted)]">
+                  Reason
+                  <textarea
+                    autoFocus
+                    rows={2}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="mt-0.5 block w-full resize-none rounded-md border border-[var(--color-line)] bg-transparent px-2 py-1.5 text-[12px] outline-none focus:border-[var(--color-accent)]"
+                  />
+                </label>
+              )}
 
               {dischargeType === 'transfer' ? (
                 <>
@@ -346,11 +438,11 @@ export function DischargeWorkflowCard({
               )}
 
               <div className="flex items-center gap-2">
-                <button type="button" disabled={busy || !reason.trim()} onClick={submitNewDischarge}
+                <button type="button" disabled={busy || !canSubmitNewDischarge} onClick={submitNewDischarge}
                   className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-[11px] font-medium text-white transition disabled:opacity-40">
                   {busy ? 'Saving…' : dischargeType === 'planned' ? 'Discharge' : 'Submit for approval'}
                 </button>
-                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setError(null); }}
+                <button type="button" disabled={busy} onClick={() => { setMode('idle'); setReason(''); setEarlyReason(''); setEarlySubReason(''); setError(null); }}
                   className="rounded-md px-2 py-1 text-[11px] text-[var(--color-ink-muted)] transition hover:bg-black/5 dark:hover:bg-white/10">
                   Cancel
                 </button>
