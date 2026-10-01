@@ -57,7 +57,10 @@ interface ActiveRow {
  * here rather than invented. See DetailPanel.tsx's similar note about pronoun/funding.
  */
 export function DischargeLog({ centreId }: { centreId: string }) {
-  const [tab, setTab] = useState<TabId>('today');
+  // null = no tab picked yet — shows every discharged client, same as this page looked before the
+  // tabs existed. Picking a tab narrows to that bucket; clicking the active tab again clears back to
+  // this unfiltered view rather than leaving no way back to it.
+  const [tab, setTab] = useState<TabId | null>(null);
   const [rows, setRows] = useState<DischargeLogRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -97,7 +100,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
   }, [rows, beds, weekEnd]);
 
   const visibleDischarged = useMemo(() => {
-    const source = tab === 'today' ? dischargedToday : pastDischarges;
+    const source = tab === 'today' ? dischargedToday : tab === 'past' ? pastDischarges : [...dischargedToday, ...pastDischarges];
     const q = query.trim().toLowerCase();
     return source
       .filter((r) => {
@@ -140,7 +143,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
       });
   }, [tab, upcoming, future, query, monthFilter, sortBy]);
 
-  const isDischargedTab = tab === 'today' || tab === 'past';
+  const isDischargedTab = tab !== 'upcoming' && tab !== 'future';
   const loading = isDischargedTab ? rows === null : boardLoading;
   const loadError = isDischargedTab ? error : boardError;
 
@@ -231,7 +234,7 @@ export function DischargeLog({ centreId }: { centreId: string }) {
             type="button"
             role="tab"
             aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => setTab(tab === t.id ? null : t.id)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition ${
               tab === t.id
                 ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
