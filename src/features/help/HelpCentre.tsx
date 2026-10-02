@@ -268,20 +268,21 @@ const FIRST_DAY_ITEMS: ReadonlyArray<{
   label: string;
   desc: string;
 }> = [
+  { id: "walkthrough-full-journey", category: "start",          label: "See the whole journey",  desc: "Admission to graduation, discharge or transfer, in one walkthrough" },
   { id: "finding-your-way",        category: "start",          label: "Find your way around",  desc: "What each menu item is for"              },
   { id: "roomboard-read-card",     category: "roomboard",      label: "Read a bed card",        desc: "Everything on an occupied card"          },
-  { id: "roomboard-colours",       category: "roomboard",      label: "What the colours mean",  desc: "Red, amber, green, blue and teal"        },
-  { id: "treatmentboard-complete", category: "treatmentboard", label: "Mark a task as done",    desc: "Clicking a square on the Treatment board" },
+  { id: "treatmentboard-complete", category: "treatmentboard", label: "Mark a task as done",    desc: "Opening a category cell on the Treatment board" },
   { id: "admissions-admit",        category: "admissions",     label: "Admit a new client",     desc: "Step-by-step from clicking Admissions"   },
 ];
 
 /** The questions people ask in their first week — offered as one-click searches. */
 const QUICK_SEARCHES: readonly string[] = [
+  "whole journey",
   "admit a new client",
   "mark a task done",
-  "what the colours mean",
+  "status vs discharge",
   "graduate a client",
-  "past date",
+  "access levels",
   "why can’t I see",
 ];
 
