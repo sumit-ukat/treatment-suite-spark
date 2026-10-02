@@ -546,8 +546,17 @@ export function TreatmentBoard({
                     </div>
                   </td>
 
-                  {/* Programme: treatment day + planned discharge — last frozen column, shadow marks the boundary */}
-                  <td className={`${osc} left-[304px] w-[120px] overflow-hidden border-r border-[var(--color-line)] px-3 py-3 whitespace-nowrap shadow-[2px_0_6px_rgba(0,0,0,0.05)]`}>
+                  {/* Programme: treatment day + planned discharge — last frozen column, shadow marks the
+                      boundary. Opens the same client file as the name cell, not a programme-scoped view —
+                      there's nothing here beyond day count and discharge date to scope a modal to. */}
+                  <td
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpenBedLabel(bed.label)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenBedLabel(bed.label); } }}
+                    title="Open full client file"
+                    className={`${osc} left-[304px] w-[120px] cursor-pointer overflow-hidden border-r border-[var(--color-line)] px-3 py-3 whitespace-nowrap shadow-[2px_0_6px_rgba(0,0,0,0.05)] transition hover:bg-[var(--color-accent-soft)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--color-accent)]`}
+                  >
                     <div className="nums text-[12.5px] font-medium text-[var(--color-ink)]">
                       Day {o.treatmentDay} <span className="text-[var(--color-ink-muted)]">of {o.durationDays}</span>
                     </div>
