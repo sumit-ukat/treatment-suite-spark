@@ -661,6 +661,15 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                     ? 'warn'
                     : 'good',
             },
+            {
+              // The one card here that isn't census or risk — everything else in this row is either
+              // a headcount or a problem count, nothing forward-looking or positive.
+              label: 'Graduating this week',
+              value: totals.dischargingThisWeek,
+              hint: 'scheduled completions, all centres',
+              icon: <TrendingUp className="size-4" />,
+              accent: 'good',
+            },
           ]}
         />
       </div>
