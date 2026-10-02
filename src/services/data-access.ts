@@ -1667,6 +1667,130 @@ export const userAdmin = {
   },
 };
 
+export interface FeedbackRow {
+  id: string;
+  kind: 'bug' | 'feature_request';
+  description: string;
+  page_path: string | null;
+  centre_id: string | null;
+  screenshot_path: string | null;
+  screenshot_url: string | null;
+  status: 'open' | 'in_progress' | 'resolved' | 'wont_fix';
+  created_at: string;
+  created_by: string | null;
+  reporter_name: string | null;
+  reporter_email: string | null;
+}
+
+export interface FeedbackRecipientRow {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+export const feedback = {
+  /**
+   * Submits a report and, if a screenshot was taken, uploads it first under the reporter's own id
+   * (`{user_id}/{uuid}.{ext}`) — the bucket RLS only lets someone upload inside their own prefix.
+   * Email notification to `feedback_recipients` is a later step; this only ever writes the row.
+   */
+  async submit(input: {
+    kind: 'bug' | 'feature_request';
+    description: string;
+    pagePath: string | null;
+    centreId: string | null;
+    screenshot?: Blob | undefined;
+  }): Promise<void> {
+    const { data: auth, error: authError } = await client().auth.getUser();
+    if (authError) throw new DataAccessError('feedback.submit', authError);
+    if (!auth.user) throw new DataAccessError('feedback.submit', { message: 'Not signed in.' });
+
+    let screenshotPath: string | null = null;
+    if (input.screenshot) {
+      screenshotPath = `${auth.user.id}/${crypto.randomUUID()}.png`;
+      const { error: uploadError } = await client()
+        .storage.from('feedback-screenshots')
+        .upload(screenshotPath, input.screenshot, { contentType: 'image/png' });
+      if (uploadError) throw new DataAccessError('feedback.submit', { message: uploadError.message });
+    }
+
+    const { error } = await client().from('tool_feedback').insert({
+      kind: input.kind,
+      description: input.description,
+      page_path: input.pagePath,
+      centre_id: input.centreId,
+      screenshot_path: screenshotPath,
+      created_by: auth.user.id,
+    });
+    if (error) throw new DataAccessError('feedback.submit', error);
+  },
+
+  /** Admin log — gated server-side by `administration.manage_users`. Most recent first, capped. */
+  async list(limit = 300): Promise<FeedbackRow[]> {
+    const rows = await run<
+      Array<
+        Omit<FeedbackRow, 'reporter_name' | 'reporter_email' | 'screenshot_url'> & {
+          user_profiles: { display_name: string; email: string } | { display_name: string; email: string }[] | null;
+        }
+      >
+    >(
+      'feedback.list',
+      client()
+        .from('tool_feedback')
+        .select('id,kind,description,page_path,centre_id,screenshot_path,status,created_at,created_by,user_profiles(display_name,email)')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    );
+
+    const screenshotPaths = rows.map((r) => r.screenshot_path).filter((p): p is string => !!p);
+    const signedUrlByPath = new Map<string, string>();
+    if (screenshotPaths.length > 0) {
+      const { data: signed } = await client().storage.from('feedback-screenshots').createSignedUrls(screenshotPaths, 3600);
+      for (const s of signed ?? []) {
+        if (s.signedUrl && !s.error) signedUrlByPath.set(s.path ?? '', s.signedUrl);
+      }
+    }
+
+    return rows.map((r) => {
+      const profile = Array.isArray(r.user_profiles) ? (r.user_profiles[0] ?? null) : r.user_profiles;
+      return {
+        ...r,
+        reporter_name: profile?.display_name ?? null,
+        reporter_email: profile?.email ?? null,
+        screenshot_url: r.screenshot_path ? (signedUrlByPath.get(r.screenshot_path) ?? null) : null,
+      };
+    });
+  },
+
+  async setStatus(id: string, status: FeedbackRow['status']): Promise<void> {
+    const { error } = await client().from('tool_feedback').update({ status }).eq('id', id);
+    if (error) throw new DataAccessError('feedback.setStatus', error);
+  },
+
+  recipients: {
+    list(): Promise<FeedbackRecipientRow[]> {
+      return run(
+        'feedback.recipients.list',
+        client().from('feedback_recipients').select('id,email,created_at').order('created_at'),
+      );
+    },
+
+    async add(email: string): Promise<void> {
+      const { data: auth, error: authError } = await client().auth.getUser();
+      if (authError) throw new DataAccessError('feedback.recipients.add', authError);
+      const { error } = await client()
+        .from('feedback_recipients')
+        .insert({ email: email.trim().toLowerCase(), added_by: auth.user?.id ?? null });
+      if (error) throw new DataAccessError('feedback.recipients.add', error);
+    },
+
+    async remove(id: string): Promise<void> {
+      const { error } = await client().from('feedback_recipients').delete().eq('id', id);
+      if (error) throw new DataAccessError('feedback.recipients.remove', error);
+    },
+  },
+};
+
 export interface AuditEventRow {
   id: number;
   actor_id: string | null;

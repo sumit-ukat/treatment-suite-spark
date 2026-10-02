@@ -2,15 +2,17 @@ import { useState } from 'react';
 import type { AccessibleCentre } from '../auth/AuthProvider.tsx';
 import { RoomsAndBedsAdmin } from './RoomsAndBeds.tsx';
 import { UsersAndRoles } from './UsersAndRoles.tsx';
+import { FeedbackAdmin } from './FeedbackAdmin.tsx';
 
 // ─── Root Administration component ───────────────────────────────────────────
 
 export function Administration({ centre }: { centre: AccessibleCentre }) {
-  const [tab, setTab] = useState<'people' | 'rooms'>('people');
+  const [tab, setTab] = useState<'people' | 'rooms' | 'feedback'>('people');
 
   const TABS = [
-    { id: 'people', label: 'User Management' },
-    { id: 'rooms',  label: 'Rooms & beds' },
+    { id: 'people',   label: 'User Management' },
+    { id: 'rooms',    label: 'Rooms & beds' },
+    { id: 'feedback', label: 'Tool feedback' },
   ] as const;
 
   return (
@@ -36,8 +38,9 @@ export function Administration({ centre }: { centre: AccessibleCentre }) {
         </div>
       </div>
 
-      {tab === 'people' ? <UsersAndRoles /> : null}
-      {tab === 'rooms'  ? <RoomsAndBedsAdmin centre={centre} /> : null}
+      {tab === 'people'   ? <UsersAndRoles /> : null}
+      {tab === 'rooms'    ? <RoomsAndBedsAdmin centre={centre} /> : null}
+      {tab === 'feedback' ? <FeedbackAdmin /> : null}
     </div>
   );
 }

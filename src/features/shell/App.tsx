@@ -63,6 +63,7 @@ import { DischargeLog } from '../discharge/DischargeLog.tsx';
 import { GpSummaryLog } from '../gp-summary/GpSummaryLog.tsx';
 import { NAV_GROUPS, Sidebar } from './Sidebar.tsx';
 import { CentreSwitcher } from './CentreSwitcher.tsx';
+import { FeedbackButton } from '../feedback/FeedbackButton.tsx';
 import { Chip } from '../../components/ui.tsx';
 import {
   Dialog,
@@ -304,6 +305,7 @@ function HubHeader({ variant }: { variant: 'operations' | 'executive' }) {
 
       <div className="ml-auto flex items-center gap-2">
         <LiveClock className="hidden sm:flex" />
+        <FeedbackButton centreId={null} />
         <UserMenu variant="panel" />
       </div>
     </header>
@@ -552,6 +554,7 @@ function CentreShell() {
                 </kbd>
               </label>
               <LiveClock className="hidden lg:flex" />
+              <FeedbackButton centreId={authCentre?.id ?? null} />
               <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
             </div>
           </header>
