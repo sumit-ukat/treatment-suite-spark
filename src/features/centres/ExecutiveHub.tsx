@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   ChevronDown,
   CircleAlert,
+  ClipboardCheck,
   Info,
   Percent,
   TrendingDown,
@@ -662,13 +663,15 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
                     : 'good',
             },
             {
-              // The one card here that isn't census or risk — everything else in this row is either
-              // a headcount or a problem count, nothing forward-looking or positive.
-              label: 'Graduating this week',
-              value: totals.dischargingThisWeek,
-              hint: 'scheduled completions, all centres',
-              icon: <TrendingUp className="size-4" />,
-              accent: 'good',
+              // The group's single most important quality/compliance number — required actions
+              // completed by their due date — already computed (occupancy-weighted across centres,
+              // same figure the per-region table and severity scoring below use) but never surfaced
+              // as its own headline card anywhere on this page until now.
+              label: 'On-time completion',
+              value: `${totals.onTimePercent}%`,
+              hint: 'required actions completed by due date',
+              icon: <ClipboardCheck className="size-4" />,
+              accent: totals.onTimePercent < ONTIME_ACT ? 'critical' : totals.onTimePercent < ONTIME_ACT + 10 ? 'warn' : 'good',
             },
           ]}
         />
