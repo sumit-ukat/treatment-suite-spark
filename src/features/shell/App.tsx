@@ -524,35 +524,41 @@ function CentreShell() {
                 value={centreSlug}
                 onChange={(slug) => navigate(`/centre/${slug}/treatment-board`)}
               />
-              <label className="relative hidden sm:block">
-                <span className="sr-only">Search beds, clients, staff</span>
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
-                />
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    // This box only ever filters Room Board (BoardPage reads the same shared
-                    // `query`). Everywhere else it looked live but silently did nothing — Enter now
-                    // jumps to Room Board, where whatever's typed is already applied.
-                    if (e.key === 'Enter' && query.trim() && !location.pathname.endsWith('/board')) {
-                      navigate(`/centre/${centreSlug}/board`);
-                    }
-                  }}
-                  placeholder="Search bed, client, staff… (Enter)"
-                  className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
-                />
-                <kbd
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
-                >
-                  ⌘K
-                </kbd>
-              </label>
+              {/* Hidden on Room Board itself: that page already has its own "Search bed, client or
+                  therapist" box in its Filters row, reading this exact same `query` state — showing
+                  both at once was two boxes doing one job, and this one's "(Enter)" hint did nothing
+                  there (the guard below excludes it), which read as broken rather than redundant. */}
+              {!location.pathname.endsWith('/board') ? (
+                <label className="relative hidden sm:block">
+                  <span className="sr-only">Search beds, clients, staff</span>
+                  <Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]"
+                  />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      // This box only ever filters Room Board (BoardPage reads the same shared
+                      // `query`). Everywhere else it looked live but silently did nothing — Enter now
+                      // jumps to Room Board, where whatever's typed is already applied.
+                      if (e.key === 'Enter' && query.trim()) {
+                        navigate(`/centre/${centreSlug}/board`);
+                      }
+                    }}
+                    placeholder="Search bed, client, staff… (Enter)"
+                    className="w-[220px] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] py-1.5 pr-9 pl-7 text-[12.5px] transition placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none"
+                  />
+                  <kbd
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-[var(--color-line)] bg-[var(--color-panel)] px-1 py-0.5 text-[10px] text-[var(--color-ink-muted)]"
+                  >
+                    ⌘K
+                  </kbd>
+                </label>
+              ) : null}
               <LiveClock className="hidden lg:flex" />
               <FeedbackButton centreId={authCentre?.id ?? null} />
               <UserMenu variant="panel" onOpenAdmin={authCentre ? () => navigate('admin') : undefined} />
