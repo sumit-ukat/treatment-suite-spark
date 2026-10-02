@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   ChevronDown,
   CircleAlert,
+  Info,
   Percent,
   TrendingDown,
   TrendingUp,
@@ -763,6 +764,18 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
             </label>
           }
         >
+          {/* One line, up top where every new user sees it before reading anything else — a
+              demo note, not a methodology page. The detail that used to live here (exactly which
+              figures are placeholders and why) is still true, just no longer necessary to say out
+              loud for a demo to make sense. */}
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-900 dark:text-amber-200">
+            <Info className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              <strong className="font-semibold">Demo data</strong> — Primrose Lodge is real; every other
+              centre below is placeholder data for this demo.
+            </span>
+          </div>
+
           {/* Capacity summary */}
           <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
             <div className="min-w-[180px] flex-1">
@@ -879,41 +892,6 @@ export function ExecutiveHub({ onOpenCentre }: { onOpenCentre: (slug: string) =>
         </Panel>
       </div>
 
-      {/* ── How the verdict was reached, and what is not real. Both belong at the bottom of a
-             stakeholder page: nobody should have to ask either question in the room. ── */}
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-[var(--color-line)] bg-card p-4">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-            How &ldquo;needs attention&rdquo; is decided
-          </p>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
-            <strong className="font-semibold text-foreground">Action</strong> — anyone still resident past
-            a planned discharge date, {OVERDUE_ACT} or more overdue actions, or on-time completion below{' '}
-            {ONTIME_ACT}%. <strong className="font-semibold text-foreground">Watch</strong> — any overdue
-            action at all, or more than {PHOTO_WATCH} client photos missing.{' '}
-            <strong className="font-semibold text-foreground">Clear</strong> — none of the above. No
-            individual clinical detail appears at this level; restricted alerts and other risk figures
-            show as group totals only — nothing here identifies which client.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-amber-900 uppercase dark:text-amber-300">
-            What is real on this page
-          </p>
-          <p className="mt-2 text-[11.5px] leading-relaxed text-amber-900 dark:text-amber-200">
-            Centre names, counties and Primrose Lodge&rsquo;s current-day figures are real — the latter
-            from the same admissions and required actions that drive its room board. Every other
-            centre&rsquo;s occupancy, overdue count and on-time rate is{' '}
-            <strong className="font-semibold">fictional</strong>, {totals.capacityUnconfirmed} of the{' '}
-            {visible.length || centres.length} bed capacities above are placeholders, and the region
-            grouping is a placeholder. The highest/lowest-occupied figures above are a{' '}
-            <strong className="font-semibold">placeholder 3-month average for every centre, Primrose
-            Lodge included</strong> — no centre&rsquo;s occupancy history is tracked yet, so there is
-            nothing real to average until that exists.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
