@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AlertTriangle, Camera, Check, Loader2, Megaphone } from 'lucide-react';
+import { Camera, Check, Loader2, Megaphone } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { feedback as feedbackService } from '../../services/data-access.js';
@@ -48,8 +48,7 @@ async function captureViewport(): Promise<Blob | null> {
 /**
  * The header's always-visible "Feedback" trigger. Capture happens before the dialog opens — never
  * while it's on screen — so a snapshot always shows the real page the user was looking at, not this
- * form. Screenshot stays opt-in even once captured: the checkbox below defaults off, since this app
- * routinely has a client's clinical detail on screen.
+ * form.
  */
 export function FeedbackButton({ centreId }: { centreId: string | null }) {
   const location = useLocation();
@@ -205,22 +204,12 @@ export function FeedbackButton({ centreId }: { centreId: string | null }) {
                       onChange={(e) => setIncludeScreenshot(e.target.checked)}
                       className="mt-0.5 rounded accent-[var(--color-accent)]"
                     />
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-1.5 text-[12px] font-medium">
-                        <Camera className="size-3.5" aria-hidden="true" />
-                        Include a screenshot of this screen
-                        {!screenshot ? (
-                          <span className="text-[10.5px] font-normal text-[var(--color-ink-muted)]">(unavailable)</span>
-                        ) : null}
-                      </span>
-                      <span className="mt-0.5 flex items-start gap-1 text-[10.5px] text-[var(--color-ink-muted)]">
-                        <AlertTriangle
-                          className="mt-0.5 size-3 shrink-0 text-amber-600 dark:text-amber-400"
-                          aria-hidden="true"
-                        />
-                        Off by default — only turn this on if the screen doesn't show a client's name or clinical
-                        details.
-                      </span>
+                    <span className="flex items-center gap-1.5 text-[12px] font-medium">
+                      <Camera className="size-3.5" aria-hidden="true" />
+                      Include a screenshot of this screen
+                      {!screenshot ? (
+                        <span className="text-[10.5px] font-normal text-[var(--color-ink-muted)]">(unavailable)</span>
+                      ) : null}
                     </span>
                   </label>
                   {includeScreenshot && screenshot ? (
