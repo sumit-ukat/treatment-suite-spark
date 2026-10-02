@@ -609,10 +609,7 @@ export function StakeholderDashboard({
           todayIndex={todayIndex}
         />
       </div>
-      {/* items-start: a grid row stretches siblings to match height by default, so on a day with
-          only one or two things needing attention, that panel was forced as tall as "Recent
-          activity" and left mostly blank underneath — reading as broken rather than just short. */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.25fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_1fr]">
         <section className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)]">
           <PanelHeader
             title="Needs attention"
