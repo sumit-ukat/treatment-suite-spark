@@ -13,6 +13,7 @@ import {
   TrendingUp,
   UserX,
   Repeat2,
+  CalendarX2,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -521,6 +522,14 @@ export function StakeholderDashboard({
             sub={pendingD > 0 ? `${pendingD} pending request${pendingD !== 1 ? 's' : ''}` : 'No pending requests'}
             accent={leavingSoon.length > 0 ? 'amber' : 'neutral'}
             onClick={() => navigate('../treatment-board?filter=discharge_soon')}
+          />
+          <KpiTile
+            icon={CalendarX2}
+            value={stats.pastPlannedDischarge}
+            label="Past planned discharge"
+            sub={stats.pastPlannedDischarge > 0 ? 'Still occupying a bed past their planned date' : 'Nobody is overdue to leave'}
+            accent={stats.pastPlannedDischarge > 0 ? 'red' : 'green'}
+            onClick={() => navigate('../board?filter=past_discharge')}
           />
         </div>
       </div>

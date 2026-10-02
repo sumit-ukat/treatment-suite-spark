@@ -149,6 +149,7 @@ type FilterId =
   | 'overdue'
   | 'due_today'
   | 'discharging'
+  | 'past_discharge'
   | 'photo'
   | 'alerts';
 
@@ -171,6 +172,10 @@ const matchesFilter = (bed: BoardBed, filter: FilterId): boolean => {
       // actual rolling-7-day one despite the comment's stated intent to match it, and (b) counted
       // anyone whose planned discharge passed long ago as "discharging this week" too.
       return o !== null && o.daysUntilDischarge >= -1 && o.daysUntilDischarge <= 7;
+    case 'past_discharge':
+      // Same test as board-data.ts's summarise() uses for pastPlannedDischarge, so this filter shows
+      // exactly who that Overview count is counting.
+      return o !== null && o.daysUntilDischarge < 0;
     case 'photo':
       return o !== null && o.photoState === 'missing';
     case 'alerts':
@@ -581,7 +586,7 @@ const EMPTY_SUMMARY: BoardSummary = {
 /** `/centre/:centreSlug/board` — the one page with meaningful state of its own (filters, view mode,
  * which bed's detail panel is open), so it keeps that state locally rather than in the shell. */
 const BOARD_FILTER_IDS: readonly FilterId[] =
-  ['all', 'occupied', 'available', 'overdue', 'due_today', 'discharging', 'photo', 'alerts'];
+  ['all', 'occupied', 'available', 'overdue', 'due_today', 'discharging', 'past_discharge', 'photo', 'alerts'];
 
 function BoardPage() {
   const { centre, authCentre, query, setQuery } = useCentreContext();
@@ -810,6 +815,7 @@ function BoardPage() {
           <option value="overdue">Overdue</option>
           <option value="due_today">Due today</option>
           <option value="discharging">Discharging this week</option>
+          <option value="past_discharge">Past planned discharge</option>
           <option value="photo">No photograph</option>
           <option value="alerts">Restricted alert</option>
         </select>
