@@ -14,7 +14,6 @@ import {
   Table2,
   UserPlus,
   Users,
-  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandMark } from '../../components/brand.tsx';
@@ -62,7 +61,6 @@ export const NAV_GROUPS: ReadonlyArray<{ heading: string; items: readonly NavIte
   {
     heading: 'Manage',
     items: [
-      // { id: 'incidents', label: 'Incident reports', icon: AlertTriangle, ready: true }, // hidden — restore when needed
       { id: 'audit', label: 'Activity log', icon: History, ready: true },
       { id: 'admin', label: 'Administration', icon: Shield, ready: true },
       // Rendered in the fixed bottom section, not this list — see Sidebar's nav-bottom block below.

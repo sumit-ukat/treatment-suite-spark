@@ -54,7 +54,7 @@ export const CATEGORIES: ReadonlyArray<{ id: CategoryId; label: string; blurb: s
   { id: 'clients',        label: 'Clients',           blurb: 'Finding people, reading their file, and the directory’s activity cards' },
   { id: 'admissions',     label: 'Admissions',        blurb: 'Bringing someone into treatment' },
   { id: 'leaving',        label: 'Graduating & leaving', blurb: 'Graduation, discharge, transfer and extensions' },
-  { id: 'concerns',       label: 'Concerns & incidents', blurb: 'Raising something that needs attention' },
+  { id: 'concerns',       label: 'Concerns',          blurb: 'Raising something that needs attention' },
   { id: 'oversight',      label: 'Reports & oversight', blurb: 'Overview, group hub and the activity log' },
   { id: 'admin',          label: 'Administration',    blurb: 'Staff, access levels, rooms and beds' },
   { id: 'glossary',       label: 'Words & symbols',   blurb: 'What the terms and icons mean' },
@@ -83,7 +83,7 @@ export const ARTICLES: readonly HelpArticle[] = [
         'The Treatment board shows them as one row, with a column per category (Admin, GP Summary, Contact/Comms, 7 Day Satisfaction, Family Visit, Life Story/Step Work, Care Plan, Doctor – Thursday, Side assignment). Clicking a category cell opens the real tasks inside it, where staff tick them off as they are done.',
         'A GP summary is due within 3 days of admission — tracked automatically from the admission date.',
         'Staff can set a quick Status flag (Graduate, Discharged, Extended, Transferred, or Not set) at any point from the Treatment board, Room board, or the client’s file — this is a manual heads-up marker, separate from and independent of the formal leaving process below. See "What is the Status column, and how is it different from Discharge?".',
-        'If something needs flagging, staff log a concern (an informal worry, shown as an amber stripe) or file a formal incident report, as appropriate.',
+        'If something needs flagging, staff log a concern (an informal worry, shown as an amber stripe) in the client’s file.',
         'If the stay needs to run longer than planned, staff submit a stay extension for approval.',
       ] },
       { kind: 'p', text: 'Stage 3 — Leaving. Treatment ends, one of four ways.' },
@@ -135,7 +135,6 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Back to group hub','Leave this centre and see all centres.'],
       ] },
       { kind: 'note', text: 'The arrow at the very bottom of the menu collapses it to icons only, which gives you more room on a small screen. Click it again to bring the words back.' },
-      { kind: 'warn', text: 'Incident reports exist as a feature (ask an administrator for the direct link) but are not currently a left-menu item at every centre — if you expect to see one and do not, that is a configuration choice, not something missing from your account.' },
     ],
   },
   {
@@ -521,7 +520,7 @@ export const ARTICLES: readonly HelpArticle[] = [
         'Their care team — therapist, buddy and other assigned staff.',
         'Their progress — how much of the required task list is complete.',
         'Their tasks — the full list, with dates, and whether each was done on time.',
-        'Concerns and incidents raised about them.',
+        'Concerns raised about them.',
       ] },
       { kind: 'p', text: 'Opening a client from the Clients directory also shows every separate admission they have had at this centre, which is the only place a past stay can be seen.' },
       { kind: 'note', text: 'If they are currently in a bed, there is a button to jump straight to them on the Room board.' },
@@ -745,7 +744,7 @@ export const ARTICLES: readonly HelpArticle[] = [
     ],
   },
 
-  /* ───────────────────────── Concerns & incidents ───────────────────────── */
+  /* ───────────────────────── Concerns ───────────────────────── */
   {
     id: 'concerns-raise',
     category: 'concerns',
@@ -760,39 +759,6 @@ export const ARTICLES: readonly HelpArticle[] = [
       ] },
       { kind: 'p', text: 'An open concern puts an amber stripe along the top of that client’s card, so the next person to look at the board knows without opening anything.' },
       { kind: 'note', text: 'Your name is stored with the concern automatically. Concerns stay visible until somebody resolves them.' },
-    ],
-  },
-  {
-    id: 'incidents-file',
-    category: 'concerns',
-    title: 'What is the difference between a concern and an incident report?',
-    summary: 'A concern is a worry to keep an eye on. An incident report records something that actually happened.',
-    keywords: ['incident', 'report', 'difference', 'when to use', 'formal', 'accident', 'event', 'serious'],
-    body: [
-      { kind: 'table', head: ['', 'Concern', 'Incident report'], rows: [
-        ['What it is', 'Something you are worried about.', 'Something that happened and must be formally recorded.'],
-        ['Where',      'In the client’s file.',           'The Incident reports screen.'],
-        ['Effect',     'Amber stripe on their card.',         'Counted on the Overview and group hub for seven days.'],
-        ['Use it when','You want the next shift to be aware.','There has been an actual event needing a record.'],
-      ] },
-      { kind: 'note', text: 'If you are unsure which to use, raise a concern — it is quick, and the detail can always be written up as a formal report afterwards.' },
-    ],
-  },
-  {
-    id: 'incidents-create',
-    category: 'concerns',
-    title: 'How do I file a formal incident report?',
-    summary: 'The Incident reports screen — ask your administrator for the direct link if it is not in your left menu yet.',
-    keywords: ['incident', 'report', 'file', 'formal', 'record', 'accident', 'event', 'serious', 'document', 'create incident', 'new incident', 'log incident'],
-    body: [
-      { kind: 'steps', items: [
-        'Open the Incident reports screen — click it in the left menu if it is shown there, or use the direct link your administrator gives you.',
-        'Click the button to create a new report.',
-        'Fill in the date, time, type of incident, what happened, and who was involved.',
-        'Save. It is immediately visible to anyone who has access to the Incident reports screen.',
-      ] },
-      { kind: 'warn', text: 'Whether "Incident reports" shows in your left menu depends on how this centre has set up its navigation — it is a real, working screen either way, just not always linked from the menu. If you expect it and cannot find it, ask an administrator for the link rather than assuming the feature is missing.' },
-      { kind: 'note', text: 'Incidents filed in the last seven days are counted on the Overview dashboard and the group hub, so managers see them without having to open each report individually.' },
     ],
   },
 
@@ -909,7 +875,6 @@ export const ARTICLES: readonly HelpArticle[] = [
         ['Life story',          'The life story / surrender piece of step work.'],
         ['Restricted alert',    'A flag whose detail is deliberately withheld from the board. Speak to the centre manager.'],
         ['Concern',             'A logged worry about a client. Shows as an amber stripe.'],
-        ['Incident report',     'A formal record of something that happened.'],
         ['Reference',           'The client’s ID code, used when names cannot be shown.'],
         ['Module',              'An optional part of the programme, ticked at admission.'],
         ['Group hub',           'The all-centres view above any single centre.'],

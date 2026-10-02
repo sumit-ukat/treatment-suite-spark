@@ -5,7 +5,6 @@ import { ArchivePicker, type DateRange } from './ArchivePicker.tsx';
 import type { BoardBed } from './board-data.js';
 import { useBoardData } from './use-board-data.js';
 import { Chip, type Tone } from '../../components/ui.tsx';
-import { incidents as incidentsService } from '../../services/data-access.js';
 import { PhotoBadge } from './BedCard.tsx';
 import { PageHeader } from '../../components/metric-card.tsx';
 import { DetailPanel } from './DetailPanel.tsx';
@@ -191,11 +190,6 @@ export function TreatmentBoard({
   // staff can opt back in from the print options dialog.
   const [printIncludeAvailable, setPrintIncludeAvailable] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
-  const [incidentCount, setIncidentCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
-  }, [centreId]);
 
   const selected = beds.find((b) => b.label === openBedLabel) ?? null;
   const selectedCategoryBed = openCategory ? beds.find((b) => b.label === openCategory.bedLabel) ?? null : null;
@@ -402,13 +396,6 @@ export function TreatmentBoard({
           active={activeFilter === 'open_concerns'}
           onClick={() => toggle('open_concerns')}
         />
-        {incidentCount !== null && (
-          <BoardStat
-            label="Incident reports (7d)"
-            value={incidentCount}
-            tone={incidentCount > 0 ? 'alert' : 'neutral'}
-          />
-        )}
       </div>
 
       {/* ── Table ── */}

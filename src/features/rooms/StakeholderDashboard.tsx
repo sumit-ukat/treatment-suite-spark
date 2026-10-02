@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
-  FileWarning,
   RefreshCw,
   Stethoscope,
   TrendingUp,
@@ -17,7 +16,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
-  incidents as incidentsService,
   roomsAndBeds,
   auditEvents,
   type BedRow,
@@ -383,13 +381,8 @@ export function StakeholderDashboard({
 }) {
   const navigate = useNavigate();
   const { beds, loading, refreshing, loadedAt, refresh } = useBoardData(centreId);
-  const [incidentCount, setIncidentCount] = useState<number | null>(null);
   const [bedRows, setBedRows] = useState<BedRow[]>([]);
   const [auditRows, setAuditRows] = useState<AuditEventRow[]>([]);
-
-  useEffect(() => {
-    incidentsService.count7d(centreId).then(setIncidentCount).catch(() => {});
-  }, [centreId]);
 
   useEffect(() => {
     roomsAndBeds.beds(centreId).then(setBedRows).catch(() => {});
@@ -528,14 +521,6 @@ export function StakeholderDashboard({
             sub={pendingD > 0 ? `${pendingD} pending request${pendingD !== 1 ? 's' : ''}` : 'No pending requests'}
             accent={leavingSoon.length > 0 ? 'amber' : 'neutral'}
             onClick={() => navigate('../treatment-board?filter=discharge_soon')}
-          />
-          <KpiTile
-            icon={FileWarning}
-            value={incidentCount ?? '—'}
-            label="Incident reports"
-            sub={incidentCount === null ? 'Loading…' : incidentCount > 0 ? 'Reported in the last 7 days' : 'None in the last 7 days'}
-            accent={incidentCount !== null && incidentCount > 0 ? 'red' : 'green'}
-            onClick={() => navigate('../incidents')}
           />
         </div>
       </div>

@@ -30,7 +30,6 @@ export const RECORD_NOUN: Record<string, string> = {
   task_templates:           'Task template',
   user_access_assignments:  'Access assignment',
   user_profiles:            'User profile',
-  incident_reports:         'Incident report',
 };
 
 const ACTION_VERB: Record<string, string> = {
@@ -60,8 +59,6 @@ const FIELD_LABELS: Record<string, string> = {
   severity:      'Severity',
   reason:        'Reason',
   role:          'Role',
-  incident_type: 'Incident type',
-  incident_at:   'When it happened',
   location:      'Location',
   room_id:       'Room',
   bed_id:        'Bed',

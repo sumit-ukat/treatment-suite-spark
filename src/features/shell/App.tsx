@@ -58,7 +58,6 @@ import { ClientDirectory } from '../clients/ClientDirectory.tsx';
 import { AuditHistory } from '../administration/AuditHistory.tsx';
 import { TreatmentBoard } from '../rooms/TreatmentBoard.tsx';
 import { StakeholderDashboard } from '../rooms/StakeholderDashboard.tsx';
-import { IncidentReportSection } from '../rooms/IncidentReportSection.tsx';
 import { HelpCentre } from '../help/HelpCentre.tsx';
 import { DischargeLog } from '../discharge/DischargeLog.tsx';
 import { GpSummaryLog } from '../gp-summary/GpSummaryLog.tsx';
@@ -136,7 +135,6 @@ function AppRoutes() {
         <Route path="gp-summary" element={<GpSummaryPage />} />
         <Route path="treatment-board" element={<TreatmentBoardPage />} />
         <Route path="overview" element={<OverviewPage />} />
-        <Route path="incidents" element={<IncidentsPage />} />
         <Route path="help" element={<HelpPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/exec" replace />} />
@@ -986,17 +984,6 @@ function OverviewPage() {
   return <StakeholderDashboard centreId={authCentre.id} centreName={centre.name} />;
 }
 
-function IncidentsPage() {
-  const { centre, authCentre } = useCentreContext();
-  if (!authCentre) return <NoMatchingCentre centreName={centre.name} />;
-  const { beds } = useBoardData(authCentre.id);
-  return (
-    <div className="mx-auto max-w-[680px] px-6 py-8">
-      <h1 className="mb-6 font-display text-xl font-semibold text-[var(--color-ink)]">Incident Reports</h1>
-      <IncidentReportSection centreId={authCentre.id} beds={beds} defaultOpen />
-    </div>
-  );
-}
 
 function DischargePage() {
   const { centre, authCentre } = useCentreContext();
