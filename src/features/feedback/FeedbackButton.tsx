@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Camera, Check, Loader2, Megaphone } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { domToBlob } from 'modern-screenshot';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx';
 import { feedback as feedbackService } from '../../services/data-access.js';
 
@@ -23,23 +23,30 @@ const KIND_OPTIONS: ReadonlyArray<{ value: Kind; label: string; hint: string }> 
 /**
  * Captures only the visible viewport, not the full (possibly very long) page — faster, and keeps the
  * image well under the feedback-screenshots bucket's 5MB limit without needing to downscale after.
- * Returns null on any failure (unsupported CSS, a decode error) rather than blocking the report —
- * the checkbox below simply has nothing to offer in that case.
+ *
+ * `modern-screenshot`, not `html2canvas`: this app's whole colour system (shadcn/Tailwind v4 tokens —
+ * `--card`, `--primary`, the shadow variables, etc., see app/styles.css) is defined in `oklch()`, with
+ * `color-mix()` in a few components on top. `html2canvas` parses colour values itself and throws on
+ * both, which silently turned into "(unavailable)" below for every real page. This library instead
+ * renders the cloned DOM through an SVG `foreignObject`, so the browser's own paint engine resolves
+ * those colours exactly as it does on screen. `restoreScrollPosition` matters here specifically
+ * because this app scrolls its inner `<main>`, not the window — without it the capture would always
+ * show the top of the page regardless of where the user actually was.
+ *
+ * Returns null on any failure (a decode error, a timed-out remote asset) rather than blocking the
+ * report — the checkbox below simply has nothing to offer in that case.
  */
 async function captureViewport(): Promise<Blob | null> {
   try {
-    const canvas = await html2canvas(document.body, {
-      x: window.scrollX,
-      y: window.scrollY,
+    return await domToBlob(document.body, {
       width: window.innerWidth,
       height: window.innerHeight,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
       scale: Math.min(window.devicePixelRatio || 1, 1.5),
       backgroundColor: '#ffffff',
-      logging: false,
+      type: 'image/jpeg',
+      quality: 0.85,
+      features: { restoreScrollPosition: true },
     });
-    return await new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85));
   } catch {
     return null;
   }
