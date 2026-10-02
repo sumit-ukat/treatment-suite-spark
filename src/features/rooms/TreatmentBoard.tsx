@@ -348,10 +348,8 @@ export function TreatmentBoard({
         </div>
       ) : null}
 
-      {/* ── Summary tiles — a single divided row, matching the reference board's density. Seven
-             BoardStats below, so the grid is seven columns too — an eighth (grid-cols-8) reserved a
-             whole extra column's width that nothing filled, instead of sharing it across all seven. ── */}
-      <div className={`grid grid-cols-4 border border-[var(--color-line)] bg-card py-[17px] ${CARD_RADIUS} ${CARD_SHADOW} print:hidden lg:grid-cols-7`}>
+      {/* ── Summary tiles — a single divided row, matching the reference board's density ── */}
+      <div className={`grid grid-cols-4 border border-[var(--color-line)] bg-card py-[17px] ${CARD_RADIUS} ${CARD_SHADOW} print:hidden lg:grid-cols-8`}>
         <BoardStat
           label="Clients"
           value={counts.clients}
